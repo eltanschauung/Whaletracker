@@ -75,6 +75,15 @@ stock bool ApplyBonusPoints(int client, int points = 1, bool playSound = true, b
 }
 
 /**
+ * Spends bonus points immediately without sound or chat output.
+ *
+ * @param client        Client index.
+ * @param points        Positive number of points to spend.
+ * @return              True if the spend succeeded.
+ */
+native bool WhaleTracker_SpendBonusPoints(int client, int points);
+
+/**
  * Resolves the best recorded name for a SteamID64.
  *
  * Lookup order:

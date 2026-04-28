@@ -1549,6 +1549,18 @@ public any Native_WhaleTracker_ApplyBonusPoints(Handle plugin, int numParams)
     return ApplyBonusPoints(client, points, playSound, chatAlert, randomChance, type, target, delay);
 }
 
+public any Native_WhaleTracker_SpendBonusPoints(Handle plugin, int numParams)
+{
+    int client = GetNativeCell(1);
+    int points = GetNativeCell(2);
+    if (points <= 0)
+    {
+        return false;
+    }
+
+    return ApplyBonusPoints(client, -points, false, false, 1.0, "", 0, 0.0);
+}
+
 int GetLastSeenForSteamId64(const char[] steamId)
 {
     if (steamId[0] == '\0')
