@@ -61,9 +61,13 @@ public Action Player_Decal(const char[] name, const int[] clients, int count, fl
 	{
 		int requiredKills = GetConVarInt(g_hCVarsKills);
 		bool statsLoaded = WhaleTracker_AreStatsLoaded(client);
-		int clientKills = statsLoaded ? WhaleTracker_GetCumulativeKills(client) : 0;
+		if (!statsLoaded)
+		{
+			return Plugin_Handled;
+		}
 
-	    if (statsLoaded && clientKills >= requiredKills)
+		int clientKills = WhaleTracker_GetCumulativeKills(client);
+	    if (clientKills >= requiredKills)
 		{
 		    return Plugin_Continue;
 		}
