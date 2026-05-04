@@ -290,6 +290,22 @@ bool GetRoundMvpCandidatePoints(int client, StringMap cachedPoints, int &points,
     return (points > 0);
 }
 
+bool CanSelectRoundMvpByKills(int client)
+{
+    if (!IsClientInGame(client) || IsFakeClient(client))
+    {
+        return false;
+    }
+
+    EnsureClientSteamId(client);
+    if (g_Stats[client].steamId[0] == '\0')
+    {
+        return false;
+    }
+
+    return !HasSteamIdBeenMapMvp(g_Stats[client].steamId);
+}
+
 bool IsBetterRoundMvpCandidate(int candidate, int candidatePoints, int currentBest, int currentBestPoints)
 {
     if (candidate <= 0)
@@ -333,17 +349,18 @@ bool SelectRoundMvpsNow()
     bool needBlue = (g_sRoundMvpSteamId[3][0] == '\0');
     int redMvp = 0;
     int blueMvp = 0;
+    int bestRedKills = 0;
+    int bestBlueKills = 0;
     int bestRedPoints = 0;
     int bestBluePoints = 0;
+    bool redTeamHasKills = false;
+    bool blueTeamHasKills = false;
     bool waitingForStats = false;
 
     if (!needRed && !needBlue)
     {
         return false;
     }
-
-    StringMap cachedPoints = new StringMap();
-    LoadRoundMvpCachedPoints(cachedPoints);
 
     for (int i = 1; i <= MaxClients; i++)
     {
@@ -358,29 +375,88 @@ bool SelectRoundMvpsNow()
             continue;
         }
 
-        int points = 0;
-        bool clientWaitingForStats = false;
-        if (!GetRoundMvpCandidatePoints(i, cachedPoints, points, clientWaitingForStats))
+        int kills = g_MapStats[i].kills;
+        if (kills > 0)
         {
-            waitingForStats |= clientWaitingForStats;
+            if (team == 2)
+            {
+                redTeamHasKills = true;
+            }
+            else
+            {
+                blueTeamHasKills = true;
+            }
+        }
+
+        if (kills <= 0 || !CanSelectRoundMvpByKills(i))
+        {
             continue;
         }
 
-        if (needRed && team == 2 && IsBetterRoundMvpCandidate(i, points, redMvp, bestRedPoints))
+        if (needRed && team == 2 && IsBetterRoundMvpCandidate(i, kills, redMvp, bestRedKills))
         {
             redMvp = i;
-            bestRedPoints = points;
+            bestRedKills = kills;
             continue;
         }
 
-        if (needBlue && team == 3 && IsBetterRoundMvpCandidate(i, points, blueMvp, bestBluePoints))
+        if (needBlue && team == 3 && IsBetterRoundMvpCandidate(i, kills, blueMvp, bestBlueKills))
         {
             blueMvp = i;
-            bestBluePoints = points;
+            bestBlueKills = kills;
         }
     }
 
-    delete cachedPoints;
+    bool fallbackRedToPoints = (needRed && redMvp <= 0 && !redTeamHasKills);
+    bool fallbackBlueToPoints = (needBlue && blueMvp <= 0 && !blueTeamHasKills);
+
+    if (fallbackRedToPoints || fallbackBlueToPoints)
+    {
+        StringMap cachedPoints = new StringMap();
+        LoadRoundMvpCachedPoints(cachedPoints);
+
+        for (int i = 1; i <= MaxClients; i++)
+        {
+            if (!IsClientInGame(i) || IsFakeClient(i))
+            {
+                continue;
+            }
+
+            int team = GetClientTeam(i);
+            if ((team == 2 && !fallbackRedToPoints) || (team == 3 && !fallbackBlueToPoints))
+            {
+                continue;
+            }
+
+            if (team != 2 && team != 3)
+            {
+                continue;
+            }
+
+            int points = 0;
+            bool clientWaitingForStats = false;
+            if (!GetRoundMvpCandidatePoints(i, cachedPoints, points, clientWaitingForStats))
+            {
+                waitingForStats |= clientWaitingForStats;
+                continue;
+            }
+
+            if (team == 2 && IsBetterRoundMvpCandidate(i, points, redMvp, bestRedPoints))
+            {
+                redMvp = i;
+                bestRedPoints = points;
+                continue;
+            }
+
+            if (team == 3 && IsBetterRoundMvpCandidate(i, points, blueMvp, bestBluePoints))
+            {
+                blueMvp = i;
+                bestBluePoints = points;
+            }
+        }
+
+        delete cachedPoints;
+    }
 
     if (needRed && redMvp > 0)
     {
