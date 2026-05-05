@@ -592,7 +592,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             ApplyKillStats(g_MapStats[attacker], backstab, medicDrop);
             if (IsClientCurrentRoundMvp(victim))
             {
-                ApplyBonusPoints(attacker, 2, true, true, 1.0, "mvp_kill", victim);
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "mvp_kill", victim);
             }
             if (victimClass == TF_CLASS_MEDIC)
             {
@@ -612,7 +612,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (deathFlags & TF_DEATHFLAG_KILLERDOMINATION)
             {
-                ApplyBonusPoints(attacker, 2, true, true, 1.0, "player_dom", victim);
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "player_dom", victim);
             }
             if (deathFlags & TF_DEATHFLAG_KILLERREVENGE)
             {
@@ -1058,6 +1058,6 @@ void SendMatchStatsMessage(int viewer, int target)
         colorTag, playerName, kills, deaths, kd, assists, damage, dpm);
     CPrintToChat(viewer, "Taken %d | Taken/min %.1f | Heal %d | HS %d | BS %d | Ubers %d | Time %s",
         damageTaken, dtpm, healing, headshots, backstabs, ubers, timeBuffer);
-    CPrintToChat(viewer, "{green}[WhaleTracker]{default} Lifetime Stats: %d | Deaths %d | KD: %.2f", lifetimeKills, lifetimeDeaths, lifetimeKd);
+    CPrintToChat(viewer, "{green}[WhaleTracker]{default} Lifetime Kills: %d | Deaths %d | KD: %.2f", lifetimeKills, lifetimeDeaths, lifetimeKd);
     CPrintToChat(viewer, "{green}[WhaleTracker]{default} Visit kogasa.tf/stats for full");
 }
