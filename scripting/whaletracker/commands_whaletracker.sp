@@ -702,6 +702,10 @@ public void WhaleTracker_ShowLeaderboardCallback(Database db, DBResultSet result
         {
             strcopy(colorTag, sizeof(colorTag), "gold");
         }
+        else if (StrEqual(colorTag, "teamcolor", false) || StrEqual(colorTag, "{teamcolor}", false))
+        {
+            strcopy(colorTag, sizeof(colorTag), "gold");
+        }
 
         rows++;
         CPrintToChat(client, "#%d {%s}%s{default} %d", rank, colorTag, displayName, points);
