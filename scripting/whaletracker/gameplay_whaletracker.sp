@@ -579,14 +579,17 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
     int deathFlags = event.GetInt("death_flags");
     int victimClass = view_as<int>(TF2_GetPlayerClass(victim));
     bool attackerScoredMedicDrop = false;
+    bool victimMedicDrop = false;
 
     if (!(deathFlags & TF_DEATHFLAG_DEADRINGER))
     {
+        victimMedicDrop = IsMedicDrop(victim);
+
         if (IsValidClient(attacker) && attacker != victim && WhaleTracker_IsTrackingEnabled(attacker))
         {
             int custom = event.GetInt("customkill");
             bool backstab = (custom == TF_CUSTOM_BACKSTAB);
-            bool medicDrop = IsMedicDrop(victim);
+            bool medicDrop = victimMedicDrop;
 
             ApplyKillStats(g_Stats[attacker], backstab, medicDrop);
             ApplyKillStats(g_MapStats[attacker], backstab, medicDrop);
@@ -652,6 +655,11 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             ApplyCumulativeDeathStats(g_Stats[victim]);
             ApplyDeathStats(g_MapStats[victim]);
             MarkClientDirty(victim);
+        }
+
+        if (victimMedicDrop)
+        {
+            AnnounceMedicDrop(victim);
         }
     }
 }
@@ -806,6 +814,29 @@ bool IsMedicDrop(int victim)
         return false;
 
     return (GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") >= 1.0);
+}
+
+void AnnounceMedicDrop(int medic)
+{
+    if (!IsValidClient(medic) || IsFakeClient(medic))
+        return;
+
+    char colorTag[32];
+    GetClientFiltersNameColorTag(medic, colorTag, sizeof(colorTag));
+    TrimString(colorTag);
+
+    if (colorTag[0] == '\0')
+    {
+        strcopy(colorTag, sizeof(colorTag), "teamcolor");
+    }
+
+    if (StrEqual(colorTag, "teamcolor", false) || StrEqual(colorTag, "{teamcolor}", false))
+    {
+        CPrintToChatAllEx(medic, "{teamcolor}%N{default} dropped!", medic);
+        return;
+    }
+
+    CPrintToChatAllEx(medic, "{%s}%N{default} dropped!", colorTag, medic);
 }
 
 bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
