@@ -590,6 +590,11 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
             ApplyKillStats(g_Stats[attacker], backstab, medicDrop);
             ApplyKillStats(g_MapStats[attacker], backstab, medicDrop);
+            int killstreak = g_Stats[attacker].currentKillstreak;
+            if (killstreak > 0 && killstreak % WHALE_KILLSTREAK_BONUS_INTERVAL == 0)
+            {
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "killstreak", killstreak, 0.0);
+            }
             if (IsClientCurrentRoundMvp(victim))
             {
                 ApplyBonusPoints(attacker, 1, true, true, 1.0, "mvp_kill", victim);

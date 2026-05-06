@@ -1678,6 +1678,12 @@ bool ApplyBonusPointsNow(int client, int points = 1, bool playSound = true, bool
         return true;
     }
 
+    if (StrEqual(type, "killstreak", false))
+    {
+        CPrintToChat(client, "{magenta}[BP] {limegreen}%s%i{default} for Killstreak: %d", sign, absPoints, target);
+        return true;
+    }
+
     char label[64];
     GetBonusPointsTypeLabel(type, label, sizeof(label));
     if (label[0] != '\0')
