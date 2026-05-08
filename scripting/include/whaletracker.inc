@@ -110,7 +110,7 @@ bool WhaleTracker_IsRoundRunning()
     return (GameRules_GetRoundState() == RoundState_RoundRunning);
 }
 
-stock bool WhaleTracker_IsServerUnderHalfCapacity()
+stock bool WhaleTracker_ServerHalfCapacity()
 {
     int capacity = 0;
     if (g_hVisibleMaxPlayers == null)
@@ -133,7 +133,7 @@ stock bool WhaleTracker_IsServerUnderHalfCapacity()
         return false;
     }
 
-    return (GetClientCount(false) * 2 < capacity);
+    return (GetClientCount(false) * 2 >= capacity);
 }
 
 bool WhaleTracker_HasHumanClientsExcept(int excludedClient)
