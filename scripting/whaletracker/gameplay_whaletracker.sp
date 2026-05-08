@@ -596,7 +596,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             int killstreak = g_Stats[attacker].currentKillstreak;
             if (killstreak > 0 && killstreak % WHALE_KILLSTREAK_BONUS_INTERVAL == 0)
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "killstreak", killstreak, 0.0);
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "killstreak", killstreak, 3.0);
                 char attackerName[MAX_NAME_LENGTH];
                 GetClientName(attacker, attackerName, sizeof(attackerName));
                 AnnounceKillstreakMilestone(attackerName, killstreak);
