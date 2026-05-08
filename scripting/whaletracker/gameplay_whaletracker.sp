@@ -597,6 +597,9 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             if (killstreak > 0 && killstreak % WHALE_KILLSTREAK_BONUS_INTERVAL == 0)
             {
                 ApplyBonusPoints(attacker, 1, true, true, 1.0, "killstreak", killstreak, 0.0);
+                char attackerName[MAX_NAME_LENGTH];
+                GetClientName(attacker, attackerName, sizeof(attackerName));
+                AnnounceKillstreakMilestone(attackerName, killstreak);
             }
             if (IsClientCurrentRoundMvp(victim))
             {
@@ -837,6 +840,53 @@ void AnnounceMedicDrop(int medic)
     }
 
     CPrintToChatAllEx(medic, "{%s}%N{default} dropped!", colorTag, medic);
+}
+
+void AnnounceKillstreakMilestone(const char[] clientName, int killstreak, bool playSound = true)
+{
+    if (killstreak < WHALE_KILLSTREAK_BONUS_INTERVAL || killstreak % WHALE_KILLSTREAK_BONUS_INTERVAL != 0)
+        return;
+
+    char label[32];
+    char commandName[32];
+
+    if (killstreak >= 30)
+    {
+        strcopy(label, sizeof(label), "GODLIKE");
+        strcopy(commandName, sizeof(commandName), "holyshit");
+    }
+    else if (killstreak >= 25)
+    {
+        strcopy(label, sizeof(label), "godlike");
+        strcopy(commandName, sizeof(commandName), "godlike");
+    }
+    else if (killstreak >= 20)
+    {
+        strcopy(label, sizeof(label), "unstoppable");
+        strcopy(commandName, sizeof(commandName), "unstoppable");
+    }
+    else if (killstreak >= 15)
+    {
+        strcopy(label, sizeof(label), "dominating");
+        strcopy(commandName, sizeof(commandName), "dominating");
+    }
+    else if (killstreak >= 10)
+    {
+        strcopy(label, sizeof(label), "on a rampage");
+        strcopy(commandName, sizeof(commandName), "rampage");
+    }
+    else
+    {
+        strcopy(label, sizeof(label), "on a killing spree");
+        strcopy(commandName, sizeof(commandName), "killingspree");
+    }
+
+    PrintCenterTextAll("%s is %s! (%d)", clientName, label, killstreak);
+
+    if (playSound && LibraryExists("saysounds"))
+    {
+        SaySounds_PlayCommand(0, commandName, false);
+    }
 }
 
 bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
