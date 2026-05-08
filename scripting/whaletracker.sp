@@ -98,7 +98,6 @@ enum WeaponCategory
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int damagecustom);
 void RequestClientStateLoads(int client);
 int GetWhalePointsForClient(int client);
-public void QueueRoundMvpSelection();
 Database GetSyncDatabaseHandle();
 DBResultSet SQLQuerySync(const char[] query);
 bool SQLFastQuerySync(const char[] query);
@@ -248,7 +247,6 @@ Handle g_hAirshotForward = null;
 
 char g_sRoundMvpSteamId[4][STEAMID64_LEN];
 char g_sLastRoundMvpSteamId[4][STEAMID64_LEN];
-Handle g_hRoundMvpTimer = null;
 StringMap g_MapMvpHistory = null;
 
 bool g_bFavoriteClassLoaded[MAXPLAYERS + 1];

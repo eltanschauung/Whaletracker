@@ -152,8 +152,7 @@ public void OnPluginStart()
     HookEvent("sticky_jump", Event_ExplosiveJump, EventHookMode_Pre);
     HookEvent("rocket_jump_landed", Event_ExplosiveJumpLanded, EventHookMode_Pre);
     HookEvent("sticky_jump_landed", Event_ExplosiveJumpLanded, EventHookMode_Pre);
-    HookEvent("teamplay_round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-    HookEvent("arena_round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+    HookEvent("teamplay_round_win", Event_RoundWin, EventHookMode_PostNoCopy);
     HookEvent("player_team", Event_PlayerTeam, EventHookMode_Post);
 
     RegConsoleCmd("sm_whalestats", Command_ShowStats, "Show your Whale Tracker statistics.");
@@ -240,7 +239,6 @@ public void OnMapStart()
     RefreshCurrentOnlineMapName();
     RefreshHostAddress();
     ClearOnlineStats();
-    g_hRoundMvpTimer = null;
     ClearCurrentRoundMvpState();
     ClearLastRoundMvpState();
     if (g_MapMvpHistory != null)
@@ -261,8 +259,6 @@ public void OnMapStart()
 
 public void OnMapEnd()
 {
-    g_hRoundMvpTimer = null;
-
     for (int i = 1; i <= MaxClients; i++)
     {
         if (IsValidClient(i) && !IsFakeClient(i))
@@ -355,7 +351,6 @@ public void OnPluginEnd()
     // invalid by the time OnPluginEnd runs.
     g_hOnlineTimer = null;
     g_hPeriodicSaveTimer = null;
-    g_hRoundMvpTimer = null;
     g_hReconnectTimer = null;
     g_hSchemaRetryTimer = null;
     g_hSavePumpTimer = null;
@@ -486,7 +481,7 @@ public void OnClientDisconnect(int client)
     SaveClientStats(client, true, true);
     CacheWhalePointsOnDisconnect(client);
     RemoveOnlineStats(client);
-    bool clearedRoundMvp = InvalidateClientRoundMvp(client);
+    InvalidateClientRoundMvp(client);
     ResetAllStats(client);
     ResetClientCommandCaches(client);
     g_KillSaveCounter[client] = 0;
@@ -498,10 +493,6 @@ public void OnClientDisconnect(int client)
         FinalizeCurrentMatch(false);
     }
 
-    if (clearedRoundMvp && !lastHuman)
-    {
-        QueueRoundMvpSelection();
-    }
 }
 
 public void OnClientAuthorized(int client, const char[] auth)

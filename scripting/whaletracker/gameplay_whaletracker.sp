@@ -149,21 +149,6 @@ void MarkSteamIdAsMapMvp(const char[] steamId)
     g_MapMvpHistory.SetValue(steamId, 1, true);
 }
 
-public void QueueRoundMvpSelection()
-{
-    if (g_hRoundMvpTimer != null)
-    {
-        return;
-    }
-
-    if (g_sRoundMvpSteamId[2][0] != '\0' && g_sRoundMvpSteamId[3][0] != '\0')
-    {
-        return;
-    }
-
-    g_hRoundMvpTimer = CreateTimer(0.25, Timer_SetRoundMvps, _, TIMER_FLAG_NO_MAPCHANGE);
-}
-
 void LoadRoundMvpCachedPoints(StringMap cachedPoints)
 {
     if (cachedPoints == null || !g_bDatabaseReady || GetSyncDatabaseHandle() == null)
@@ -343,8 +328,13 @@ bool IsBetterRoundMvpCandidate(int candidate, int candidatePoints, int currentBe
     return candidate < currentBest;
 }
 
-bool SelectRoundMvpsNow()
+bool SelectRoundMvpsNow(bool replaceExisting = false, bool announce = true)
 {
+    if (replaceExisting)
+    {
+        ClearCurrentRoundMvpState();
+    }
+
     bool needRed = (g_sRoundMvpSteamId[2][0] == '\0');
     bool needBlue = (g_sRoundMvpSteamId[3][0] == '\0');
     int redMvp = 0;
@@ -355,7 +345,6 @@ bool SelectRoundMvpsNow()
     int bestBluePoints = 0;
     bool redTeamHasKills = false;
     bool blueTeamHasKills = false;
-    bool waitingForStats = false;
 
     if (!needRed && !needBlue)
     {
@@ -437,7 +426,6 @@ bool SelectRoundMvpsNow()
             bool clientWaitingForStats = false;
             if (!GetRoundMvpCandidatePoints(i, cachedPoints, points, clientWaitingForStats))
             {
-                waitingForStats |= clientWaitingForStats;
                 continue;
             }
 
@@ -468,38 +456,18 @@ bool SelectRoundMvpsNow()
         AssignRoundMvp(blueMvp, 3);
     }
 
-    if (redMvp > 0 && blueMvp > 0)
+    if (announce && redMvp > 0 && blueMvp > 0)
     {
         CPrintToChatAll("{magenta}MVPs{default} this round: {red}%N{default}, {blue}%N", redMvp, blueMvp);
-    }
-
-    if (((needRed && redMvp <= 0) || (needBlue && blueMvp <= 0)) && waitingForStats)
-    {
-        QueueRoundMvpSelection();
     }
 
     return (redMvp > 0 || blueMvp > 0);
 }
 
-public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+public void Event_RoundWin(Event event, const char[] name, bool dontBroadcast)
 {
+    SelectRoundMvpsNow(true);
     SnapshotCurrentRoundMvpStateToLastRound();
-    ClearCurrentRoundMvpState();
-    g_hRoundMvpTimer = null;
-
-    QueueRoundMvpSelection();
-}
-
-public Action Timer_SetRoundMvps(Handle timer, any data)
-{
-    if (timer != INVALID_HANDLE && timer != g_hRoundMvpTimer)
-    {
-        return Plugin_Stop;
-    }
-
-    g_hRoundMvpTimer = null;
-    SelectRoundMvpsNow();
-    return Plugin_Stop;
 }
 
 public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
@@ -511,12 +479,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
     }
 
     int oldTeam = event.GetInt("oldteam");
-    int newTeam = event.GetInt("team");
-    bool cleared = InvalidateClientRoundMvp(client, oldTeam);
-    if (cleared || oldTeam != newTeam)
-    {
-        QueueRoundMvpSelection();
-    }
+    InvalidateClientRoundMvp(client, oldTeam);
 }
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)

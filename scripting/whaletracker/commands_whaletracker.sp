@@ -320,16 +320,6 @@ public Action Command_ShowMvps(int client, int args)
     int currentRed = FindConnectedClientBySteamId(g_sRoundMvpSteamId[2]);
     int currentBlue = FindConnectedClientBySteamId(g_sRoundMvpSteamId[3]);
 
-    bool missingCurrentMvp = (g_sRoundMvpSteamId[2][0] == '\0' || g_sRoundMvpSteamId[3][0] == '\0');
-
-    if (missingCurrentMvp)
-    {
-        SelectRoundMvpsNow();
-
-        currentRed = FindConnectedClientBySteamId(g_sRoundMvpSteamId[2]);
-        currentBlue = FindConnectedClientBySteamId(g_sRoundMvpSteamId[3]);
-    }
-
     char currentRedName[256];
     char currentBlueName[256];
     bool hasCurrentRed = (currentRed > 0) || GetSteamIdRecordedName(g_sRoundMvpSteamId[2], currentRedName, sizeof(currentRedName));
