@@ -184,11 +184,6 @@ public void OnPluginStart()
 
     EnsureMatchStorage();
 
-    if (g_hGameModeCvar == null)
-    {
-        g_hGameModeCvar = FindConVar("sm_gamemode");
-    }
-
     if (GetClientCount(true) > 0 && !g_sCurrentLogId[0])
     {
         BeginMatchTracking();

@@ -1069,6 +1069,39 @@ void NormalizeGamemodeForMap(const char[] mapName, char[] gamemode, int gamemode
     }
 }
 
+bool WhaleTracker_GetDgmGameMode(char[] gamemode, int gamemodeLen)
+{
+    if (gamemodeLen <= 0)
+    {
+        return false;
+    }
+
+    gamemode[0] = '\0';
+    if (GetFeatureStatus(FeatureType_Native, "DGM_GetGameMode") != FeatureStatus_Available)
+    {
+        strcopy(gamemode, gamemodeLen, "Unknown");
+        return false;
+    }
+
+    if (!DGM_GetGameMode(gamemode, gamemodeLen) || !gamemode[0])
+    {
+        strcopy(gamemode, gamemodeLen, "Unknown");
+        return false;
+    }
+
+    return true;
+}
+
+bool WhaleTracker_ServerCapacityCheck(float capacityRatio = 0.50)
+{
+    if (GetFeatureStatus(FeatureType_Native, "ServerCapacityCheck") != FeatureStatus_Available)
+    {
+        return false;
+    }
+
+    return ServerCapacityCheck(capacityRatio);
+}
+
 void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool forceSync)
 {
     if (!WhaleTracker_ShouldUseMatchLogs())
@@ -1088,18 +1121,7 @@ void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool 
     EscapeSqlString(mapName, escapedMap, sizeof(escapedMap));
 
     char gamemode[64] = "Unknown";
-    if (g_hGameModeCvar == null)
-    {
-        g_hGameModeCvar = FindConVar("sm_gamemode");
-    }
-    if (g_hGameModeCvar != null)
-    {
-        g_hGameModeCvar.GetString(gamemode, sizeof(gamemode));
-        if (!gamemode[0])
-        {
-            strcopy(gamemode, sizeof(gamemode), "Unknown");
-        }
-    }
+    WhaleTracker_GetDgmGameMode(gamemode, sizeof(gamemode));
     NormalizeGamemodeForMap(mapName, gamemode, sizeof(gamemode));
 
     char escapedMode[64];
@@ -1797,18 +1819,7 @@ bool ShouldSuppressDeathIncrementForCurrentGamemode()
 {
     char gamemode[64];
 
-    if (g_hGameModeCvar == null)
-    {
-        g_hGameModeCvar = FindConVar("sm_gamemode");
-    }
-
-    if (g_hGameModeCvar == null)
-    {
-        return false;
-    }
-
-    g_hGameModeCvar.GetString(gamemode, sizeof(gamemode));
-    if (!gamemode[0])
+    if (!WhaleTracker_GetDgmGameMode(gamemode, sizeof(gamemode)) || !gamemode[0])
     {
         return false;
     }

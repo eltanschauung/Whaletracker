@@ -50,6 +50,8 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("Filters_GetChatName");
     MarkNativeAsOptional("Filters_GetSteamIdColorTag");
     MarkNativeAsOptional("SaySounds_PlayCommand");
+    MarkNativeAsOptional("DGM_GetGameMode");
+    MarkNativeAsOptional("ServerCapacityCheck");
     RegPluginLibrary("whaletracker");
     CreateNative("WhaleTracker_GetCumulativeKills", Native_WhaleTracker_GetCumulativeKills);
     CreateNative("WhaleTracker_AreStatsLoaded", Native_WhaleTracker_AreStatsLoaded);
@@ -230,7 +232,6 @@ int g_iHostPort = 0;
 int g_iMatchStartTime = 0;
 bool g_bMatchFinalized = false;
 
-ConVar g_hGameModeCvar = null;
 ConVar g_hHostIpCvar = null;
 ConVar g_hHostPortCvar = null;
 ConVar g_hServerFlags = null;
@@ -257,7 +258,7 @@ char g_SaveQueryBuffers[MAX_CONCURRENT_SAVE_QUERIES][SAVE_QUERY_MAXLEN];
 int g_SaveQueryUserIds[MAX_CONCURRENT_SAVE_QUERIES];
 bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 
-#include "include/dgm.inc"
+#include "include/dgm_api.inc"
 #include "include/whaletracker.inc"
 #include "whaletracker/motd_whaletracker.sp"
 #undef REQUIRE_EXTENSIONS
