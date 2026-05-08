@@ -881,12 +881,26 @@ void AnnounceKillstreakMilestone(const char[] clientName, int killstreak, bool p
         strcopy(commandName, sizeof(commandName), "killingspree");
     }
 
-    PrintCenterTextAll("%s is %s! (%d)", clientName, label, killstreak);
-
     if (playSound && LibraryExists("saysounds"))
     {
-        SaySounds_PlayCommand(0, commandName, false);
+        for (int i = 1; i <= MaxClients; i++)
+        {
+            if (!IsValidClient(i) || IsFakeClient(i))
+            {
+                continue;
+            }
+
+            if (!SaySounds_PlayCommand(i, commandName, false))
+            {
+                continue;
+            }
+
+            PrintCenterText(i, "%s is %s! (%d)", clientName, label, killstreak);
+        }
+        return;
     }
+
+    PrintCenterTextAll("%s is %s! (%d)", clientName, label, killstreak);
 }
 
 bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
