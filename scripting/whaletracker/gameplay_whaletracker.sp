@@ -662,7 +662,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
         if (victimMedicDrop)
         {
-            AnnounceMedicDrop(victim);
+            AnnounceMedicDrop(attacker, victim);
         }
     }
 }
@@ -819,29 +819,62 @@ bool IsMedicDrop(int victim)
     return (GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") >= 1.0);
 }
 
-void AnnounceMedicDrop(int medic)
+void AnnounceMedicDrop(int attacker, int medic)
 {
     if (!IsValidClient(medic) || IsFakeClient(medic))
         return;
 
-    char colorTag[32];
-    GetClientFiltersNameColorTag(medic, colorTag, sizeof(colorTag));
-    TrimString(colorTag);
+    char medicName[256];
+    BuildMedicDropDisplayName(medic, medicName, sizeof(medicName));
 
-    if (colorTag[0] == '\0')
+    if (!IsValidClient(attacker) || IsFakeClient(attacker) || attacker == medic)
     {
-        strcopy(colorTag, sizeof(colorTag), "teamcolor");
-    }
-
-    if (StrEqual(colorTag, "teamcolor", false) || StrEqual(colorTag, "{teamcolor}", false))
-    {
-        CPrintToChatAllEx(medic, "{teamcolor}%N{default} dropped!", medic);
+        CPrintToChatAll("%s dropped!", medicName);
         PlayMedicDropSound();
         return;
     }
 
-    CPrintToChatAllEx(medic, "{%s}%N{default} dropped!", colorTag, medic);
+    char attackerName[256];
+    BuildMedicDropDisplayName(attacker, attackerName, sizeof(attackerName));
+
+    CPrintToChatAll("%s dropped %s!", attackerName, medicName);
     PlayMedicDropSound();
+}
+
+void BuildMedicDropDisplayName(int client, char[] buffer, int maxlen)
+{
+    buffer[0] = '\0';
+
+    char colorTag[32];
+    GetClientFiltersNameColorTag(client, colorTag, sizeof(colorTag));
+    TrimString(colorTag);
+
+    if (colorTag[0] == '\0')
+    {
+        strcopy(colorTag, sizeof(colorTag), "gold");
+    }
+    else if (StrEqual(colorTag, "teamcolor", false) || StrEqual(colorTag, "{teamcolor}", false))
+    {
+        BuildMedicDropTeamColorTag(client, colorTag, sizeof(colorTag));
+    }
+
+    if (colorTag[0] == '{')
+    {
+        Format(buffer, maxlen, "%s%N{default}", colorTag, client);
+        return;
+    }
+
+    Format(buffer, maxlen, "{%s}%N{default}", colorTag, client);
+}
+
+void BuildMedicDropTeamColorTag(int client, char[] colorTag, int maxlen)
+{
+    switch (GetClientTeam(client))
+    {
+        case 2: strcopy(colorTag, maxlen, "{red}");
+        case 3: strcopy(colorTag, maxlen, "{blue}");
+        default: strcopy(colorTag, maxlen, "{default}");
+    }
 }
 
 void PlayMedicDropSound()
