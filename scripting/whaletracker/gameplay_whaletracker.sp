@@ -717,7 +717,6 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
         if (IsSupstatsAirshot(attacker, victim, weapon, wasDirectHit))
         {
             g_Stats[attacker].totalAirshots += 1;
-            ApplyBonusPoints(attacker, 1, true, true, 1.0, "airshot");
             if (g_hAirshotForward != null)
             {
                 Call_StartForward(g_hAirshotForward);
