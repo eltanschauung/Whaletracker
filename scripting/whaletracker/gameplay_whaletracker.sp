@@ -836,10 +836,20 @@ void AnnounceMedicDrop(int medic)
     if (StrEqual(colorTag, "teamcolor", false) || StrEqual(colorTag, "{teamcolor}", false))
     {
         CPrintToChatAllEx(medic, "{teamcolor}%N{default} dropped!", medic);
+        PlayMedicDropSound();
         return;
     }
 
     CPrintToChatAllEx(medic, "{%s}%N{default} dropped!", colorTag, medic);
+    PlayMedicDropSound();
+}
+
+void PlayMedicDropSound()
+{
+    if (!LibraryExists("saysounds"))
+        return;
+
+    SaySounds_PlayCommand(0, "holyshit", false);
 }
 
 void AnnounceKillstreakMilestone(const char[] clientName, int killstreak, bool playSound = true)
