@@ -562,7 +562,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
                 ApplyBonusPoints(attacker, 1, true, true, 1.0, "killstreak", killstreak, 3.0);
                 char attackerName[MAX_NAME_LENGTH];
                 GetClientName(attacker, attackerName, sizeof(attackerName));
-                AnnounceKillstreakMilestone(attackerName, killstreak);
+                AnnounceKillstreakMilestone(attacker, attackerName, killstreak);
             }
             if (IsClientCurrentRoundMvp(victim))
             {
@@ -847,7 +847,7 @@ void PlayMedicDropSound()
     SaySounds_PlayCommand(0, "holyshit", false);
 }
 
-void AnnounceKillstreakMilestone(const char[] clientName, int killstreak, bool playSound = true)
+void AnnounceKillstreakMilestone(int client, const char[] clientName, int killstreak, bool playSound = true)
 {
     if (killstreak < WHALE_KILLSTREAK_BONUS_INTERVAL || killstreak % WHALE_KILLSTREAK_BONUS_INTERVAL != 0)
         return;
@@ -884,6 +884,25 @@ void AnnounceKillstreakMilestone(const char[] clientName, int killstreak, bool p
     {
         strcopy(label, sizeof(label), "on a killing spree");
         strcopy(commandName, sizeof(commandName), "killingspree");
+    }
+
+    if (killstreak == WHALE_KILLSTREAK_BONUS_INTERVAL && WhaleTracker_ServerHalfCapacity())
+    {
+        if (!IsValidClient(client) || IsFakeClient(client))
+        {
+            return;
+        }
+
+        if (playSound && LibraryExists("saysounds"))
+        {
+            if (!SaySounds_PlayCommand(client, commandName, false))
+            {
+                return;
+            }
+        }
+
+        PrintCenterText(client, "%s is %s! (%d)", clientName, label, killstreak);
+        return;
     }
 
     if (playSound && LibraryExists("saysounds"))
