@@ -110,32 +110,6 @@ bool WhaleTracker_IsRoundRunning()
     return (GameRules_GetRoundState() == RoundState_RoundRunning);
 }
 
-stock bool WhaleTracker_ServerHalfCapacity()
-{
-    int capacity = 0;
-    if (g_hVisibleMaxPlayers == null)
-    {
-        g_hVisibleMaxPlayers = FindConVar("sv_visiblemaxplayers");
-    }
-
-    if (g_hVisibleMaxPlayers != null)
-    {
-        capacity = g_hVisibleMaxPlayers.IntValue;
-    }
-
-    if (capacity <= 0)
-    {
-        capacity = MaxClients;
-    }
-
-    if (capacity <= 0)
-    {
-        return false;
-    }
-
-    return (GetClientCount(false) * 2 >= capacity);
-}
-
 bool WhaleTracker_HasHumanClientsExcept(int excludedClient)
 {
     for (int i = 1; i <= MaxClients; i++)

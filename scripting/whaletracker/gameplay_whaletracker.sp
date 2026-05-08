@@ -886,7 +886,7 @@ void AnnounceKillstreakMilestone(int client, const char[] clientName, int killst
         strcopy(commandName, sizeof(commandName), "killingspree");
     }
 
-    if (killstreak == WHALE_KILLSTREAK_BONUS_INTERVAL && WhaleTracker_ServerHalfCapacity())
+    if (killstreak == WHALE_KILLSTREAK_BONUS_INTERVAL && ServerCapacityCheck())
     {
         if (!IsValidClient(client) || IsFakeClient(client))
         {

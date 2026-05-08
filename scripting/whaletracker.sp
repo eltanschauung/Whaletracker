@@ -257,6 +257,7 @@ char g_SaveQueryBuffers[MAX_CONCURRENT_SAVE_QUERIES][SAVE_QUERY_MAXLEN];
 int g_SaveQueryUserIds[MAX_CONCURRENT_SAVE_QUERIES];
 bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 
+#include "include/dgm.inc"
 #include "include/whaletracker.inc"
 #include "whaletracker/motd_whaletracker.sp"
 #undef REQUIRE_EXTENSIONS
