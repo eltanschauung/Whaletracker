@@ -844,7 +844,7 @@ void PlayMedicDropSound()
     if (!LibraryExists("saysounds"))
         return;
 
-    SaySounds_PlayCommand(0, "holyshit", false);
+    SaySounds_PlayCommand(0, "humiliation", false);
 }
 
 void AnnounceKillstreakMilestone(int client, const char[] clientName, int killstreak, bool playSound = true)
