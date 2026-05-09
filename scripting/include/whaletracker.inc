@@ -248,17 +248,8 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
 
     int now = GetTime();
     float engineNow = GetEngineTime();
-    int playerCount = GetClientCount(false);
-
-    int visibleMax = GetMaxHumanPlayers();
-    if (g_hVisibleMaxPlayers != null)
-    {
-        int conVarValue = GetConVarInt(g_hVisibleMaxPlayers);
-        if (conVarValue > 0 && visibleMax > conVarValue)
-        {
-            visibleMax = conVarValue;
-        }
-    }
+    int playerCount = WhaleTracker_GetCurrentPlayerCount();
+    int visibleMax = WhaleTracker_GetCurrentServerCapacity();
 
     char query[SAVE_QUERY_MAXLEN];
     char escapedMapName[256];
@@ -811,6 +802,13 @@ void RefreshCurrentOnlineMapName()
 {
     char rawName[128];
     g_sOnlineMapName[0] = '\0';
+    if (GetFeatureStatus(FeatureType_Native, "DGM_CurrentNormalizedMap") == FeatureStatus_Available
+        && DGM_CurrentNormalizedMap(rawName, sizeof(rawName)))
+    {
+        strcopy(g_sOnlineMapName, sizeof(g_sOnlineMapName), rawName);
+        return;
+    }
+
     GetCurrentMap(rawName, sizeof(rawName));
     if (!rawName[0])
     {
@@ -1054,6 +1052,23 @@ void NormalizeGamemodeForMap(const char[] mapName, char[] gamemode, int gamemode
         return;
     }
 
+    char gamemodeKey[32];
+    if (GetFeatureStatus(FeatureType_Native, "DGM_GetGameModeKeyForMap") == FeatureStatus_Available
+        && DGM_GetGameModeKeyForMap(mapName, gamemodeKey, sizeof(gamemodeKey)))
+    {
+        if (StrEqual(gamemodeKey, "ctf", false))
+        {
+            strcopy(gamemode, gamemodeLen, "Capture The Flag");
+            return;
+        }
+
+        if (StrEqual(gamemodeKey, "cp", false))
+        {
+            strcopy(gamemode, gamemodeLen, "Control Point");
+            return;
+        }
+    }
+
     if (StrContains(mapName, "ctf_", false) == 0)
     {
         strcopy(gamemode, gamemodeLen, "Capture The Flag");
@@ -1088,6 +1103,40 @@ bool WhaleTracker_GetDgmGameMode(char[] gamemode, int gamemodeLen)
     }
 
     return true;
+}
+
+int WhaleTracker_GetCurrentPlayerCount()
+{
+    if (GetFeatureStatus(FeatureType_Native, "DGM_RealPlayerCount") == FeatureStatus_Available)
+    {
+        return DGM_RealPlayerCount();
+    }
+
+    return GetClientCount(false);
+}
+
+int WhaleTracker_GetCurrentServerCapacity()
+{
+    if (GetFeatureStatus(FeatureType_Native, "DGM_GetServerCapacity") == FeatureStatus_Available)
+    {
+        int capacity = DGM_GetServerCapacity();
+        if (capacity > 0)
+        {
+            return capacity;
+        }
+    }
+
+    int visibleMax = GetMaxHumanPlayers();
+    if (g_hVisibleMaxPlayers != null)
+    {
+        int conVarValue = GetConVarInt(g_hVisibleMaxPlayers);
+        if (conVarValue > 0 && visibleMax > conVarValue)
+        {
+            visibleMax = conVarValue;
+        }
+    }
+
+    return visibleMax;
 }
 
 bool WhaleTracker_ServerCapacityCheck(float capacityRatio = 0.50)
