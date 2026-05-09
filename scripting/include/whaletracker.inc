@@ -1094,12 +1094,12 @@ bool WhaleTracker_GetDgmGameMode(char[] gamemode, int gamemodeLen)
 
 bool WhaleTracker_ServerCapacityCheck(float capacityRatio = 0.50)
 {
-    if (GetFeatureStatus(FeatureType_Native, "ServerCapacityCheck") != FeatureStatus_Available)
+    if (GetFeatureStatus(FeatureType_Native, "DGM_ServerCapacitycheck") != FeatureStatus_Available)
     {
         return false;
     }
 
-    return ServerCapacityCheck(capacityRatio);
+    return DGM_ServerCapacitycheck(capacityRatio);
 }
 
 void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool forceSync)
