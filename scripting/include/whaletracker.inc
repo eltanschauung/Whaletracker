@@ -1815,6 +1815,11 @@ void ApplyAssistStats(WhaleStats stats)
 
 bool ShouldSuppressDeathIncrementForCurrentGamemode()
 {
+    if (GetFeatureStatus(FeatureType_Native, "DGM_IsSmallFormatGamemode") == FeatureStatus_Available)
+    {
+        return DGM_IsSmallFormatGamemode();
+    }
+
     char gamemode[64];
 
     if (!WhaleTracker_GetDgmGameMode(gamemode, sizeof(gamemode)) || !gamemode[0])
