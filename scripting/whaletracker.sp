@@ -51,6 +51,7 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("Filters_GetSteamIdColorTag");
     MarkNativeAsOptional("SaySounds_PlayCommand");
     MarkNativeAsOptional("DGM_GetGameMode");
+    MarkNativeAsOptional("DGM_NormalizeMapName");
     MarkNativeAsOptional("DGM_ServerCapacitycheck");
     RegPluginLibrary("whaletracker");
     CreateNative("WhaleTracker_GetCumulativeKills", Native_WhaleTracker_GetCumulativeKills);

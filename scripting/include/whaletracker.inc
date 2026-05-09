@@ -818,11 +818,9 @@ void RefreshCurrentOnlineMapName()
         return;
     }
 
-    ReplaceStringEx(rawName, sizeof(rawName), "workshop/", "");
-    int dotIndex = FindCharInString(rawName, '.');
-    if (dotIndex > 0 && dotIndex < sizeof(rawName))
+    if (GetFeatureStatus(FeatureType_Native, "DGM_NormalizeMapName") == FeatureStatus_Available)
     {
-        rawName[dotIndex] = '\0';
+        DGM_NormalizeMapName(rawName, rawName, sizeof(rawName));
     }
     strcopy(g_sOnlineMapName, sizeof(g_sOnlineMapName), rawName[0] ? rawName : "unknown");
 }
