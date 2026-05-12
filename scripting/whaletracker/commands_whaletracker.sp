@@ -425,6 +425,15 @@ public Action Command_ShowLastSeen(int client, int args)
     char timestamp[32];
     FormatTime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", lastSeen);
     CPrintToChat(client, "{green}[WhaleTracker]{default} %s{default} last seen: {gold}%s", matchedName, timestamp);
+
+    int firstSeen = GetFirstSeenForSteamId64(steamId);
+    if (firstSeen > 0)
+    {
+        char firstSeenDate[32];
+        FormatTime(firstSeenDate, sizeof(firstSeenDate), "%Y-%m-%d", firstSeen);
+        CPrintToChat(client, "{green}[WhaleTracker]{default} First seen: {gold}%s", firstSeenDate);
+    }
+
     return Plugin_Handled;
 }
 
@@ -1618,6 +1627,71 @@ int GetLastSeenForSteamId64(const char[] steamId)
 
     delete results;
     return lastSeen;
+}
+
+int GetFirstSeenForSteamId64(const char[] steamId)
+{
+    if (steamId[0] == '\0')
+    {
+        return 0;
+    }
+
+    for (int i = 1; i <= MaxClients; i++)
+    {
+        if (!IsClientConnected(i) || IsFakeClient(i))
+        {
+            continue;
+        }
+
+        char clientSteamId[STEAMID64_LEN];
+        if (!GetClientAuthId(i, AuthId_SteamID64, clientSteamId, sizeof(clientSteamId)))
+        {
+            continue;
+        }
+
+        if (!StrEqual(clientSteamId, steamId, false))
+        {
+            continue;
+        }
+
+        if (g_Stats[i].firstSeenTimestamp > 0)
+        {
+            return g_Stats[i].firstSeenTimestamp;
+        }
+
+        break;
+    }
+
+    if (!g_bDatabaseReady || g_hDatabase == null)
+    {
+        return 0;
+    }
+
+    char escapedSteamId[STEAMID64_LEN * 2];
+    EscapeSqlString(steamId, escapedSteamId, sizeof(escapedSteamId));
+
+    char query[256];
+    Format(query, sizeof(query),
+        "SELECT COALESCE(first_seen, 0) FROM whaletracker WHERE steamid = '%s' LIMIT 1",
+        escapedSteamId);
+
+    DBResultSet results = SQLQuerySync(query);
+    if (results == null)
+    {
+        char error[256];
+        GetSyncDatabaseError(error, sizeof(error));
+        LogError("[WhaleTracker] FirstSeen query failed: %s", error);
+        return 0;
+    }
+
+    int firstSeen = 0;
+    if (results.FetchRow())
+    {
+        firstSeen = results.FetchInt(0);
+    }
+
+    delete results;
+    return firstSeen;
 }
 
 public any Native_WhaleTracker_GetLastRecordedName(Handle plugin, int numParams)
