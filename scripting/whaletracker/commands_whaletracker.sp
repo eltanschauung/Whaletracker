@@ -1519,6 +1519,25 @@ public any Native_WhaleTracker_AreStatsLoaded(Handle plugin, int numParams)
     return WhaleTracker_AreClientStatsReady(client);
 }
 
+public any Native_WhaleTracker_HasPlaytimeHours(Handle plugin, int numParams)
+{
+    int client = GetNativeCell(1);
+    int hours = GetNativeCell(2);
+
+    if (!WhaleTracker_AreClientStatsReady(client) || hours < 0)
+    {
+        return false;
+    }
+
+    if (hours > 596523)
+    {
+        return false;
+    }
+
+    int requiredSeconds = hours * 3600;
+    return g_Stats[client].playtime >= requiredSeconds;
+}
+
 public any Native_WhaleTracker_GetWhalePoints(Handle plugin, int numParams)
 {
     int client = GetNativeCell(1);

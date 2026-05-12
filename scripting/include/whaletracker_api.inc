@@ -22,6 +22,15 @@ native int WhaleTracker_GetCumulativeKills(int client);
 native bool WhaleTracker_AreStatsLoaded(int client);
 
 /**
+ * Returns whether a client's loaded cumulative playtime meets an hour threshold.
+ *
+ * @param client        Client index.
+ * @param hours         Required cumulative playtime in whole hours.
+ * @return              True if loaded playtime is at least hours.
+ */
+native bool WhaleTracker_HasPlaytimeHours(int client, int hours);
+
+/**
  * Returns a client's current Whale Points total.
  *
  * @param client        Client index.
