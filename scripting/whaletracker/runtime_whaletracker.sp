@@ -204,6 +204,7 @@ public void OnPluginStart()
     g_hPeriodicSaveTimer = CreateTimer(30.0, Timer_GlobalSave, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 
     g_hAirshotForward = CreateGlobalForward("WhaleTracker_OnAirshot", ET_Ignore, Param_Cell, Param_Cell);
+    g_hKillstreakForward = CreateGlobalForward("WhaleTracker_OnKillstreak", ET_Ignore, Param_Cell, Param_Cell);
 
     for (int i = 1; i <= MaxClients; i++)
     {
@@ -354,6 +355,12 @@ public void OnPluginEnd()
     {
         delete g_hAirshotForward;
         g_hAirshotForward = null;
+    }
+
+    if (g_hKillstreakForward != null)
+    {
+        delete g_hKillstreakForward;
+        g_hKillstreakForward = null;
     }
 
     if (g_SaveQueue != null)

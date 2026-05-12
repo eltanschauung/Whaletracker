@@ -252,6 +252,7 @@ Handle g_hReconnectTimer = null;
 Handle g_hSchemaRetryTimer = null;
 Handle g_hSavePumpTimer = null;
 Handle g_hAirshotForward = null;
+Handle g_hKillstreakForward = null;
 
 char g_sRoundMvpSteamId[4][STEAMID64_LEN];
 char g_sLastRoundMvpSteamId[4][STEAMID64_LEN];

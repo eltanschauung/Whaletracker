@@ -1139,16 +1139,6 @@ int WhaleTracker_GetCurrentServerCapacity()
     return visibleMax;
 }
 
-bool WhaleTracker_ServerCapacityCheck(float capacityRatio = 0.50)
-{
-    if (GetFeatureStatus(FeatureType_Native, "DGM_ServerCapacitycheck") != FeatureStatus_Available)
-    {
-        return false;
-    }
-
-    return DGM_ServerCapacitycheck(capacityRatio);
-}
-
 void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool forceSync)
 {
     if (!WhaleTracker_ShouldUseMatchLogs())

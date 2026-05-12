@@ -127,3 +127,13 @@ native int WhaleTracker_GetLastSeen(const char[] steamId64);
  * @param victim        Victim client index.
  */
 forward void WhaleTracker_OnAirshot(int attacker, int victim);
+
+/**
+ * Fired when WhaleTracker records a killstreak milestone.
+ *
+ * Milestones fire in increments of 5: 5, 10, 15, and so on.
+ *
+ * @param client        Client index.
+ * @param killstreak    Current killstreak value.
+ */
+forward void WhaleTracker_OnKillstreak(int client, int killstreak);

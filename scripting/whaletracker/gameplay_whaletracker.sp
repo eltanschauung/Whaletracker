@@ -560,9 +560,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             if (killstreak > 0 && killstreak % WHALE_KILLSTREAK_BONUS_INTERVAL == 0)
             {
                 ApplyBonusPoints(attacker, 1, true, true, 1.0, "killstreak", killstreak, 3.0);
-                char attackerName[MAX_NAME_LENGTH];
-                GetClientName(attacker, attackerName, sizeof(attackerName));
-                AnnounceKillstreakMilestone(attacker, attackerName, killstreak);
+                FireKillstreakForward(attacker, killstreak);
             }
             if (IsClientCurrentRoundMvp(victim))
             {
@@ -847,84 +845,18 @@ void PlayMedicDropSound()
     SaySounds_PlayCommand(0, "humiliation", false);
 }
 
-void AnnounceKillstreakMilestone(int client, const char[] clientName, int killstreak, bool playSound = true)
+void FireKillstreakForward(int client, int killstreak)
 {
-    if (killstreak < WHALE_KILLSTREAK_BONUS_INTERVAL || killstreak % WHALE_KILLSTREAK_BONUS_INTERVAL != 0)
-        return;
-
-    char label[32];
-    char commandName[32];
-
-    if (killstreak >= 30)
+    if (g_hKillstreakForward == null)
     {
-        strcopy(label, sizeof(label), "GODLIKE");
-        strcopy(commandName, sizeof(commandName), "holyshit");
-    }
-    else if (killstreak >= 25)
-    {
-        strcopy(label, sizeof(label), "godlike");
-        strcopy(commandName, sizeof(commandName), "godlike");
-    }
-    else if (killstreak >= 20)
-    {
-        strcopy(label, sizeof(label), "unstoppable");
-        strcopy(commandName, sizeof(commandName), "unstoppable");
-    }
-    else if (killstreak >= 15)
-    {
-        strcopy(label, sizeof(label), "dominating");
-        strcopy(commandName, sizeof(commandName), "dominating");
-    }
-    else if (killstreak >= 10)
-    {
-        strcopy(label, sizeof(label), "on a rampage");
-        strcopy(commandName, sizeof(commandName), "rampage");
-    }
-    else
-    {
-        strcopy(label, sizeof(label), "on a killing spree");
-        strcopy(commandName, sizeof(commandName), "killingspree");
-    }
-
-    if (killstreak == WHALE_KILLSTREAK_BONUS_INTERVAL && WhaleTracker_ServerCapacityCheck())
-    {
-        if (!IsValidClient(client) || IsFakeClient(client))
-        {
-            return;
-        }
-
-        if (playSound && LibraryExists("saysounds"))
-        {
-            if (!SaySounds_PlayCommand(client, commandName, false))
-            {
-                return;
-            }
-        }
-
-        PrintCenterText(client, "%s is %s! (%d)", clientName, label, killstreak);
         return;
     }
 
-    if (playSound && LibraryExists("saysounds"))
-    {
-        for (int i = 1; i <= MaxClients; i++)
-        {
-            if (!IsValidClient(i) || IsFakeClient(i))
-            {
-                continue;
-            }
-
-            if (!SaySounds_PlayCommand(i, commandName, false))
-            {
-                continue;
-            }
-
-            PrintCenterText(i, "%s is %s! (%d)", clientName, label, killstreak);
-        }
-        return;
-    }
-
-    PrintCenterTextAll("%s is %s! (%d)", clientName, label, killstreak);
+    Call_StartForward(g_hKillstreakForward);
+    Call_PushCell(client);
+    Call_PushCell(killstreak);
+    int _ret;
+    Call_Finish(_ret);
 }
 
 bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
