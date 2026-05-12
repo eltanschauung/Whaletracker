@@ -138,6 +138,14 @@ public void OnPluginStart()
         true,
         1.0
     );
+    g_hMultikillWindow = CreateConVar(
+        "sm_multikill_window",
+        "3.0",
+        "Seconds allowed for double/triple/quadra/penta kill tracking.",
+        FCVAR_NOTIFY,
+        true,
+        0.1
+    );
 
     if (g_hVisibleMaxPlayers == null)
     {
@@ -153,6 +161,7 @@ public void OnPluginStart()
     HookEvent("rocket_jump_landed", Event_ExplosiveJumpLanded, EventHookMode_Pre);
     HookEvent("sticky_jump_landed", Event_ExplosiveJumpLanded, EventHookMode_Pre);
     HookEvent("teamplay_round_win", Event_RoundWin, EventHookMode_PostNoCopy);
+    HookEvent("teamplay_round_start", Event_ResetMultikillAll, EventHookMode_PostNoCopy);
     HookEvent("player_team", Event_PlayerTeam, EventHookMode_Post);
 
     RegConsoleCmd("sm_whalestats", Command_ShowStats, "Show your Whale Tracker statistics.");
@@ -205,6 +214,7 @@ public void OnPluginStart()
 
     g_hAirshotForward = CreateGlobalForward("WhaleTracker_OnAirshot", ET_Ignore, Param_Cell, Param_Cell);
     g_hKillstreakForward = CreateGlobalForward("WhaleTracker_OnKillstreak", ET_Ignore, Param_Cell, Param_Cell);
+    g_hMultikillForward = CreateGlobalForward("WhaleTracker_OnMultikill", ET_Ignore, Param_Cell, Param_Cell);
 
     for (int i = 1; i <= MaxClients; i++)
     {
@@ -237,6 +247,7 @@ public void OnMapStart()
     ClearOnlineStats();
     ClearCurrentRoundMvpState();
     ClearLastRoundMvpState();
+    ResetMultikillAll();
     if (g_MapMvpHistory != null)
     {
         g_MapMvpHistory.Clear();
@@ -363,6 +374,12 @@ public void OnPluginEnd()
         g_hKillstreakForward = null;
     }
 
+    if (g_hMultikillForward != null)
+    {
+        delete g_hMultikillForward;
+        g_hMultikillForward = null;
+    }
+
     if (g_SaveQueue != null)
     {
         delete g_SaveQueue;
@@ -467,6 +484,8 @@ public void OnClientCookiesCached(int client)
 
 public void OnClientDisconnect(int client)
 {
+    ResetMultikillClient(client);
+
     if (IsFakeClient(client))
     {
         SDKUnhook(client, SDKHook_OnTakeDamage, OnTakeDamage);

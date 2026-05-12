@@ -137,3 +137,13 @@ forward void WhaleTracker_OnAirshot(int attacker, int victim);
  * @param killstreak    Current killstreak value.
  */
 forward void WhaleTracker_OnKillstreak(int client, int killstreak);
+
+/**
+ * Fired when WhaleTracker records a multikill milestone.
+ *
+ * Multikills fire for 2, 3, 4, and 5 kills within the configured window.
+ *
+ * @param client        Client index.
+ * @param kills         Number of kills in the current multikill chain.
+ */
+forward void WhaleTracker_OnMultikill(int client, int kills);

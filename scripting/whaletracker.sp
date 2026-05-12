@@ -25,6 +25,7 @@
 #define WHALE_RANK_MIN_KD_SUM 200
 #define WHALE_RANK_MIN_PLAYTIME_SECONDS 10800
 #define WHALE_KILLSTREAK_BONUS_INTERVAL 5
+#define WHALE_MULTIKILL_MAX_LEVEL 5
 #define WT_BONUS_POINTS_SOUND "xp_gain"
 #define WHALE_LEADERBOARD_PAGE_SIZE 10
 #define WT_MARKET_GARDENER_DEF_INDEX 416
@@ -242,6 +243,7 @@ bool g_bMatchFinalized = false;
 ConVar g_hHostIpCvar = null;
 ConVar g_hHostPortCvar = null;
 ConVar g_hServerFlags = null;
+ConVar g_hMultikillWindow = null;
 
 char g_sDatabaseConfig[64];
 ArrayList g_SaveQueue = null;
@@ -253,6 +255,7 @@ Handle g_hSchemaRetryTimer = null;
 Handle g_hSavePumpTimer = null;
 Handle g_hAirshotForward = null;
 Handle g_hKillstreakForward = null;
+Handle g_hMultikillForward = null;
 
 char g_sRoundMvpSteamId[4][STEAMID64_LEN];
 char g_sLastRoundMvpSteamId[4][STEAMID64_LEN];
@@ -261,6 +264,8 @@ StringMap g_MapMvpHistory = null;
 bool g_bFavoriteClassLoaded[MAXPLAYERS + 1];
 bool g_bFavoriteClassPending[MAXPLAYERS + 1];
 int g_iFavoriteClassCache[MAXPLAYERS + 1];
+float g_fMultikillTimes[MAXPLAYERS + 1][WHALE_MULTIKILL_MAX_LEVEL];
+int g_iLastMultikillAnnounced[MAXPLAYERS + 1];
 
 char g_SaveQueryBuffers[MAX_CONCURRENT_SAVE_QUERIES][SAVE_QUERY_MAXLEN];
 int g_SaveQueryUserIds[MAX_CONCURRENT_SAVE_QUERIES];

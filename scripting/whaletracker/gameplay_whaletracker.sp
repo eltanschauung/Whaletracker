@@ -556,6 +556,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
             ApplyKillStats(g_Stats[attacker], backstab, medicDrop);
             ApplyKillStats(g_MapStats[attacker], backstab, medicDrop);
+            RegisterMultikill(attacker);
             int killstreak = g_Stats[attacker].currentKillstreak;
             if (killstreak > 0 && killstreak % WHALE_KILLSTREAK_BONUS_INTERVAL == 0)
             {
@@ -857,6 +858,97 @@ void FireKillstreakForward(int client, int killstreak)
     Call_PushCell(killstreak);
     int _ret;
     Call_Finish(_ret);
+}
+
+void RegisterMultikill(int client)
+{
+    float now = GetGameTime();
+    float window = 3.0;
+    if (g_hMultikillWindow != null)
+    {
+        window = g_hMultikillWindow.FloatValue;
+    }
+
+    for (int i = 0; i < WHALE_MULTIKILL_MAX_LEVEL - 1; i++)
+    {
+        g_fMultikillTimes[client][i] = g_fMultikillTimes[client][i + 1];
+    }
+
+    g_fMultikillTimes[client][WHALE_MULTIKILL_MAX_LEVEL - 1] = now;
+
+    int killsInWindow = CountMultikillsInWindow(client, now, window);
+    if (killsInWindow <= 1)
+    {
+        g_iLastMultikillAnnounced[client] = 1;
+        return;
+    }
+
+    if (killsInWindow > WHALE_MULTIKILL_MAX_LEVEL)
+    {
+        killsInWindow = WHALE_MULTIKILL_MAX_LEVEL;
+    }
+
+    if (killsInWindow > g_iLastMultikillAnnounced[client])
+    {
+        g_iLastMultikillAnnounced[client] = killsInWindow;
+        FireMultikillForward(client, killsInWindow);
+    }
+}
+
+int CountMultikillsInWindow(int client, float now, float window)
+{
+    int count = 0;
+    for (int i = 0; i < WHALE_MULTIKILL_MAX_LEVEL; i++)
+    {
+        float killTime = g_fMultikillTimes[client][i];
+        if (killTime > 0.0 && now - killTime <= window)
+        {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+void FireMultikillForward(int client, int kills)
+{
+    if (g_hMultikillForward == null)
+    {
+        return;
+    }
+
+    Call_StartForward(g_hMultikillForward);
+    Call_PushCell(client);
+    Call_PushCell(kills);
+    int _ret;
+    Call_Finish(_ret);
+}
+
+public void Event_ResetMultikillAll(Event event, const char[] name, bool dontBroadcast)
+{
+    ResetMultikillAll();
+}
+
+void ResetMultikillAll()
+{
+    for (int client = 1; client <= MaxClients; client++)
+    {
+        ResetMultikillClient(client);
+    }
+}
+
+void ResetMultikillClient(int client)
+{
+    if (client < 1 || client > MaxClients)
+    {
+        return;
+    }
+
+    g_iLastMultikillAnnounced[client] = 0;
+    for (int i = 0; i < WHALE_MULTIKILL_MAX_LEVEL; i++)
+    {
+        g_fMultikillTimes[client][i] = 0.0;
+    }
 }
 
 bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
