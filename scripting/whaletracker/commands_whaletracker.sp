@@ -997,27 +997,36 @@ bool FindSeenMatch(const char[] search, char[] steamId, int steamIdLen, char[] m
         return false;
     }
 
-    char escapedSearch[256];
-    EscapeSqlString(search, escapedSearch, sizeof(escapedSearch));
+    char loweredSearch[128];
+    CopyLowercase(search, loweredSearch, sizeof(loweredSearch));
 
-    char query[1536];
+    char escapedSearch[256];
+    EscapeSqlString(loweredSearch, escapedSearch, sizeof(escapedSearch));
+
+    char query[2048];
     Format(query, sizeof(query),
         "SELECT w.steamid, COALESCE(NULLIF(pc.prename, ''), NULLIF(pc.name, ''), NULLIF(w.cached_personaname, ''), NULLIF(w.personaname, ''), w.steamid) "
         ... "FROM whaletracker w "
         ... "LEFT JOIN whaletracker_points_cache pc ON pc.steamid = w.steamid "
-        ... "WHERE INSTR(COALESCE(w.cached_personaname_lower, ''), '%s') > 0 OR INSTR(w.steamid, '%s') > 0 "
+        ... "CROSS JOIN (SELECT '%s' AS term) q "
+        ... "WHERE INSTR(COALESCE(w.cached_personaname_lower, ''), q.term) > 0 "
+        ... "OR INSTR(LOWER(COALESCE(pc.prename, '')), q.term) > 0 "
+        ... "OR INSTR(LOWER(COALESCE(pc.name, '')), q.term) > 0 "
+        ... "OR INSTR(LOWER(COALESCE(w.personaname, '')), q.term) > 0 "
+        ... "OR INSTR(w.steamid, q.term) > 0 "
         ... "ORDER BY CASE "
-        ... "WHEN COALESCE(w.cached_personaname_lower, '') = '%s' THEN 0 "
-        ... "WHEN LEFT(COALESCE(w.cached_personaname_lower, ''), CHAR_LENGTH('%s')) = '%s' THEN 1 "
-        ... "WHEN w.steamid = '%s' THEN 0 "
+        ... "WHEN w.steamid = q.term THEN 0 "
+        ... "WHEN COALESCE(w.cached_personaname_lower, '') = q.term "
+        ... "OR LOWER(COALESCE(pc.prename, '')) = q.term "
+        ... "OR LOWER(COALESCE(pc.name, '')) = q.term "
+        ... "OR LOWER(COALESCE(w.personaname, '')) = q.term THEN 0 "
+        ... "WHEN LEFT(COALESCE(w.cached_personaname_lower, ''), CHAR_LENGTH(q.term)) = q.term "
+        ... "OR LEFT(LOWER(COALESCE(pc.prename, '')), CHAR_LENGTH(q.term)) = q.term "
+        ... "OR LEFT(LOWER(COALESCE(pc.name, '')), CHAR_LENGTH(q.term)) = q.term "
+        ... "OR LEFT(LOWER(COALESCE(w.personaname, '')), CHAR_LENGTH(q.term)) = q.term THEN 1 "
         ... "ELSE 2 END, "
         ... "COALESCE(w.last_seen, 0) DESC, w.steamid ASC "
         ... "LIMIT 1",
-        escapedSearch,
-        escapedSearch,
-        escapedSearch,
-        escapedSearch,
-        escapedSearch,
         escapedSearch);
 
     DBResultSet results = SQLQuerySync(query);
