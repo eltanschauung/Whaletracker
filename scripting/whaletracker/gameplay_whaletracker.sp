@@ -612,6 +612,12 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
         if (IsValidClient(victim) && WhaleTracker_IsTrackingEnabled(victim))
         {
+            int victimKillstreak = g_Stats[victim].currentKillstreak;
+            if (victimKillstreak >= WHALE_KILLSTREAK_BONUS_INTERVAL)
+            {
+                FireKillstreakEndForward(victim, victimKillstreak);
+            }
+
             if (attackerScoredMedicDrop)
             {
                 g_Stats[victim].totalUberDrops++;
@@ -854,6 +860,20 @@ void FireKillstreakForward(int client, int killstreak)
     }
 
     Call_StartForward(g_hKillstreakForward);
+    Call_PushCell(client);
+    Call_PushCell(killstreak);
+    int _ret;
+    Call_Finish(_ret);
+}
+
+void FireKillstreakEndForward(int client, int killstreak)
+{
+    if (g_hKillstreakEndForward == null)
+    {
+        return;
+    }
+
+    Call_StartForward(g_hKillstreakEndForward);
     Call_PushCell(client);
     Call_PushCell(killstreak);
     int _ret;

@@ -214,6 +214,7 @@ public void OnPluginStart()
 
     g_hAirshotForward = CreateGlobalForward("WhaleTracker_OnAirshot", ET_Ignore, Param_Cell, Param_Cell);
     g_hKillstreakForward = CreateGlobalForward("WhaleTracker_OnKillstreak", ET_Ignore, Param_Cell, Param_Cell);
+    g_hKillstreakEndForward = CreateGlobalForward("WhaleTracker_OnKillstreakEnd", ET_Ignore, Param_Cell, Param_Cell);
     g_hMultikillForward = CreateGlobalForward("WhaleTracker_OnMultikill", ET_Ignore, Param_Cell, Param_Cell);
 
     for (int i = 1; i <= MaxClients; i++)
@@ -372,6 +373,12 @@ public void OnPluginEnd()
     {
         delete g_hKillstreakForward;
         g_hKillstreakForward = null;
+    }
+
+    if (g_hKillstreakEndForward != null)
+    {
+        delete g_hKillstreakEndForward;
+        g_hKillstreakEndForward = null;
     }
 
     if (g_hMultikillForward != null)

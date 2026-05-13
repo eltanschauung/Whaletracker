@@ -139,6 +139,16 @@ forward void WhaleTracker_OnAirshot(int attacker, int victim);
 forward void WhaleTracker_OnKillstreak(int client, int killstreak);
 
 /**
+ * Fired when WhaleTracker records the end of a killstreak.
+ *
+ * This fires when a client with a killstreak of 5 or higher is killed.
+ *
+ * @param client        Client index whose killstreak ended.
+ * @param killstreak    Final killstreak value before it was reset.
+ */
+forward void WhaleTracker_OnKillstreakEnd(int client, int killstreak);
+
+/**
  * Fired when WhaleTracker records a multikill milestone.
  *
  * Multikills fire for 2, 3, 4, and 5 kills within the configured window.
