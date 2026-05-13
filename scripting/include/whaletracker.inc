@@ -1773,7 +1773,14 @@ bool ApplyBonusPoints(int client, int points = 1, bool playSound = true, bool ch
     pack.WriteCell(chatAlert ? 1 : 0);
     pack.WriteFloat(randomChance);
     pack.WriteString(type);
-    pack.WriteCell(IsValidClient(target) ? GetClientUserId(target) : 0);
+    if (StrEqual(type, "killstreak", false))
+    {
+        pack.WriteCell(target);
+    }
+    else
+    {
+        pack.WriteCell(IsValidClient(target) ? GetClientUserId(target) : 0);
+    }
 
     CreateTimer(delay, Timer_DeferredApplyBonusPoints, pack, TIMER_FLAG_NO_MAPCHANGE | TIMER_DATA_HNDL_CLOSE);
     return true;
@@ -1791,7 +1798,8 @@ public Action Timer_DeferredApplyBonusPoints(Handle timer, any data)
     float randomChance = pack.ReadFloat();
     char type[64];
     pack.ReadString(type, sizeof(type));
-    int target = GetClientOfUserId(pack.ReadCell());
+    int targetValue = pack.ReadCell();
+    int target = StrEqual(type, "killstreak", false) ? targetValue : GetClientOfUserId(targetValue);
 
     ApplyBonusPointsNow(client, points, playSound, chatAlert, randomChance, type, target);
     return Plugin_Stop;
