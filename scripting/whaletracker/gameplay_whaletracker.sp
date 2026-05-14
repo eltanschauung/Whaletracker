@@ -1,5 +1,9 @@
 bool g_bPlayerTakenDirectHit[MAXPLAYERS + 1];
 bool g_bInExplosiveJump[MAXPLAYERS + 1];
+int g_iPendingMarketGardenAttacker[MAXPLAYERS + 1];
+float g_fPendingMarketGardenTime[MAXPLAYERS + 1];
+
+#define WT_MARKET_GARDEN_KILL_WINDOW 0.25
 
 void ClearRoundMvpIdentity()
 {
@@ -490,6 +494,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
     g_bPlayerTakenDirectHit[client] = false;
     g_bInExplosiveJump[client] = false;
+    ResetMarketGardenKillCandidate(client);
     ResetLifeCounters(g_Stats[client]);
     ResetLifeCounters(g_MapStats[client]);
 }
@@ -566,6 +571,10 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             if (IsClientCurrentRoundMvp(victim))
             {
                 ApplyBonusPoints(attacker, 1, true, true, 1.0, "mvp_kill", victim);
+            }
+            if (ConsumeMarketGardenKill(attacker, victim))
+            {
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "market_garden_kill");
             }
             if (victimClass == TF_CLASS_MEDIC)
             {
@@ -699,7 +708,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
         {
             g_Stats[attacker].totalMarketGardenHits += 1;
             g_MapStats[attacker].totalMarketGardenHits += 1;
-            ApplyBonusPoints(attacker, 1, true, true, 1.0, "market_garden");
+            MarkMarketGardenKillCandidate(attacker, victim);
         }
 
         g_Stats[attacker].totalDamage += damageInt;
@@ -969,6 +978,8 @@ void ResetMultikillClient(int client)
     {
         g_fMultikillTimes[client][i] = 0.0;
     }
+
+    ResetMarketGardenKillCandidate(client);
 }
 
 bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
@@ -1058,6 +1069,43 @@ bool IsMarketGardenerHit(int attacker, int weapon)
         return true;
     }
     return false;
+}
+
+void MarkMarketGardenKillCandidate(int attacker, int victim)
+{
+    if (!IsValidClient(attacker) || !IsValidClient(victim) || attacker == victim)
+    {
+        return;
+    }
+
+    g_iPendingMarketGardenAttacker[victim] = attacker;
+    g_fPendingMarketGardenTime[victim] = GetGameTime();
+}
+
+bool ConsumeMarketGardenKill(int attacker, int victim)
+{
+    if (!IsValidClient(attacker) || !IsValidClient(victim))
+    {
+        return false;
+    }
+
+    bool isMarketGardenKill = g_iPendingMarketGardenAttacker[victim] == attacker
+        && g_fPendingMarketGardenTime[victim] > 0.0
+        && GetGameTime() - g_fPendingMarketGardenTime[victim] <= WT_MARKET_GARDEN_KILL_WINDOW;
+
+    ResetMarketGardenKillCandidate(victim);
+    return isMarketGardenKill;
+}
+
+void ResetMarketGardenKillCandidate(int client)
+{
+    if (client < 1 || client > MaxClients)
+    {
+        return;
+    }
+
+    g_iPendingMarketGardenAttacker[client] = 0;
+    g_fPendingMarketGardenTime[client] = 0.0;
 }
 
 float DistanceAboveGroundBox(int victim)

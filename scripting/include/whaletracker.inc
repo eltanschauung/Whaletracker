@@ -1626,9 +1626,9 @@ void GetBonusPointsTypeLabel(const char[] type, char[] label, int maxlen)
         return;
     }
 
-    if (StrEqual(type, "market_garden", false))
+    if (StrEqual(type, "market_garden", false) || StrEqual(type, "market_garden_kill", false))
     {
-        strcopy(label, maxlen, "Market Garden");
+        strcopy(label, maxlen, "Market Garden Kill");
         return;
     }
 
