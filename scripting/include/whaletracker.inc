@@ -1645,6 +1645,27 @@ void GetBonusPointsTypeLabel(const char[] type, char[] label, int maxlen)
     }
 }
 
+void GetMultikillBonusPointsLabel(int kills, char[] label, int maxlen)
+{
+    label[0] = '\0';
+
+    switch (kills)
+    {
+        case 3:
+        {
+            strcopy(label, maxlen, "Triple Kill");
+        }
+        case 4:
+        {
+            strcopy(label, maxlen, "Quadra Kill");
+        }
+        case 5:
+        {
+            strcopy(label, maxlen, "Penta Kill");
+        }
+    }
+}
+
 bool ApplyBonusPointsNow(int client, int points = 1, bool playSound = true, bool chatAlert = true, float randomChance = 1.0, const char[] type = "", int target = 0)
 {
     if (!IsValidClient(client) || !IsClientInGame(client) || IsFakeClient(client) || points == 0)
@@ -1740,6 +1761,21 @@ bool ApplyBonusPointsNow(int client, int points = 1, bool playSound = true, bool
     if (StrEqual(type, "killstreak", false))
     {
         CPrintToChat(client, "{magenta}[BP] {limegreen}%s%i{default} for Killstreak: %d", sign, absPoints, target);
+        return true;
+    }
+
+    if (StrEqual(type, "multikill", false))
+    {
+        char multikillLabel[32];
+        GetMultikillBonusPointsLabel(target, multikillLabel, sizeof(multikillLabel));
+        if (multikillLabel[0] != '\0')
+        {
+            CPrintToChat(client, "{magenta}[BP] {limegreen}%s%i{default} for {gold}%s", sign, absPoints, multikillLabel);
+        }
+        else
+        {
+            CPrintToChat(client, "{magenta}[BP] {limegreen}%s%i{default} for Multikill: %d", sign, absPoints, target);
+        }
         return true;
     }
 

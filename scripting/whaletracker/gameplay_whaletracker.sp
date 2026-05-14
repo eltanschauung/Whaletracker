@@ -920,6 +920,10 @@ void RegisterMultikill(int client)
     if (killsInWindow > g_iLastMultikillAnnounced[client])
     {
         g_iLastMultikillAnnounced[client] = killsInWindow;
+        if (killsInWindow >= 3)
+        {
+            ApplyBonusPoints(client, 1, true, true, 1.0, "multikill", killsInWindow);
+        }
         FireMultikillForward(client, killsInWindow);
     }
 }
