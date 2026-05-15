@@ -39,6 +39,14 @@ native bool WhaleTracker_HasPlaytimeHours(int client, int hours);
 native int WhaleTracker_GetWhalePoints(int client);
 
 /**
+ * Returns a client's current Bonus Points total.
+ *
+ * @param client        Client index.
+ * @return              Bonus Points, or 0 if unavailable.
+ */
+native int WhaleTracker_GetBonusPoints(int client);
+
+/**
  * Computes Whale Points from raw cumulative totals.
  *
  * @param kills         Total kills.

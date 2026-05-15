@@ -1544,6 +1544,17 @@ public any Native_WhaleTracker_GetWhalePoints(Handle plugin, int numParams)
     return GetWhalePointsForClient(client);
 }
 
+public any Native_WhaleTracker_GetBonusPoints(Handle plugin, int numParams)
+{
+    int client = GetNativeCell(1);
+    if (!WhaleTracker_AreClientStatsReady(client))
+    {
+        return 0;
+    }
+
+    return g_Stats[client].bonusPoints;
+}
+
 public any Native_WhaleTracker_ComputeWhalePoints(Handle plugin, int numParams)
 {
     WhaleStats pointStats;
