@@ -137,6 +137,14 @@ native int WhaleTracker_GetLastSeen(const char[] steamId64);
 forward void WhaleTracker_OnAirshot(int attacker, int victim);
 
 /**
+ * Fired when WhaleTracker records a medic dropping a full uber.
+ *
+ * @param attacker      Attacker client index, or 0 if no valid attacker.
+ * @param medic         Medic client index.
+ */
+forward void WhaleTracker_OnMedicDrop(int attacker, int medic);
+
+/**
  * Fired when WhaleTracker records a killstreak milestone.
  *
  * Milestones fire in increments of 5: 5, 10, 15, and so on.

@@ -255,6 +255,7 @@ Handle g_hReconnectTimer = null;
 Handle g_hSchemaRetryTimer = null;
 Handle g_hSavePumpTimer = null;
 Handle g_hAirshotForward = null;
+Handle g_hMedicDropForward = null;
 Handle g_hKillstreakForward = null;
 Handle g_hKillstreakEndForward = null;
 Handle g_hMultikillForward = null;

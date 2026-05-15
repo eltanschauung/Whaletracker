@@ -806,7 +806,7 @@ void AnnounceMedicDrop(int attacker, int medic)
     if (!IsValidClient(attacker) || IsFakeClient(attacker) || attacker == medic)
     {
         CPrintToChatAll("%s dropped!", medicName);
-        PlayMedicDropSound();
+        FireMedicDropForward(attacker, medic);
         return;
     }
 
@@ -814,7 +814,7 @@ void AnnounceMedicDrop(int attacker, int medic)
     BuildMedicDropDisplayName(attacker, attackerName, sizeof(attackerName));
 
     CPrintToChatAll("%s dropped %s!", attackerName, medicName);
-    PlayMedicDropSound();
+    FireMedicDropForward(attacker, medic);
 }
 
 void BuildMedicDropDisplayName(int client, char[] buffer, int maxlen)
@@ -853,12 +853,18 @@ void BuildMedicDropTeamColorTag(int client, char[] colorTag, int maxlen)
     }
 }
 
-void PlayMedicDropSound()
+void FireMedicDropForward(int attacker, int medic)
 {
-    if (!LibraryExists("saysounds"))
+    if (g_hMedicDropForward == null)
+    {
         return;
+    }
 
-    SaySounds_PlayCommand(0, "humiliation", false);
+    Call_StartForward(g_hMedicDropForward);
+    Call_PushCell(attacker);
+    Call_PushCell(medic);
+    int _ret;
+    Call_Finish(_ret);
 }
 
 void FireKillstreakForward(int client, int killstreak)
