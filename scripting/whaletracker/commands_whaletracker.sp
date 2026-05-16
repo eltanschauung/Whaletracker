@@ -482,7 +482,7 @@ public Action Command_ShowBonusPoints(int client, int args)
         "%N's Bonus Points: {lightgreen}%i{default}\n"
         ... "{lightgreen}+3{default}: Medic drops, penta-kills\n"
         ... "{lightgreen}+2{default}: Triple-kills, quadra-kills, killstreaks above 10\n"
-        ... "{lightgreen}+1:{default} Airshot kills, market garden kills, ubers, killstreaks",
+        ... "{lightgreen}+1:{default} Airshot kills, market garden kills, ubers, killstreaks, dominations, revenge",
         target,
         g_Stats[target].bonusPoints);
 

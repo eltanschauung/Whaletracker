@@ -595,6 +595,10 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 ApplyBonusPoints(attacker, 1, true, true, 1.0, "player_dom", victim);
             }
+            if (deathFlags & TF_DEATHFLAG_KILLERREVENGE)
+            {
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "player_revenge", victim);
+            }
             attackerScoredMedicDrop = medicDrop;
             MarkClientDirty(attacker);
         }
@@ -606,6 +610,10 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             if (deathFlags & TF_DEATHFLAG_ASSISTERDOMINATION)
             {
                 ApplyBonusPoints(assister, 1, true, true, 1.0, "player_dom", victim);
+            }
+            if (deathFlags & TF_DEATHFLAG_ASSISTERREVENGE)
+            {
+                ApplyBonusPoints(assister, 1, true, true, 1.0, "player_revenge", victim);
             }
             MarkClientDirty(assister);
         }

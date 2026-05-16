@@ -1637,6 +1637,12 @@ void GetBonusPointsTypeLabel(const char[] type, char[] label, int maxlen)
         strcopy(label, maxlen, "Dominating");
         return;
     }
+
+    if (StrEqual(type, "player_revenge", false))
+    {
+        strcopy(label, maxlen, "Revenge");
+        return;
+    }
 }
 
 void GetMultikillBonusPointsLabel(int kills, char[] label, int maxlen)
@@ -1743,6 +1749,12 @@ bool ApplyBonusPointsNow(int client, int points = 1, bool playSound = true, bool
     if (StrEqual(type, "player_dom", false) && IsValidClient(target))
     {
         CPrintToChat(client, "{magenta}[BP] {limegreen}%s%i{default} for Dominating %N", sign, absPoints, target);
+        return true;
+    }
+
+    if (StrEqual(type, "player_revenge", false) && IsValidClient(target))
+    {
+        CPrintToChat(client, "{magenta}[BP] {limegreen}%s%i{default} for Revenge on %N", sign, absPoints, target);
         return true;
     }
 
