@@ -182,11 +182,6 @@ public void OnPluginStart()
     RegConsoleCmd("sm_gardens", Command_ShowMarketGardens, "Show your market garden total.");
     RegConsoleCmd("sm_as", Command_ShowMarketGardens, "Show your market garden total.");
     RegConsoleCmd("sm_airshots", Command_ShowMarketGardens, "Show your market garden total.");
-    RegConsoleCmd("sm_bonus", Command_ShowBonusPoints, "Show your total Bonus Points.");
-    RegConsoleCmd("sm_bonuspoints", Command_ShowBonusPoints, "Show your total Bonus Points.");
-    RegConsoleCmd("sm_bp", Command_ShowBonusPoints, "Show your total Bonus Points.");
-    RegConsoleCmd("sm_sendbp", Command_SendBonusPoints, "Send Bonus Points to another player.");
-    RegConsoleCmd("sm_bpsend", Command_SendBonusPoints, "Send Bonus Points to another player.");
     RegConsoleCmd("sm_ranks", Command_ShowLeaderboard, "Show WhaleTracker leaderboard page.");
     RegAdminCmd("sm_savestats", Command_SaveAllStats, ADMFLAG_GENERIC, "Manually save all WhaleTracker stats");
     WhaleTracker_InitMotdCommands();

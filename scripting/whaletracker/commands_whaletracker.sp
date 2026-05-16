@@ -448,146 +448,6 @@ public Action Command_ShowMarketGardens(int client, int args)
     return Plugin_Handled;
 }
 
-public Action Command_ShowBonusPoints(int client, int args)
-{
-    if (client <= 0 || !IsClientInGame(client) || IsFakeClient(client))
-    {
-        return Plugin_Handled;
-    }
-
-    int target = client;
-    if (args >= 1)
-    {
-        char targetArg[64];
-        GetCmdArgString(targetArg, sizeof(targetArg));
-        TrimString(targetArg);
-        if (targetArg[0])
-        {
-            int candidate = FindTarget(client, targetArg, true, false);
-            if (candidate > 0 && IsValidClient(candidate) && !IsFakeClient(candidate))
-            {
-                target = candidate;
-            }
-            else
-            {
-                CPrintToChat(client, "{green}[WhaleTracker]{default} Could not find player '%s'.", targetArg);
-                return Plugin_Handled;
-            }
-        }
-    }
-
-    char msg[512];
-
-    FormatEx(msg, sizeof(msg),
-        "%N's Bonus Points: {lightgreen}%i{default}\n"
-        ... "{lightgreen}+3{default}: Medic drops, penta-kills\n"
-        ... "{lightgreen}+2{default}: Triple-kills, quadra-kills, killstreaks above 10\n"
-        ... "{lightgreen}+1:{default} Airshot kills, market garden kills, ubers, killstreaks, dominations, revenge",
-        target,
-        g_Stats[target].bonusPoints);
-
-    CPrintToChat(client, "%s", msg);
-    return Plugin_Handled;
-}
-
-public Action Command_SendBonusPoints(int client, int args)
-{
-    if (client <= 0 || !IsClientInGame(client) || IsFakeClient(client))
-    {
-        return Plugin_Handled;
-    }
-
-    if (args < 2)
-    {
-        CPrintToChat(client, "{green}[WhaleTracker]{default} Usage: !sendbp <player> <amount>");
-        return Plugin_Handled;
-    }
-
-    char targetArg[64];
-    GetCmdArg(1, targetArg, sizeof(targetArg));
-    TrimString(targetArg);
-
-    int target = FindTarget(client, targetArg, true, false);
-    if (target <= 0 || !IsValidClient(target) || IsFakeClient(target))
-    {
-        CPrintToChat(client, "{green}[WhaleTracker]{default} Could not find player '%s'.", targetArg);
-        return Plugin_Handled;
-    }
-
-    if (target == client)
-    {
-        CPrintToChat(client, "{green}[WhaleTracker]{default} You cannot send Bonus Points to yourself.");
-        return Plugin_Handled;
-    }
-
-    char amountArg[32];
-    GetCmdArg(2, amountArg, sizeof(amountArg));
-    int amount = StringToInt(amountArg);
-    if (amount <= 0)
-    {
-        CPrintToChat(client, "{green}[WhaleTracker]{default} Amount must be greater than 0.");
-        return Plugin_Handled;
-    }
-
-    if (!WhaleTracker_AreClientStatsReady(client))
-    {
-        RequestClientStateLoads(client);
-        CPrintToChat(client, "{green}[WhaleTracker]{default} Your stats are loading. Try again in a moment.");
-        return Plugin_Handled;
-    }
-
-    if (!WhaleTracker_AreClientStatsReady(target))
-    {
-        RequestClientStateLoads(target);
-        CPrintToChat(client, "{green}[WhaleTracker]{default} %N's stats are loading. Try again in a moment.", target);
-        return Plugin_Handled;
-    }
-
-    if (g_Stats[client].bonusPoints < amount)
-    {
-        CPrintToChat(client, "{green}[WhaleTracker]{default} You only have {magenta}%i{default} BP.", g_Stats[client].bonusPoints);
-        return Plugin_Handled;
-    }
-
-    if (!ApplyBonusPoints(client, -amount, false, false, 1.0, "", 0, 0.0))
-    {
-        CPrintToChat(client, "{green}[WhaleTracker]{default} Could not spend your Bonus Points.");
-        return Plugin_Handled;
-    }
-
-    if (!ApplyBonusPoints(target, amount, false, false, 1.0, "", 0, 0.0))
-    {
-        ApplyBonusPoints(client, amount, false, false, 1.0, "", 0, 0.0);
-        CPrintToChat(client, "{green}[WhaleTracker]{default} Could not give Bonus Points to %N.", target);
-        return Plugin_Handled;
-    }
-
-    if (LibraryExists("saysounds"))
-    {
-        SaySounds_PlayCommand(0, WT_BONUS_POINTS_SOUND, true);
-    }
-
-    char senderDisplay[128];
-    char targetDisplay[128];
-    GetClientChatDisplayName(client, senderDisplay, sizeof(senderDisplay));
-    GetClientChatDisplayName(target, targetDisplay, sizeof(targetDisplay));
-    if (StrContains(targetDisplay, "{teamcolor}", false) != -1)
-    {
-        ReplaceString(targetDisplay, sizeof(targetDisplay), "{teamcolor}", "{gold}", false);
-    }
-
-    for (int i = 1; i <= MaxClients; i++)
-    {
-        if (!IsClientInGame(i) || IsFakeClient(i))
-        {
-            continue;
-        }
-
-        CPrintToChatEx(i, client, "{lightgreen}[WhaleTracker]{default} %s{default} sent %s{default} %i {magenta}BP{default}!", senderDisplay, targetDisplay, amount);
-    }
-    return Plugin_Handled;
-}
-
 public Action Command_SetFavoriteClass(int client, int args)
 {
     if (client <= 0 || !IsClientInGame(client) || IsFakeClient(client))
@@ -1547,12 +1407,12 @@ public any Native_WhaleTracker_GetWhalePoints(Handle plugin, int numParams)
 public any Native_WhaleTracker_GetBonusPoints(Handle plugin, int numParams)
 {
     int client = GetNativeCell(1);
-    if (!WhaleTracker_AreClientStatsReady(client))
+    if (GetFeatureStatus(FeatureType_Native, "PointsStore_GetBonusPoints") != FeatureStatus_Available)
     {
         return 0;
     }
 
-    return g_Stats[client].bonusPoints;
+    return PointsStore_GetBonusPoints(client);
 }
 
 public any Native_WhaleTracker_ComputeWhalePoints(Handle plugin, int numParams)
@@ -1588,7 +1448,12 @@ public any Native_WhaleTracker_ApplyBonusPoints(Handle plugin, int numParams)
 
     int target = (numParams >= 7) ? GetNativeCell(7) : 0;
     float delay = (numParams >= 8) ? view_as<float>(GetNativeCell(8)) : 3.0;
-    return ApplyBonusPoints(client, points, playSound, chatAlert, randomChance, type, target, delay);
+    if (GetFeatureStatus(FeatureType_Native, "PointsStore_ApplyBonusPoints") != FeatureStatus_Available)
+    {
+        return false;
+    }
+
+    return PointsStore_ApplyBonusPoints(client, points, playSound, chatAlert, randomChance, type, target, delay);
 }
 
 public any Native_WhaleTracker_SpendBonusPoints(Handle plugin, int numParams)
@@ -1600,7 +1465,12 @@ public any Native_WhaleTracker_SpendBonusPoints(Handle plugin, int numParams)
         return false;
     }
 
-    return ApplyBonusPoints(client, -points, false, false, 1.0, "", 0, 0.0);
+    if (GetFeatureStatus(FeatureType_Native, "PointsStore_SpendBonusPoints") != FeatureStatus_Available)
+    {
+        return false;
+    }
+
+    return PointsStore_SpendBonusPoints(client, points);
 }
 
 int GetLastSeenForSteamId64(const char[] steamId)

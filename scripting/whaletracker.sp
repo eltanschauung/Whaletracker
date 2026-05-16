@@ -59,6 +59,9 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("DGM_CurrentNormalizedMap");
     MarkNativeAsOptional("DGM_GetServerCapacity");
     MarkNativeAsOptional("DGM_ServerCapacitycheck");
+    MarkNativeAsOptional("PointsStore_GetBonusPoints");
+    MarkNativeAsOptional("PointsStore_ApplyBonusPoints");
+    MarkNativeAsOptional("PointsStore_SpendBonusPoints");
     RegPluginLibrary("whaletracker");
     CreateNative("WhaleTracker_GetCumulativeKills", Native_WhaleTracker_GetCumulativeKills);
     CreateNative("WhaleTracker_AreStatsLoaded", Native_WhaleTracker_AreStatsLoaded);
@@ -275,6 +278,7 @@ int g_SaveQueryUserIds[MAX_CONCURRENT_SAVE_QUERIES];
 bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 
 #include "include/dgm_api.inc"
+#include "include/points_store_api.inc"
 #include "include/whaletracker.inc"
 #include "whaletracker/motd_whaletracker.sp"
 #undef REQUIRE_EXTENSIONS

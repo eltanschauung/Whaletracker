@@ -546,44 +546,6 @@ void QueueStatsSave(int client, int userId, bool forceSync)
     QueueSaveQuery(query, userId, forceSync);
 }
 
-void QueueBonusPointsDeltaSave(int client, int delta, bool forceSync = false)
-{
-    if (delta == 0)
-    {
-        return;
-    }
-
-    EnsureClientSteamId(client);
-    if (g_Stats[client].steamId[0] == '\0')
-    {
-        return;
-    }
-
-    if (g_Stats[client].firstSeenTimestamp == 0)
-    {
-        g_Stats[client].firstSeenTimestamp = GetTime();
-        FormatTime(g_Stats[client].firstSeen, sizeof(g_Stats[client].firstSeen), "%Y-%m-%d", g_Stats[client].firstSeenTimestamp);
-    }
-
-    char escapedSteamId[STEAMID64_LEN * 2];
-    EscapeSqlString(g_Stats[client].steamId, escapedSteamId, sizeof(escapedSteamId));
-
-    char query[512];
-    Format(query, sizeof(query),
-        "INSERT INTO whaletracker (steamid, first_seen, bonusPoints, last_seen) "
-        ... "VALUES ('%s', %d, %d, %d) "
-        ... "ON DUPLICATE KEY UPDATE "
-        ... "first_seen = LEAST(first_seen, VALUES(first_seen)), "
-        ... "bonusPoints = GREATEST(0, bonusPoints + VALUES(bonusPoints)), "
-        ... "last_seen = GREATEST(last_seen, VALUES(last_seen))",
-        escapedSteamId,
-        g_Stats[client].firstSeenTimestamp,
-        delta,
-        g_Stats[client].lastSeen);
-
-    QueueSaveQuery(query, GetClientUserId(client), forceSync);
-}
-
 bool SaveClientStats(int client, bool includeMapStats, bool forceSave, bool forceSync = false)
 {
     if (!IsValidClient(client))
