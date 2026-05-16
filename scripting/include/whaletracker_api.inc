@@ -39,14 +39,6 @@ native bool WhaleTracker_HasPlaytimeHours(int client, int hours);
 native int WhaleTracker_GetWhalePoints(int client);
 
 /**
- * Returns a client's current Bonus Points total.
- *
- * @param client        Client index.
- * @return              Bonus Points, or 0 if unavailable.
- */
-native int WhaleTracker_GetBonusPoints(int client);
-
-/**
  * Computes Whale Points from raw cumulative totals.
  *
  * @param kills         Total kills.
@@ -67,38 +59,6 @@ native int WhaleTracker_ComputeWhalePoints(int kills, int deaths, int assists, i
  * @return              True if current round MVP.
  */
 native bool WhaleTracker_IsCurrentRoundMvp(int client);
-
-/**
- * Applies bonus points with full WhaleTracker behavior.
- *
- * @param client        Client index.
- * @param points        Points delta. Negative spends.
- * @param playSound     Play  through SaySounds.
- * @param chatAlert     Print BP chat line.
- * @param randomChance  Chance, clamped to 0.1..1.0.
- * @param type          Message type key.
- * @param target        Optional target client.
- * @param delay         Delay in seconds. 0.0 = immediate.
- * @return              True on success.
- */
-native bool WhaleTracker_ApplyBonusPoints(int client, int points, bool playSound, bool chatAlert, float randomChance, const char[] type, int target = 0, float delay = 3.0);
-
-/**
- * API convenience wrapper.
- */
-stock bool ApplyBonusPoints(int client, int points = 1, bool playSound = true, bool chatAlert = true, float randomChance = 1.0, const char[] type = "", int target = 0, float delay = 3.0)
-{
-    return WhaleTracker_ApplyBonusPoints(client, points, playSound, chatAlert, randomChance, type, target, delay);
-}
-
-/**
- * Spends bonus points immediately without sound or chat output.
- *
- * @param client        Client index.
- * @param points        Positive number of points to spend.
- * @return              True if the spend succeeded.
- */
-native bool WhaleTracker_SpendBonusPoints(int client, int points);
 
 /**
  * Resolves the best recorded name for a SteamID64.

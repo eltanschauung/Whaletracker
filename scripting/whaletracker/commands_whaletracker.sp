@@ -1404,17 +1404,6 @@ public any Native_WhaleTracker_GetWhalePoints(Handle plugin, int numParams)
     return GetWhalePointsForClient(client);
 }
 
-public any Native_WhaleTracker_GetBonusPoints(Handle plugin, int numParams)
-{
-    int client = GetNativeCell(1);
-    if (GetFeatureStatus(FeatureType_Native, "PointsStore_GetBonusPoints") != FeatureStatus_Available)
-    {
-        return 0;
-    }
-
-    return PointsStore_GetBonusPoints(client);
-}
-
 public any Native_WhaleTracker_ComputeWhalePoints(Handle plugin, int numParams)
 {
     WhaleStats pointStats;
@@ -1432,45 +1421,6 @@ public any Native_WhaleTracker_IsCurrentRoundMvp(Handle plugin, int numParams)
 {
     int client = GetNativeCell(1);
     return IsClientCurrentRoundMvp(client);
-}
-
-public any Native_WhaleTracker_ApplyBonusPoints(Handle plugin, int numParams)
-{
-    int client = GetNativeCell(1);
-    int points = GetNativeCell(2);
-    bool playSound = view_as<bool>(GetNativeCell(3));
-    bool chatAlert = view_as<bool>(GetNativeCell(4));
-    float randomChance = view_as<float>(GetNativeCell(5));
-
-    char type[64];
-    GetNativeString(6, type, sizeof(type));
-    TrimString(type);
-
-    int target = (numParams >= 7) ? GetNativeCell(7) : 0;
-    float delay = (numParams >= 8) ? view_as<float>(GetNativeCell(8)) : 3.0;
-    if (GetFeatureStatus(FeatureType_Native, "PointsStore_ApplyBonusPoints") != FeatureStatus_Available)
-    {
-        return false;
-    }
-
-    return PointsStore_ApplyBonusPoints(client, points, playSound, chatAlert, randomChance, type, target, delay);
-}
-
-public any Native_WhaleTracker_SpendBonusPoints(Handle plugin, int numParams)
-{
-    int client = GetNativeCell(1);
-    int points = GetNativeCell(2);
-    if (points <= 0)
-    {
-        return false;
-    }
-
-    if (GetFeatureStatus(FeatureType_Native, "PointsStore_SpendBonusPoints") != FeatureStatus_Available)
-    {
-        return false;
-    }
-
-    return PointsStore_SpendBonusPoints(client, points);
 }
 
 int GetLastSeenForSteamId64(const char[] steamId)

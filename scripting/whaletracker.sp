@@ -67,11 +67,8 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     CreateNative("WhaleTracker_AreStatsLoaded", Native_WhaleTracker_AreStatsLoaded);
     CreateNative("WhaleTracker_HasPlaytimeHours", Native_WhaleTracker_HasPlaytimeHours);
     CreateNative("WhaleTracker_GetWhalePoints", Native_WhaleTracker_GetWhalePoints);
-    CreateNative("WhaleTracker_GetBonusPoints", Native_WhaleTracker_GetBonusPoints);
     CreateNative("WhaleTracker_ComputeWhalePoints", Native_WhaleTracker_ComputeWhalePoints);
     CreateNative("WhaleTracker_IsCurrentRoundMvp", Native_WhaleTracker_IsCurrentRoundMvp);
-    CreateNative("WhaleTracker_ApplyBonusPoints", Native_WhaleTracker_ApplyBonusPoints);
-    CreateNative("WhaleTracker_SpendBonusPoints", Native_WhaleTracker_SpendBonusPoints);
     CreateNative("WhaleTracker_GetLastRecordedName", Native_WhaleTracker_GetLastRecordedName);
     CreateNative("WhaleTracker_GetLastSeen", Native_WhaleTracker_GetLastSeen);
     return APLRes_Success;
@@ -130,7 +127,6 @@ enum struct WhaleStats
     int totalUbers;
     int totalMedicDrops;
     int totalAirshots;
-    int bonusPoints;
     int totalMedicKills;
     int totalHeavyKills;
     int totalMarketGardenHits;
