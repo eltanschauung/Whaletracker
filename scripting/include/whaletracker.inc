@@ -1661,9 +1661,9 @@ bool ShouldSuppressDeathIncrementForCurrentGamemode()
     return StrEqual(gamemode, "mge", false) || StrEqual(gamemode, "ultiduo", false);
 }
 
-void ApplyCumulativeDeathStats(WhaleStats stats)
+void ApplyCumulativeDeathStats(WhaleStats stats, bool countDeath = true)
 {
-    if (!ShouldSuppressDeathIncrementForCurrentGamemode())
+    if (countDeath && !ShouldSuppressDeathIncrementForCurrentGamemode())
     {
         stats.deaths++;
     }

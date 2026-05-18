@@ -542,7 +542,8 @@ public void OnProjectileTouch(int entity, int other)
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
     int victim = GetClientOfUserId(event.GetInt("userid"));
-    int attacker = GetClientOfUserId(event.GetInt("attacker"));
+    int attackerUserId = event.GetInt("attacker");
+    int attacker = GetClientOfUserId(attackerUserId);
     int assister = GetClientOfUserId(event.GetInt("assister"));
     int deathFlags = event.GetInt("death_flags");
     int victimClass = view_as<int>(TF2_GetPlayerClass(victim));
@@ -631,7 +632,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
                 g_Stats[victim].totalUberDrops++;
                 g_MapStats[victim].totalUberDrops++;
             }
-            ApplyCumulativeDeathStats(g_Stats[victim]);
+            ApplyCumulativeDeathStats(g_Stats[victim], attackerUserId != 0);
             ApplyDeathStats(g_MapStats[victim]);
             MarkClientDirty(victim);
         }
