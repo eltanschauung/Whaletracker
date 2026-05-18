@@ -547,14 +547,16 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
     int assister = GetClientOfUserId(event.GetInt("assister"));
     int deathFlags = event.GetInt("death_flags");
     int victimClass = view_as<int>(TF2_GetPlayerClass(victim));
+    bool victimIsHuman = IsValidClient(victim) && !IsFakeClient(victim);
+    bool attackerIsHuman = IsValidClient(attacker) && !IsFakeClient(attacker) && attacker != victim;
     bool attackerScoredMedicDrop = false;
     bool victimMedicDrop = false;
 
     if (!(deathFlags & TF_DEATHFLAG_DEADRINGER))
     {
-        victimMedicDrop = IsMedicDrop(victim);
+        victimMedicDrop = victimIsHuman && IsMedicDrop(victim);
 
-        if (IsValidClient(attacker) && attacker != victim && WhaleTracker_IsTrackingEnabled(attacker))
+        if (victimIsHuman && attackerIsHuman && WhaleTracker_IsTrackingEnabled(attacker))
         {
             int custom = event.GetInt("customkill");
             bool backstab = (custom == TF_CUSTOM_BACKSTAB);
@@ -604,7 +606,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             MarkClientDirty(attacker);
         }
 
-        if (IsValidClient(assister) && assister != victim && WhaleTracker_IsTrackingEnabled(assister))
+        if (victimIsHuman && IsValidClient(assister) && assister != victim && WhaleTracker_IsTrackingEnabled(assister))
         {
             ApplyAssistStats(g_Stats[assister]);
             ApplyAssistStats(g_MapStats[assister]);
@@ -622,7 +624,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
         if (IsValidClient(victim) && WhaleTracker_IsTrackingEnabled(victim))
         {
             int victimKillstreak = g_Stats[victim].currentKillstreak;
-            if (victimKillstreak >= WHALE_KILLSTREAK_BONUS_INTERVAL)
+            if (attackerIsHuman && victimKillstreak >= WHALE_KILLSTREAK_BONUS_INTERVAL)
             {
                 FireKillstreakEndForward(victim, victimKillstreak);
             }
@@ -689,7 +691,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
         g_bPlayerTakenDirectHit[victim] = false;
     }
 
-    if (IsValidClient(attacker) && !IsFakeClient(attacker) && WhaleTracker_IsTrackingEnabled(attacker))
+    if (IsValidClient(victim) && !IsFakeClient(victim) && IsValidClient(attacker) && !IsFakeClient(attacker) && WhaleTracker_IsTrackingEnabled(attacker))
     {
         if (IsSupstatsAirshot(attacker, victim, weapon, wasDirectHit))
         {
