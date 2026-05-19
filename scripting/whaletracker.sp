@@ -274,7 +274,9 @@ int g_SaveQueryUserIds[MAX_CONCURRENT_SAVE_QUERIES];
 bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 
 #include "include/dgm_api.inc"
+#undef REQUIRE_PLUGIN
 #include "include/points_store_api.inc"
+#define REQUIRE_PLUGIN
 #include "include/whaletracker.inc"
 #include "whaletracker/motd_whaletracker.sp"
 #undef REQUIRE_EXTENSIONS

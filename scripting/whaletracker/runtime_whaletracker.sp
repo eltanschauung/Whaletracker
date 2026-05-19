@@ -586,7 +586,7 @@ void RequestClientJoinLeaderboardQuery(int client)
 
     char query[512];
     Format(query, sizeof(query),
-        "SELECT points, rank, name_color, name, prename FROM whaletracker_points_cache WHERE steamid = '%s' LIMIT 1",
+        "SELECT points, rank FROM whaletracker_points_cache WHERE steamid = '%s' LIMIT 1",
         escapedSteamId);
     g_hDatabase.Query(WhaleTracker_JoinLeaderboardQueryCallback, query, pack);
 }
@@ -615,12 +615,6 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
 
     int points = 0;
     int rank = 0;
-    char colorTag[32];
-    char cachedName[128];
-    char cachedPrename[128];
-    colorTag[0] = '\0';
-    cachedName[0] = '\0';
-    cachedPrename[0] = '\0';
 
     if (results == null || !results.FetchRow())
     {
@@ -638,15 +632,7 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
         rank = 0;
     }
 
-    results.FetchString(2, colorTag, sizeof(colorTag));
-    results.FetchString(3, cachedName, sizeof(cachedName));
-    results.FetchString(4, cachedPrename, sizeof(cachedPrename));
-    TrimString(colorTag);
-    TrimString(cachedName);
-    TrimString(cachedPrename);
-
     char displayName[128];
-    bool useCachedDecorated = false;
     if (GetFeatureStatus(FeatureType_Native, "Filters_GetChatName") == FeatureStatus_Available
         && Filters_GetChatName(client, displayName, sizeof(displayName)) && displayName[0] != '\0')
     {
@@ -659,42 +645,14 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
     }
     else
     {
-        useCachedDecorated = (colorTag[0] != '\0' && (cachedPrename[0] != '\0' || cachedName[0] != '\0'));
-        if (useCachedDecorated)
-        {
-            if (cachedPrename[0] != '\0')
-            {
-                strcopy(displayName, sizeof(displayName), cachedPrename);
-            }
-            else
-            {
-                strcopy(displayName, sizeof(displayName), cachedName);
-            }
-        }
-        else
-        {
-            char rawName[MAX_NAME_LENGTH];
-            char rawNameColor[32] = "gold";
-            GetClientName(client, rawName, sizeof(rawName));
-            EnsureClientSteamId(client);
-            if (g_Stats[client].steamId[0] != '\0')
-            {
-                TryGetFiltersSteamIdColorTag(g_Stats[client].steamId, rawNameColor, sizeof(rawNameColor));
-            }
-            FormatEx(displayName, sizeof(displayName), "{%s}%s", rawNameColor, rawName);
-        }
+        char rawName[MAX_NAME_LENGTH];
+        GetClientName(client, rawName, sizeof(rawName));
+        FormatEx(displayName, sizeof(displayName), "{gold}%s", rawName);
     }
 
     if (rank > 0)
     {
-        if (useCachedDecorated)
-        {
-            CPrintToChatAll("{%s}%s{default} (%d Points, Rank #%d) joined the game", colorTag, displayName, points, rank);
-        }
-        else
-        {
-            CPrintToChatAll("%s{default} (%d Points, Rank #%d) joined the game", displayName, points, rank);
-        }
+        CPrintToChatAll("%s{default} (%d Points, Rank #%d) joined the game", displayName, points, rank);
         PrintToServer("[WhaleTracker] %s (%d Points, Rank #%d) joined the game", displayName, points, rank);
     }
     else
