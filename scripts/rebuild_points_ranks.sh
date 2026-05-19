@@ -102,7 +102,7 @@ FROM (
             + (GREATEST(w.total_ubers,0) * 10)) * 10000.0)
             / GREATEST(GREATEST(w.deaths,0) + (GREATEST(w.damage_taken,0) / 500.0), 1)
         ) AS points,
-        COALESCE(NULLIF(w.cached_personaname,''), NULLIF(w.personaname,''), w.steamid) AS name,
+        COALESCE(NULLIF(w.cached_personaname,''), w.steamid) AS name,
         COALESCE(NULLIF(f.color,''), COALESCE(NULLIF(c.name_color,''), 'gold')) AS color,
         COALESCE((SELECT p.newname FROM prename_rules p WHERE p.pattern = w.steamid LIMIT 1), '') AS prename
     FROM whaletracker w

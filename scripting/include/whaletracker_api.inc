@@ -66,8 +66,7 @@ native bool WhaleTracker_IsCurrentRoundMvp(int client);
  * Lookup order:
  * 1. Connected live client name
  * 2. whaletracker.cached_personaname
- * 3. whaletracker.personaname
- * 4. whaletracker_points_cache.name
+ * 3. whaletracker_points_cache.name
  *
  * @param steamId64     SteamID64 to look up.
  * @param buffer        Output buffer.
