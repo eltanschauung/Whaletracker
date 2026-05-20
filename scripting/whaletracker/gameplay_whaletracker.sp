@@ -626,7 +626,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             int victimKillstreak = g_Stats[victim].currentKillstreak;
             if (attackerIsHuman && victimKillstreak >= WHALE_KILLSTREAK_BONUS_INTERVAL)
             {
-                FireKillstreakEndForward(victim, victimKillstreak);
+                FireKillstreakEndForward(attacker, victim, victimKillstreak);
             }
 
             if (attackerScoredMedicDrop)
@@ -883,7 +883,7 @@ void FireKillstreakForward(int client, int killstreak)
     Call_Finish(_ret);
 }
 
-void FireKillstreakEndForward(int client, int killstreak)
+void FireKillstreakEndForward(int attacker, int victim, int killstreak)
 {
     if (g_hKillstreakEndForward == null)
     {
@@ -891,7 +891,8 @@ void FireKillstreakEndForward(int client, int killstreak)
     }
 
     Call_StartForward(g_hKillstreakEndForward);
-    Call_PushCell(client);
+    Call_PushCell(attacker);
+    Call_PushCell(victim);
     Call_PushCell(killstreak);
     int _ret;
     Call_Finish(_ret);
