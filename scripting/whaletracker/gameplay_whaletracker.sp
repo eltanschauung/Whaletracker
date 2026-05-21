@@ -470,6 +470,7 @@ bool SelectRoundMvpsNow(bool replaceExisting = false, bool announce = true)
 
 public void Event_RoundWin(Event event, const char[] name, bool dontBroadcast)
 {
+    WhaleTracker_RecordRoundStatistics(event);
     SelectRoundMvpsNow(true);
     SnapshotCurrentRoundMvpStateToLastRound();
 }

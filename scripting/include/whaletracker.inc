@@ -1104,6 +1104,44 @@ bool WhaleTracker_GetDgmGameMode(char[] gamemode, int gamemodeLen)
     return true;
 }
 
+void WhaleTracker_EnsureRoundStatisticsTable()
+{
+    if (!g_bDatabaseReady || g_hSyncDatabase == null)
+    {
+        return;
+    }
+
+    char query[SAVE_QUERY_MAXLEN];
+    FormatEx(query, sizeof(query),
+        "CREATE TABLE IF NOT EXISTS whaletracker_round_statistics_events ("
+        ... "id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,"
+        ... "recorded_at INT NOT NULL,"
+        ... "host_port INT NOT NULL DEFAULT 0,"
+        ... "map_name VARCHAR(128) NOT NULL DEFAULT '',"
+        ... "gamemode VARCHAR(64) NOT NULL DEFAULT '',"
+        ... "winning_team TINYINT NOT NULL DEFAULT 0,"
+        ... "winning_team_name VARCHAR(16) NOT NULL DEFAULT '',"
+        ... "losing_team TINYINT NOT NULL DEFAULT 0,"
+        ... "losing_team_name VARCHAR(16) NOT NULL DEFAULT '',"
+        ... "winning_steamids TEXT NOT NULL,"
+        ... "losing_steamids TEXT NOT NULL,"
+        ... "winner_count INT NOT NULL DEFAULT 0,"
+        ... "loser_count INT NOT NULL DEFAULT 0,"
+        ... "PRIMARY KEY (id),"
+        ... "KEY idx_recorded_at (recorded_at),"
+        ... "KEY idx_gamemode (gamemode),"
+        ... "KEY idx_winning_team (winning_team),"
+        ... "KEY idx_host_map_time (host_port, map_name, recorded_at)"
+        ... ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    if (!SQLFastQuerySync(query))
+    {
+        char error[256];
+        GetSyncDatabaseError(error, sizeof(error));
+        LogError("[WhaleTracker] Failed to ensure round statistics table: %s", error);
+    }
+}
+
 int WhaleTracker_GetCurrentPlayerCount()
 {
     if (GetFeatureStatus(FeatureType_Native, "DGM_RealPlayerCount") == FeatureStatus_Available)
@@ -1136,6 +1174,142 @@ int WhaleTracker_GetCurrentServerCapacity()
     }
 
     return visibleMax;
+}
+
+void WhaleTracker_GetTeamName(int team, char[] buffer, int maxlen)
+{
+    switch (team)
+    {
+        case 2:
+        {
+            strcopy(buffer, maxlen, "RED");
+        }
+        case 3:
+        {
+            strcopy(buffer, maxlen, "BLU");
+        }
+        default:
+        {
+            strcopy(buffer, maxlen, "Unknown");
+        }
+    }
+}
+
+bool WhaleTracker_GetClientSteamId64(int client, char[] buffer, int maxlen)
+{
+    if (client <= 0 || client > MaxClients || !IsClientInGame(client) || IsFakeClient(client))
+    {
+        return false;
+    }
+
+    EnsureClientSteamId(client);
+    if (g_Stats[client].steamId[0])
+    {
+        strcopy(buffer, maxlen, g_Stats[client].steamId);
+        return true;
+    }
+
+    return GetClientAuthId(client, AuthId_SteamID64, buffer, maxlen);
+}
+
+void WhaleTracker_BuildTeamSteamIdList(int team, char[] buffer, int maxlen, int &count)
+{
+    buffer[0] = '\0';
+    count = 0;
+
+    for (int client = 1; client <= MaxClients; client++)
+    {
+        if (!IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != team)
+        {
+            continue;
+        }
+
+        char steamId[STEAMID64_LEN];
+        if (!WhaleTracker_GetClientSteamId64(client, steamId, sizeof(steamId)))
+        {
+            continue;
+        }
+
+        if (buffer[0])
+        {
+            StrCat(buffer, maxlen, ",");
+        }
+        StrCat(buffer, maxlen, steamId);
+        count++;
+    }
+}
+
+void WhaleTracker_RecordRoundStatistics(Event event)
+{
+    if (!g_bDatabaseReady || g_hDatabase == null)
+    {
+        return;
+    }
+
+    int winningTeam = event.GetInt("team");
+    if (winningTeam != 2 && winningTeam != 3)
+    {
+        return;
+    }
+
+    int losingTeam = (winningTeam == 2) ? 3 : 2;
+
+    char winningSteamIds[1024];
+    char losingSteamIds[1024];
+    int winnerCount = 0;
+    int loserCount = 0;
+    WhaleTracker_BuildTeamSteamIdList(winningTeam, winningSteamIds, sizeof(winningSteamIds), winnerCount);
+    WhaleTracker_BuildTeamSteamIdList(losingTeam, losingSteamIds, sizeof(losingSteamIds), loserCount);
+
+    char mapName[128];
+    strcopy(mapName, sizeof(mapName), g_sCurrentMap);
+    if (!mapName[0])
+    {
+        GetCurrentMap(mapName, sizeof(mapName));
+    }
+    if (!mapName[0])
+    {
+        strcopy(mapName, sizeof(mapName), "unknown");
+    }
+
+    char gamemode[64] = "Unknown";
+    WhaleTracker_GetDgmGameMode(gamemode, sizeof(gamemode));
+    NormalizeGamemodeForMap(mapName, gamemode, sizeof(gamemode));
+
+    char winningTeamName[16];
+    char losingTeamName[16];
+    WhaleTracker_GetTeamName(winningTeam, winningTeamName, sizeof(winningTeamName));
+    WhaleTracker_GetTeamName(losingTeam, losingTeamName, sizeof(losingTeamName));
+
+    char escapedMap[256];
+    char escapedMode[128];
+    char escapedWinningSteamIds[2048];
+    char escapedLosingSteamIds[2048];
+    EscapeSqlString(mapName, escapedMap, sizeof(escapedMap));
+    EscapeSqlString(gamemode, escapedMode, sizeof(escapedMode));
+    EscapeSqlString(winningSteamIds, escapedWinningSteamIds, sizeof(escapedWinningSteamIds));
+    EscapeSqlString(losingSteamIds, escapedLosingSteamIds, sizeof(escapedLosingSteamIds));
+
+    int timestamp = GetTime();
+    char query[SAVE_QUERY_MAXLEN];
+    Format(query, sizeof(query),
+        "INSERT INTO whaletracker_round_statistics_events "
+        ... "(recorded_at, host_port, map_name, gamemode, winning_team, winning_team_name, losing_team, losing_team_name, winning_steamids, losing_steamids, winner_count, loser_count) "
+        ... "VALUES (%d, %d, '%s', '%s', %d, '%s', %d, '%s', '%s', '%s', %d, %d)",
+        timestamp,
+        g_iHostPort,
+        escapedMap,
+        escapedMode,
+        winningTeam,
+        winningTeamName,
+        losingTeam,
+        losingTeamName,
+        escapedWinningSteamIds,
+        escapedLosingSteamIds,
+        winnerCount,
+        loserCount);
+
+    QueueSaveQuery(query, 0, false);
 }
 
 void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool forceSync)

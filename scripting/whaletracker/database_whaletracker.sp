@@ -16,6 +16,7 @@ void WhaleTracker_MaybeMarkDatabaseReady()
         WHALETRACKER_SCHEMA_VERSION,
         GetClientCount(false),
         WhaleTracker_IsRoundRunning() ? 1 : 0);
+    WhaleTracker_EnsureRoundStatisticsTable();
     PumpSaveQueue();
 }
 
