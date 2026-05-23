@@ -53,14 +53,6 @@ native int WhaleTracker_GetWhalePoints(int client);
 native int WhaleTracker_ComputeWhalePoints(int kills, int deaths, int assists, int totalUbers, int damageDealt, int healing, int playtime);
 
 /**
- * Returns whether a client is the stored MVP for their current team this round.
- *
- * @param client        Client index.
- * @return              True if current round MVP.
- */
-native bool WhaleTracker_IsCurrentRoundMvp(int client);
-
-/**
  * Resolves the best recorded name for a SteamID64.
  *
  * Lookup order:

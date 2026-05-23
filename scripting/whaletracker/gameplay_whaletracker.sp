@@ -5,96 +5,14 @@ float g_fPendingMarketGardenTime[MAXPLAYERS + 1];
 
 #define WT_MARKET_GARDEN_KILL_WINDOW 0.25
 
-void ClearRoundMvpIdentity()
+public void Event_RoundWin(Event event, const char[] name, bool dontBroadcast)
 {
-    g_sRoundMvpSteamId[2][0] = '\0';
-    g_sRoundMvpSteamId[3][0] = '\0';
+    WhaleTracker_RecordRoundStatistics(event);
 }
 
-void ClearLastRoundMvpIdentity()
+bool IsTopScoringPlayerOnTeam(int client)
 {
-    g_sLastRoundMvpSteamId[2][0] = '\0';
-    g_sLastRoundMvpSteamId[3][0] = '\0';
-}
-
-void ClearCurrentRoundMvpState()
-{
-    ClearRoundMvpIdentity();
-}
-
-void ClearLastRoundMvpState()
-{
-    ClearLastRoundMvpIdentity();
-}
-
-void SnapshotCurrentRoundMvpStateToLastRound()
-{
-    strcopy(g_sLastRoundMvpSteamId[2], sizeof(g_sLastRoundMvpSteamId[]), g_sRoundMvpSteamId[2]);
-    strcopy(g_sLastRoundMvpSteamId[3], sizeof(g_sLastRoundMvpSteamId[]), g_sRoundMvpSteamId[3]);
-}
-
-void ClearRoundMvpForTeam(int team)
-{
-    if (team != 2 && team != 3)
-    {
-        return;
-    }
-
-    g_sRoundMvpSteamId[team][0] = '\0';
-
-    for (int i = 1; i <= MaxClients; i++)
-    {
-        if (!IsClientConnected(i) || IsFakeClient(i))
-        {
-            continue;
-        }
-
-    }
-}
-
-bool InvalidateClientRoundMvp(int client, int team = 0)
-{
-    if (client <= 0 || client > MaxClients || IsFakeClient(client))
-    {
-        return false;
-    }
-
-    EnsureClientSteamId(client);
-    if (g_Stats[client].steamId[0] == '\0')
-    {
-        return false;
-    }
-
-    bool cleared = false;
-    if (team == 2 || team == 3)
-    {
-        if (StrEqual(g_sRoundMvpSteamId[team], g_Stats[client].steamId, false))
-        {
-            ClearRoundMvpForTeam(team);
-            cleared = true;
-        }
-
-        return cleared;
-    }
-
-    if (StrEqual(g_sRoundMvpSteamId[2], g_Stats[client].steamId, false))
-    {
-        ClearRoundMvpForTeam(2);
-        cleared = true;
-    }
-
-    if (StrEqual(g_sRoundMvpSteamId[3], g_Stats[client].steamId, false))
-    {
-        ClearRoundMvpForTeam(3);
-        cleared = true;
-    }
-
-    return cleared;
-}
-
-bool IsClientCurrentRoundMvp(int client)
-{
-    if (!IsValidClient(client) || IsFakeClient(client))
+    if (!IsValidClient(client) || !IsClientInGame(client) || IsFakeClient(client))
     {
         return false;
     }
@@ -105,386 +23,44 @@ bool IsClientCurrentRoundMvp(int client)
         return false;
     }
 
-    EnsureClientSteamId(client);
-    if (g_Stats[client].steamId[0] == '\0' || g_sRoundMvpSteamId[team][0] == '\0')
-    {
-        return false;
-    }
-
-    return StrEqual(g_Stats[client].steamId, g_sRoundMvpSteamId[team], false);
-}
-
-void AssignRoundMvp(int client, int team)
-{
-    if (team != 2 && team != 3)
-    {
-        return;
-    }
-
-    EnsureClientSteamId(client);
-    if (g_Stats[client].steamId[0] == '\0')
-    {
-        return;
-    }
-
-    ClearRoundMvpForTeam(team);
-    strcopy(g_sRoundMvpSteamId[team], sizeof(g_sRoundMvpSteamId[]), g_Stats[client].steamId);
-    MarkSteamIdAsMapMvp(g_Stats[client].steamId);
-}
-
-bool HasSteamIdBeenMapMvp(const char[] steamId)
-{
-    if (steamId[0] == '\0' || g_MapMvpHistory == null)
-    {
-        return false;
-    }
-
-    int seen = 0;
-    return g_MapMvpHistory.GetValue(steamId, seen);
-}
-
-void MarkSteamIdAsMapMvp(const char[] steamId)
-{
-    if (steamId[0] == '\0' || g_MapMvpHistory == null)
-    {
-        return;
-    }
-
-    g_MapMvpHistory.SetValue(steamId, 1, true);
-}
-
-void LoadRoundMvpCachedPoints(StringMap cachedPoints)
-{
-    if (cachedPoints == null || !g_bDatabaseReady || GetSyncDatabaseHandle() == null)
-    {
-        return;
-    }
-
-    char inClause[4096];
-    int candidateCount = 0;
-    inClause[0] = '\0';
-
-    for (int i = 1; i <= MaxClients; i++)
-    {
-        if (!IsClientInGame(i) || IsFakeClient(i))
-        {
-            continue;
-        }
-
-        int team = GetClientTeam(i);
-        if (team != 2 && team != 3)
-        {
-            continue;
-        }
-
-        EnsureClientSteamId(i);
-        if (g_Stats[i].steamId[0] == '\0' || HasSteamIdBeenMapMvp(g_Stats[i].steamId))
-        {
-            continue;
-        }
-
-        char escapedSteamId[STEAMID64_LEN * 2];
-        EscapeSqlString(g_Stats[i].steamId, escapedSteamId, sizeof(escapedSteamId));
-
-        if (candidateCount > 0)
-        {
-            StrCat(inClause, sizeof(inClause), ",");
-        }
-
-        StrCat(inClause, sizeof(inClause), "'");
-        StrCat(inClause, sizeof(inClause), escapedSteamId);
-        StrCat(inClause, sizeof(inClause), "'");
-        candidateCount++;
-    }
-
-    if (candidateCount <= 0)
-    {
-        return;
-    }
-
-    char query[6144];
-    Format(query, sizeof(query),
-        "SELECT steamid, points "
-        ... "FROM whaletracker_points_cache "
-        ... "WHERE steamid IN (%s)",
-        inClause);
-
-    DBResultSet results = SQLQuerySync(query);
-    if (results == null)
-    {
-        char error[256];
-        GetSyncDatabaseError(error, sizeof(error));
-        LogError("[WhaleTracker] Failed to load round MVP cache points: %s", error);
-        if (WhaleTracker_IsConnectionLostError(error))
-        {
-            WhaleTracker_ScheduleReconnect(2.0);
-        }
-        return;
-    }
-
-    while (SQL_HasResultSet(results) && results.FetchRow())
-    {
-        char steamId[STEAMID64_LEN];
-        results.FetchString(0, steamId, sizeof(steamId));
-        TrimString(steamId);
-        if (steamId[0] == '\0')
-        {
-            continue;
-        }
-
-        cachedPoints.SetValue(steamId, results.FetchInt(1), true);
-    }
-
-    delete results;
-}
-
-bool GetRoundMvpCandidatePoints(int client, StringMap cachedPoints, int &points, bool &waitingForStats)
-{
-    points = 0;
-    waitingForStats = false;
-
-    if (!IsClientInGame(client) || IsFakeClient(client))
-    {
-        return false;
-    }
-
-    EnsureClientSteamId(client);
-    if (g_Stats[client].steamId[0] == '\0')
-    {
-        return false;
-    }
-
-    if (HasSteamIdBeenMapMvp(g_Stats[client].steamId))
-    {
-        return false;
-    }
-
-    if (cachedPoints != null && cachedPoints.GetValue(g_Stats[client].steamId, points))
-    {
-        return (points > 0);
-    }
-
-    if (!g_Stats[client].loaded)
-    {
-        if (!g_bStatsLoadPending[client])
-        {
-            RequestClientStateLoads(client);
-        }
-
-        waitingForStats = true;
-        return false;
-    }
-
-    points = GetWhalePointsForStats(g_Stats[client]);
-    return (points > 0);
-}
-
-bool CanSelectRoundMvpByKills(int client)
-{
-    if (!IsClientInGame(client) || IsFakeClient(client))
-    {
-        return false;
-    }
-
-    EnsureClientSteamId(client);
-    if (g_Stats[client].steamId[0] == '\0')
-    {
-        return false;
-    }
-
-    return !HasSteamIdBeenMapMvp(g_Stats[client].steamId);
-}
-
-bool IsBetterRoundMvpCandidate(int candidate, int candidatePoints, int currentBest, int currentBestPoints)
-{
-    if (candidate <= 0)
-    {
-        return false;
-    }
-
-    if (currentBest <= 0)
-    {
-        return true;
-    }
-
-    if (candidatePoints > currentBestPoints)
-    {
-        return true;
-    }
-
-    if (candidatePoints < currentBestPoints)
-    {
-        return false;
-    }
-
-    EnsureClientSteamId(candidate);
-    EnsureClientSteamId(currentBest);
-
-    if (g_Stats[candidate].steamId[0] != '\0' && g_Stats[currentBest].steamId[0] != '\0')
-    {
-        int compare = strcmp(g_Stats[candidate].steamId, g_Stats[currentBest].steamId, false);
-        if (compare != 0)
-        {
-            return compare < 0;
-        }
-    }
-
-    return candidate < currentBest;
-}
-
-bool SelectRoundMvpsNow(bool replaceExisting = false, bool announce = true)
-{
-    if (replaceExisting)
-    {
-        ClearCurrentRoundMvpState();
-    }
-
-    bool needRed = (g_sRoundMvpSteamId[2][0] == '\0');
-    bool needBlue = (g_sRoundMvpSteamId[3][0] == '\0');
-    int redMvp = 0;
-    int blueMvp = 0;
-    int bestRedKills = 0;
-    int bestBlueKills = 0;
-    int bestRedPoints = 0;
-    int bestBluePoints = 0;
-    bool redTeamHasKills = false;
-    bool blueTeamHasKills = false;
-
-    if (!needRed && !needBlue)
+    int clientScore = GetTrackedClientScore(client);
+    if (clientScore <= 0)
     {
         return false;
     }
 
     for (int i = 1; i <= MaxClients; i++)
     {
-        if (!IsClientInGame(i) || IsFakeClient(i))
+        if (i == client || !IsValidClient(i) || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != team)
         {
             continue;
         }
 
-        int team = GetClientTeam(i);
-        if (team != 2 && team != 3)
+        if (GetTrackedClientScore(i) > clientScore)
         {
-            continue;
-        }
-
-        int kills = g_MapStats[i].kills;
-        if (kills > 0)
-        {
-            if (team == 2)
-            {
-                redTeamHasKills = true;
-            }
-            else
-            {
-                blueTeamHasKills = true;
-            }
-        }
-
-        if (kills <= 0 || !CanSelectRoundMvpByKills(i))
-        {
-            continue;
-        }
-
-        if (needRed && team == 2 && IsBetterRoundMvpCandidate(i, kills, redMvp, bestRedKills))
-        {
-            redMvp = i;
-            bestRedKills = kills;
-            continue;
-        }
-
-        if (needBlue && team == 3 && IsBetterRoundMvpCandidate(i, kills, blueMvp, bestBlueKills))
-        {
-            blueMvp = i;
-            bestBlueKills = kills;
+            return false;
         }
     }
 
-    bool fallbackRedToPoints = (needRed && redMvp <= 0 && !redTeamHasKills);
-    bool fallbackBlueToPoints = (needBlue && blueMvp <= 0 && !blueTeamHasKills);
-
-    if (fallbackRedToPoints || fallbackBlueToPoints)
-    {
-        StringMap cachedPoints = new StringMap();
-        LoadRoundMvpCachedPoints(cachedPoints);
-
-        for (int i = 1; i <= MaxClients; i++)
-        {
-            if (!IsClientInGame(i) || IsFakeClient(i))
-            {
-                continue;
-            }
-
-            int team = GetClientTeam(i);
-            if ((team == 2 && !fallbackRedToPoints) || (team == 3 && !fallbackBlueToPoints))
-            {
-                continue;
-            }
-
-            if (team != 2 && team != 3)
-            {
-                continue;
-            }
-
-            int points = 0;
-            bool clientWaitingForStats = false;
-            if (!GetRoundMvpCandidatePoints(i, cachedPoints, points, clientWaitingForStats))
-            {
-                continue;
-            }
-
-            if (team == 2 && IsBetterRoundMvpCandidate(i, points, redMvp, bestRedPoints))
-            {
-                redMvp = i;
-                bestRedPoints = points;
-                continue;
-            }
-
-            if (team == 3 && IsBetterRoundMvpCandidate(i, points, blueMvp, bestBluePoints))
-            {
-                blueMvp = i;
-                bestBluePoints = points;
-            }
-        }
-
-        delete cachedPoints;
-    }
-
-    if (needRed && redMvp > 0)
-    {
-        AssignRoundMvp(redMvp, 2);
-    }
-
-    if (needBlue && blueMvp > 0)
-    {
-        AssignRoundMvp(blueMvp, 3);
-    }
-
-    if (announce && redMvp > 0 && blueMvp > 0)
-    {
-        CPrintToChatAll("{magenta}MVPs{default} this round: {red}%N{default}, {blue}%N", redMvp, blueMvp);
-    }
-
-    return (redMvp > 0 || blueMvp > 0);
+    return true;
 }
 
-public void Event_RoundWin(Event event, const char[] name, bool dontBroadcast)
+int GetTrackedClientScore(int client)
 {
-    WhaleTracker_RecordRoundStatistics(event);
-    SelectRoundMvpsNow(true);
-    SnapshotCurrentRoundMvpStateToLastRound();
-}
-
-public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
-{
-    int client = GetClientOfUserId(event.GetInt("userid"));
-    if (!IsValidClient(client) || IsFakeClient(client))
+    static int scorePropState = 0;
+    if (scorePropState == 2 || (scorePropState == 1 && !HasEntProp(client, Prop_Send, "m_iScore")))
     {
-        return;
+        return GetClientFrags(client);
     }
 
-    int oldTeam = event.GetInt("oldteam");
-    InvalidateClientRoundMvp(client, oldTeam);
+    if (HasEntProp(client, Prop_Send, "m_iScore"))
+    {
+        scorePropState = 1;
+        return GetEntProp(client, Prop_Send, "m_iScore");
+    }
+
+    scorePropState = 2;
+    return GetClientFrags(client);
 }
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -571,9 +147,9 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 FireKillstreakForward(attacker, killstreak);
             }
-            if (IsClientCurrentRoundMvp(victim))
+            if (IsTopScoringPlayerOnTeam(victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "mvp_kill", victim);
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "top_score_kill", victim);
             }
             if (ConsumeMarketGardenKill(attacker, victim))
             {

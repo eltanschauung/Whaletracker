@@ -68,7 +68,6 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     CreateNative("WhaleTracker_HasPlaytimeHours", Native_WhaleTracker_HasPlaytimeHours);
     CreateNative("WhaleTracker_GetWhalePoints", Native_WhaleTracker_GetWhalePoints);
     CreateNative("WhaleTracker_ComputeWhalePoints", Native_WhaleTracker_ComputeWhalePoints);
-    CreateNative("WhaleTracker_IsCurrentRoundMvp", Native_WhaleTracker_IsCurrentRoundMvp);
     CreateNative("WhaleTracker_GetLastRecordedName", Native_WhaleTracker_GetLastRecordedName);
     CreateNative("WhaleTracker_GetLastSeen", Native_WhaleTracker_GetLastSeen);
     return APLRes_Success;
@@ -258,10 +257,6 @@ Handle g_hMedicDropForward = null;
 Handle g_hKillstreakForward = null;
 Handle g_hKillstreakEndForward = null;
 Handle g_hMultikillForward = null;
-
-char g_sRoundMvpSteamId[4][STEAMID64_LEN];
-char g_sLastRoundMvpSteamId[4][STEAMID64_LEN];
-StringMap g_MapMvpHistory = null;
 
 bool g_bFavoriteClassLoaded[MAXPLAYERS + 1];
 bool g_bFavoriteClassPending[MAXPLAYERS + 1];

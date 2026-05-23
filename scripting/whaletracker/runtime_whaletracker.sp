@@ -89,14 +89,6 @@ public void OnPluginStart()
         delete g_SaveQueue;
     }
     g_SaveQueue = new ArrayList();
-    if (g_MapMvpHistory == null)
-    {
-        g_MapMvpHistory = new StringMap();
-    }
-    else
-    {
-        g_MapMvpHistory.Clear();
-    }
     g_PendingSaveQueries = 0;
     g_bShuttingDown = false;
     g_hReconnectTimer = null;
@@ -162,7 +154,6 @@ public void OnPluginStart()
     HookEvent("sticky_jump_landed", Event_ExplosiveJumpLanded, EventHookMode_Pre);
     HookEvent("teamplay_round_win", Event_RoundWin, EventHookMode_PostNoCopy);
     HookEvent("teamplay_round_start", Event_ResetMultikillAll, EventHookMode_PostNoCopy);
-    HookEvent("player_team", Event_PlayerTeam, EventHookMode_Post);
 
     RegConsoleCmd("sm_whalestats", Command_ShowStats, "Show your Whale Tracker statistics.");
     RegConsoleCmd("sm_stats", Command_ShowStats, "Show your Whale Tracker statistics.");
@@ -173,7 +164,6 @@ public void OnPluginStart()
     RegConsoleCmd("sm_rank", Command_ShowPoints, "Show your WhalePoints total.");
     RegConsoleCmd("sm_ps", Command_ShowPoints, "Show your WhalePoints total.");
     RegConsoleCmd("sm_calc", Command_ShowPointsCalculation, "Show how WhalePoints are calculated.");
-    RegConsoleCmd("sm_mvp", Command_ShowMvps, "Show current and last-round MVPs.");
     RegConsoleCmd("sm_seen", Command_ShowLastSeen, "Search cached names and show a player's last seen time.");
     RegConsoleCmd("sm_fav", Command_SetFavoriteClass, "Set your favorite class for WhaleTracker.");
     RegConsoleCmd("sm_favorite", Command_SetFavoriteClass, "Set your favorite class for WhaleTracker.");
@@ -242,13 +232,7 @@ public void OnMapStart()
     RefreshCurrentOnlineMapName();
     RefreshHostAddress();
     ClearOnlineStats();
-    ClearCurrentRoundMvpState();
-    ClearLastRoundMvpState();
     ResetMultikillAll();
-    if (g_MapMvpHistory != null)
-    {
-        g_MapMvpHistory.Clear();
-    }
     for (int i = 1; i <= MaxClients; i++)
     {
         ResetMapStats(i);
@@ -395,12 +379,6 @@ public void OnPluginEnd()
         g_SaveQueue = null;
     }
 
-    if (g_MapMvpHistory != null)
-    {
-        delete g_MapMvpHistory;
-        g_MapMvpHistory = null;
-    }
-
     if (g_hDatabase != null)
     {
         delete g_hDatabase;
@@ -511,7 +489,6 @@ public void OnClientDisconnect(int client)
     SaveClientStats(client, true, true);
     CacheWhalePointsOnDisconnect(client);
     RemoveOnlineStats(client);
-    InvalidateClientRoundMvp(client);
     ResetAllStats(client);
     ResetClientCommandCaches(client);
     g_KillSaveCounter[client] = 0;
