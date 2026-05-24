@@ -251,7 +251,7 @@ public void OnMapEnd()
     {
         if (IsValidClient(i) && !IsFakeClient(i))
         {
-            SaveClientStats(i, true, true, true);
+            SaveClientStats(i, false, true, true);
         }
     }
 

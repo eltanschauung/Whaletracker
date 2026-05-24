@@ -36,7 +36,7 @@ public Action Command_SaveAllStats(int client, int args)
 
     for (int i = 1; i <= MaxClients; i++)
     {
-        if (SaveClientStats(i, true, true))
+        if (SaveClientStats(i, false, true))
         {
             saved++;
         }

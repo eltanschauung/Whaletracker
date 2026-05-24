@@ -390,7 +390,7 @@ public Action Timer_GlobalSave(Handle timer, any data)
     {
         if (IsClientInGame(i) && !IsFakeClient(i))
         {
-            SaveClientStats(i, true, false);
+            SaveClientStats(i, false, false);
         }
     }
     return Plugin_Continue;
