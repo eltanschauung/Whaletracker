@@ -1,2 +1,4 @@
 rust_cache_migration_plan.txt
 rust_schema_migration_plan.txt
+backup/
+**/backup/
