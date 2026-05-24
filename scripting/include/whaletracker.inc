@@ -62,6 +62,10 @@ void ResetAllStats(int client)
     g_bOnlineStateLoadPending[client] = false;
     g_bTrackEligible[client] = false;
     g_iDamageGate[client] = 0;
+    for (int i = 0; i <= WEAPON_CATEGORY_COUNT; i++)
+    {
+        g_fLastHitscanAccuracyHit[client][i] = 0.0;
+    }
 }
 
 void ResetMapStats(int client)
@@ -1679,6 +1683,33 @@ int ResolveAccuracyWeaponCategory(int weapon)
     return GetWeaponCategoryFromClassname(classname);
 }
 
+bool IsHitscanAccuracyCategory(int weaponCategory)
+{
+    return (weaponCategory == view_as<int>(WeaponCategory_Shotguns)
+        || weaponCategory == view_as<int>(WeaponCategory_Scatterguns)
+        || weaponCategory == view_as<int>(WeaponCategory_Pistols)
+        || weaponCategory == view_as<int>(WeaponCategory_Snipers)
+        || weaponCategory == view_as<int>(WeaponCategory_Revolvers));
+}
+
+bool ShouldDebounceAccuracyHit(int client, int weaponCategory)
+{
+    if (!IsHitscanAccuracyCategory(weaponCategory))
+    {
+        return false;
+    }
+
+    float now = GetEngineTime();
+    float lastHit = g_fLastHitscanAccuracyHit[client][weaponCategory];
+    if (lastHit > 0.0 && now - lastHit <= HITSCAN_ACCURACY_HIT_DEBOUNCE)
+    {
+        return true;
+    }
+
+    g_fLastHitscanAccuracyHit[client][weaponCategory] = now;
+    return false;
+}
+
 bool TrackAccuracyEvent(int client, int weapon, bool isHit)
 {
     if (!WhaleTracker_IsTrackingEnabled(client))
@@ -1700,6 +1731,11 @@ bool TrackAccuracyEvent(int client, int weapon, bool isHit)
 
     if (isHit)
     {
+        if (ShouldDebounceAccuracyHit(client, weaponCategory))
+        {
+            return true;
+        }
+
         g_Stats[client].weaponHits[weaponCategory]++;
         g_MapStats[client].weaponHits[weaponCategory]++;
     }

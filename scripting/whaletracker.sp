@@ -105,6 +105,7 @@ enum WeaponCategory
     WeaponCategory_Count = WeaponCategory_Revolvers
 }
 #define WEAPON_CATEGORY_COUNT 8
+#define HITSCAN_ACCURACY_HIT_DEBOUNCE 0.05
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int damagecustom);
 void RequestClientStateLoads(int client);
@@ -158,6 +159,7 @@ WhaleStats g_Stats[MAXPLAYERS + 1];
 WhaleStats g_MapStats[MAXPLAYERS + 1];
 int g_KillSaveCounter[MAXPLAYERS + 1];
 bool g_bStatsDirty[MAXPLAYERS + 1];
+float g_fLastHitscanAccuracyHit[MAXPLAYERS + 1][WEAPON_CATEGORY_COUNT + 1];
 Handle g_hPeriodicSaveTimer = null;
 bool g_bStatsLoadPending[MAXPLAYERS + 1];
 bool g_bOnlineStateLoadPending[MAXPLAYERS + 1];
