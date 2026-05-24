@@ -59,6 +59,7 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("DGM_CurrentNormalizedMap");
     MarkNativeAsOptional("DGM_GetServerCapacity");
     MarkNativeAsOptional("DGM_ServerCapacitycheck");
+    MarkNativeAsOptional("DGM_IsRoundRunning");
     MarkNativeAsOptional("PointsStore_GetBonusPoints");
     MarkNativeAsOptional("PointsStore_ApplyBonusPoints");
     MarkNativeAsOptional("PointsStore_SpendBonusPoints");

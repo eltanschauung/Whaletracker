@@ -106,6 +106,11 @@ bool WhaleTracker_AreClientStatsReady(int client)
 
 bool WhaleTracker_IsRoundRunning()
 {
+    if (GetFeatureStatus(FeatureType_Native, "DGM_IsRoundRunning") == FeatureStatus_Available)
+    {
+        return DGM_IsRoundRunning();
+    }
+
     return (GameRules_GetRoundState() == RoundState_RoundRunning);
 }
 
