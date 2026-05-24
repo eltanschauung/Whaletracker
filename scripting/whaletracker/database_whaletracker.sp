@@ -215,9 +215,10 @@ void LoadClientStats(int client)
 
     g_bStatsLoadPending[client] = true;
 
-    char query[512];
+    char query[1024];
     Format(query, sizeof(query),
         "SELECT first_seen, kills, deaths, healing, total_ubers, best_ubers_life, medic_drops, uber_drops, airshots, medicKills, heavyKills, marketGardenHits, headshots, backstabs, best_killstreak, assists, playtime, damage_dealt, damage_taken, last_seen "
+        ... ", shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers "
         ... "FROM whaletracker WHERE steamid = '%s'", g_Stats[client].steamId);
 
     g_hDatabase.Query(WhaleTracker_LoadCallback, query, GetClientUserId(client));
@@ -325,6 +326,22 @@ public void WhaleTracker_LoadCallback(Database db, DBResultSet results, const ch
         g_Stats[index].totalDamage = results.FetchInt(17);
         g_Stats[index].totalDamageTaken = results.FetchInt(18);
         g_Stats[index].lastSeen = results.FetchInt(19);
+        g_Stats[index].weaponShots[WeaponCategory_Shotguns] = results.FetchInt(20);
+        g_Stats[index].weaponHits[WeaponCategory_Shotguns] = results.FetchInt(21);
+        g_Stats[index].weaponShots[WeaponCategory_Scatterguns] = results.FetchInt(22);
+        g_Stats[index].weaponHits[WeaponCategory_Scatterguns] = results.FetchInt(23);
+        g_Stats[index].weaponShots[WeaponCategory_Pistols] = results.FetchInt(24);
+        g_Stats[index].weaponHits[WeaponCategory_Pistols] = results.FetchInt(25);
+        g_Stats[index].weaponShots[WeaponCategory_RocketLaunchers] = results.FetchInt(26);
+        g_Stats[index].weaponHits[WeaponCategory_RocketLaunchers] = results.FetchInt(27);
+        g_Stats[index].weaponShots[WeaponCategory_GrenadeLaunchers] = results.FetchInt(28);
+        g_Stats[index].weaponHits[WeaponCategory_GrenadeLaunchers] = results.FetchInt(29);
+        g_Stats[index].weaponShots[WeaponCategory_StickyLaunchers] = results.FetchInt(30);
+        g_Stats[index].weaponHits[WeaponCategory_StickyLaunchers] = results.FetchInt(31);
+        g_Stats[index].weaponShots[WeaponCategory_Snipers] = results.FetchInt(32);
+        g_Stats[index].weaponHits[WeaponCategory_Snipers] = results.FetchInt(33);
+        g_Stats[index].weaponShots[WeaponCategory_Revolvers] = results.FetchInt(34);
+        g_Stats[index].weaponHits[WeaponCategory_Revolvers] = results.FetchInt(35);
         g_Stats[index].loaded = true;
     }
     else
