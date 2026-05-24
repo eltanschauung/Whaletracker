@@ -484,45 +484,22 @@ void RegisterMultikill(int client)
         window = g_hMultikillWindow.FloatValue;
     }
 
-    for (int i = 0; i < WHALE_MULTIKILL_MAX_LEVEL - 1; i++)
+    if (g_iMultikillChainKills[client] <= 0 || now > g_fMultikillChainExpiresAt[client])
     {
-        g_fMultikillTimes[client][i] = g_fMultikillTimes[client][i + 1];
+        g_iMultikillChainKills[client] = 1;
+    }
+    else
+    {
+        g_iMultikillChainKills[client]++;
     }
 
-    g_fMultikillTimes[client][WHALE_MULTIKILL_MAX_LEVEL - 1] = now;
+    g_fMultikillChainExpiresAt[client] = now + window;
 
-    int killsInWindow = CountMultikillsInWindow(client, now, window);
-    if (killsInWindow <= 1)
+    int kills = g_iMultikillChainKills[client];
+    if (kills >= 2 && kills <= WHALE_MULTIKILL_MAX_LEVEL)
     {
-        g_iLastMultikillAnnounced[client] = 1;
-        return;
+        FireMultikillForward(client, kills);
     }
-
-    if (killsInWindow > WHALE_MULTIKILL_MAX_LEVEL)
-    {
-        killsInWindow = WHALE_MULTIKILL_MAX_LEVEL;
-    }
-
-    if (killsInWindow > g_iLastMultikillAnnounced[client])
-    {
-        g_iLastMultikillAnnounced[client] = killsInWindow;
-        FireMultikillForward(client, killsInWindow);
-    }
-}
-
-int CountMultikillsInWindow(int client, float now, float window)
-{
-    int count = 0;
-    for (int i = 0; i < WHALE_MULTIKILL_MAX_LEVEL; i++)
-    {
-        float killTime = g_fMultikillTimes[client][i];
-        if (killTime > 0.0 && now - killTime <= window)
-        {
-            count++;
-        }
-    }
-
-    return count;
 }
 
 void FireMultikillForward(int client, int kills)
@@ -559,11 +536,8 @@ void ResetMultikillClient(int client)
         return;
     }
 
-    g_iLastMultikillAnnounced[client] = 0;
-    for (int i = 0; i < WHALE_MULTIKILL_MAX_LEVEL; i++)
-    {
-        g_fMultikillTimes[client][i] = 0.0;
-    }
+    g_iMultikillChainKills[client] = 0;
+    g_fMultikillChainExpiresAt[client] = 0.0;
 
     ResetMarketGardenKillCandidate(client);
 }
