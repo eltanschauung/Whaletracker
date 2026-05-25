@@ -45,6 +45,41 @@ bool IsTopScoringPlayerOnTeam(int client)
     return true;
 }
 
+bool HasMultipleDominationsAfterKill(int client, int victim)
+{
+    if (!IsValidClient(client) || !IsClientInGame(client) || !HasEntProp(client, Prop_Send, "m_bPlayerDominated"))
+    {
+        return false;
+    }
+
+    int dominationCount = 0;
+    bool countedVictim = false;
+
+    for (int target = 1; target <= MaxClients; target++)
+    {
+        if (target == client || !IsValidClient(target) || !IsClientInGame(target))
+        {
+            continue;
+        }
+
+        if (GetEntProp(client, Prop_Send, "m_bPlayerDominated", _, target) != 0)
+        {
+            dominationCount++;
+            if (target == victim)
+            {
+                countedVictim = true;
+            }
+        }
+    }
+
+    if (IsValidClient(victim) && !countedVictim)
+    {
+        dominationCount++;
+    }
+
+    return dominationCount > 1;
+}
+
 int GetTrackedClientScore(int client)
 {
     static int scorePropState = 0;
@@ -173,7 +208,10 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (deathFlags & TF_DEATHFLAG_KILLERDOMINATION)
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "player_dom", victim);
+                if (HasMultipleDominationsAfterKill(attacker, victim))
+                {
+                    ApplyBonusPoints(attacker, 1, true, true, 1.0, "multiple_dominations");
+                }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERREVENGE)
             {
@@ -189,7 +227,10 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             ApplyAssistStats(g_MapStats[assister]);
             if (deathFlags & TF_DEATHFLAG_ASSISTERDOMINATION)
             {
-                ApplyBonusPoints(assister, 1, true, true, 1.0, "player_dom", victim);
+                if (HasMultipleDominationsAfterKill(assister, victim))
+                {
+                    ApplyBonusPoints(assister, 1, true, true, 1.0, "multiple_dominations");
+                }
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERREVENGE)
             {
