@@ -533,6 +533,7 @@ public void OnClientPostAdminCheck(int client)
         return;
     }
 
+    WhaleTracker_UpdateClientAdminStatus(client);
     RequestClientJoinLeaderboardQuery(client);
     RequestFavoriteClassLoad(client);
 }

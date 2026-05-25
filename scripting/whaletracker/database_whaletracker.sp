@@ -16,6 +16,7 @@ void WhaleTracker_MaybeMarkDatabaseReady()
         WHALETRACKER_SCHEMA_VERSION,
         GetClientCount(false),
         WhaleTracker_IsRoundRunning() ? 1 : 0);
+    WhaleTracker_EnsureAdminStatusColumns();
     WhaleTracker_EnsureRoundStatisticsTable();
     PumpSaveQueue();
 }
@@ -493,10 +494,10 @@ void QueueStatsSave(int client, int userId, bool forceSync)
         "INSERT INTO whaletracker "
         ... "(steamid, first_seen, kills, deaths, healing, total_ubers, best_ubers_life, medic_drops, uber_drops, airshots, medicKills, heavyKills, marketGardenHits, headshots, backstabs, "
         ... "best_killstreak, assists, playtime, damage_dealt, damage_taken, last_seen, "
-        ... "shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers) "
+        ... "is_admin, shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers) "
         ... "VALUES ('%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, "
         ... "%d, %d, %d, %d, %d, %d, %d, "
-        ... "%s) "
+        ... "%d, %s) "
         ... "ON DUPLICATE KEY UPDATE "
         ... "first_seen = LEAST(first_seen, VALUES(first_seen)), "
         ... "kills = GREATEST(kills, VALUES(kills)), "
@@ -518,6 +519,7 @@ void QueueStatsSave(int client, int userId, bool forceSync)
         ... "damage_dealt = GREATEST(damage_dealt, VALUES(damage_dealt)), "
         ... "damage_taken = GREATEST(damage_taken, VALUES(damage_taken)), "
         ... "last_seen = GREATEST(last_seen, VALUES(last_seen)), "
+        ... "is_admin = VALUES(is_admin), "
 
         ... "shots_shotguns = GREATEST(shots_shotguns, VALUES(shots_shotguns)), "
         ... "hits_shotguns = GREATEST(hits_shotguns, VALUES(hits_shotguns)), "
@@ -556,6 +558,7 @@ void QueueStatsSave(int client, int userId, bool forceSync)
         g_Stats[client].totalDamage,
         g_Stats[client].totalDamageTaken,
         g_Stats[client].lastSeen,
+        g_Stats[client].isAdmin ? 1 : 0,
 
         accuracyValueSegment);
 

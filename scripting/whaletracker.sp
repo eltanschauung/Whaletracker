@@ -152,6 +152,7 @@ enum struct WhaleStats
 
     float connectTime;
 
+    bool isAdmin;
 
 }
 
@@ -217,6 +218,7 @@ enum MatchStatField
 
     MatchStat_BestStreak,
     MatchStat_BestUbersLife,
+    MatchStat_IsAdmin,
     MatchStat_Count
 };
 

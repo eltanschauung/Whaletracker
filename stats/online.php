@@ -52,7 +52,7 @@ try {
     $pdo = wt_pdo();
     wt_clear_online_cache_flag($pdo, $cacheKey);
     $sqlExtended = sprintf(
-        'SELECT steamid, personaname, class, team, alive, is_spectator, kills, deaths, assists, damage, damage_taken, healing, headshots, backstabs, shots, hits%s%s, '
+        'SELECT steamid, personaname, class, team, alive, is_spectator, COALESCE(is_admin, 0) AS is_admin, kills, deaths, assists, damage, damage_taken, healing, headshots, backstabs, shots, hits%s%s, '
         . 'playtime, total_ubers, classes_mask, time_connected, visible_max, last_update '
         . 'FROM whaletracker_online ORDER BY last_update DESC',
         $weaponCategoryClause,
@@ -62,7 +62,7 @@ try {
         $stmt = $pdo->query($sqlExtended);
     } catch (Throwable $e) {
         $sqlLegacy = sprintf(
-            'SELECT steamid, personaname, class, team, alive, is_spectator, kills, deaths, assists, damage, damage_taken, healing, headshots, backstabs, shots, hits%s%s, '
+            'SELECT steamid, personaname, class, team, alive, is_spectator, 0 AS is_admin, kills, deaths, assists, damage, damage_taken, healing, headshots, backstabs, shots, hits%s%s, '
             . 'playtime, total_ubers, time_connected, visible_max, last_update '
             . 'FROM whaletracker_online ORDER BY last_update DESC',
             $weaponCategoryClause,

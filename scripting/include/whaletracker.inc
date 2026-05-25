@@ -23,6 +23,7 @@ void ResetStatsStruct(WhaleStats stats, bool resetIdentity)
         stats.steamId[0] = '\0';
         stats.firstSeen[0] = '\0';
         stats.firstSeenTimestamp = 0;
+        stats.isAdmin = false;
     }
 
     stats.kills = 0;
@@ -72,11 +73,44 @@ void ResetMapStats(int client)
 {
     ResetStatsStruct(g_MapStats[client], false);
     g_MapStats[client].loaded = g_Stats[client].loaded;
+    g_MapStats[client].isAdmin = g_Stats[client].isAdmin;
     if (g_Stats[client].steamId[0] != '\0')
     {
         strcopy(g_MapStats[client].steamId, sizeof(g_MapStats[client].steamId), g_Stats[client].steamId);
     }
     g_MapStats[client].connectTime = GetEngineTime();
+}
+
+bool WhaleTracker_ComputeClientAdminStatus(int client)
+{
+    if (client <= 0 || client > MaxClients || !IsClientInGame(client) || IsFakeClient(client))
+    {
+        return false;
+    }
+
+    return GetUserAdmin(client) != INVALID_ADMIN_ID;
+}
+
+void WhaleTracker_UpdateClientAdminStatus(int client)
+{
+    if (client <= 0 || client > MaxClients || IsFakeClient(client))
+    {
+        return;
+    }
+
+    bool isAdmin = WhaleTracker_ComputeClientAdminStatus(client);
+    if (g_Stats[client].isAdmin == isAdmin && g_MapStats[client].isAdmin == isAdmin)
+    {
+        return;
+    }
+
+    g_Stats[client].isAdmin = isAdmin;
+    g_MapStats[client].isAdmin = isAdmin;
+
+    if (g_Stats[client].loaded)
+    {
+        MarkClientDirty(client);
+    }
 }
 
 void ResetRuntimeStats(int client)
@@ -205,14 +239,15 @@ bool QueueClientOnlineSnapshot(int client, int now, float engineNow, int playerC
     char query[SAVE_QUERY_MAXLEN];
     Format(query, sizeof(query),
         "REPLACE INTO whaletracker_online "
-        ... "(steamid, personaname, class, team, alive, is_spectator, kills, deaths, assists, damage, damage_taken, healing, headshots, backstabs, medic_drops, uber_drops, airshots, marketGardenHits, playtime, total_ubers, best_streak, best_ubers_life, current_killstreak, current_ubers_life, visible_max, time_connected, shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers, host_ip, host_port, playercount, map_name, last_update) "
-        ... "VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %s, '%s', %d, %d, '%s', %d)",
+        ... "(steamid, personaname, class, team, alive, is_spectator, is_admin, kills, deaths, assists, damage, damage_taken, healing, headshots, backstabs, medic_drops, uber_drops, airshots, marketGardenHits, playtime, total_ubers, best_streak, best_ubers_life, current_killstreak, current_ubers_life, visible_max, time_connected, shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers, host_ip, host_port, playercount, map_name, last_update) "
+        ... "VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %s, '%s', %d, %d, '%s', %d)",
         steamId,
         escapedName,
         tfClass,
         team,
         alive ? 1 : 0,
         spectator ? 1 : 0,
+        g_Stats[client].isAdmin ? 1 : 0,
         g_MapStats[client].kills,
         g_MapStats[client].deaths,
         g_MapStats[client].totalAssists,
@@ -637,6 +672,7 @@ void SnapshotFromStats(const WhaleStats stats, int data[MATCH_STAT_COUNT])
     data[MatchStat_HitsRevolvers] = stats.weaponHits[WeaponCategory_Revolvers];
     data[MatchStat_BestStreak] = stats.bestKillstreak;
     data[MatchStat_BestUbersLife] = stats.bestUbersLife;
+    data[MatchStat_IsAdmin] = stats.isAdmin ? 1 : 0;
 }
 
 void MergeSnapshotArrays(int base[MATCH_STAT_COUNT], const int delta[MATCH_STAT_COUNT])
@@ -679,6 +715,10 @@ void MergeSnapshotArrays(int base[MATCH_STAT_COUNT], const int delta[MATCH_STAT_
     if (delta[MatchStat_BestUbersLife] > base[MatchStat_BestUbersLife])
     {
         base[MatchStat_BestUbersLife] = delta[MatchStat_BestUbersLife];
+    }
+    if (delta[MatchStat_IsAdmin] > base[MatchStat_IsAdmin])
+    {
+        base[MatchStat_IsAdmin] = delta[MatchStat_IsAdmin];
     }
 }
 
@@ -778,6 +818,7 @@ void ApplySnapshotToStats(WhaleStats stats, const int data[MATCH_STAT_COUNT])
     stats.weaponHits[WeaponCategory_Revolvers] = data[MatchStat_HitsRevolvers];
     stats.bestKillstreak = data[MatchStat_BestStreak];
     stats.bestUbersLife = data[MatchStat_BestUbersLife];
+    stats.isAdmin = data[MatchStat_IsAdmin] != 0;
     stats.loaded = true;
 }
 
@@ -880,6 +921,35 @@ bool WhaleTracker_UseDeferredSavePump()
     return (g_hDeferredSavePump != null && g_hDeferredSavePump.BoolValue);
 }
 
+void WhaleTracker_EnsureAdminStatusColumns()
+{
+    if (!g_bDatabaseReady || g_hSyncDatabase == null)
+    {
+        return;
+    }
+
+    if (!SQLFastQuerySync("ALTER TABLE whaletracker ADD COLUMN IF NOT EXISTS is_admin TINYINT(1) DEFAULT 0"))
+    {
+        char error[256];
+        GetSyncDatabaseError(error, sizeof(error));
+        LogError("[WhaleTracker] Failed to ensure whaletracker.is_admin: %s", error);
+    }
+
+    if (!SQLFastQuerySync("ALTER TABLE whaletracker_online ADD COLUMN IF NOT EXISTS is_admin TINYINT(1) DEFAULT 0"))
+    {
+        char error[256];
+        GetSyncDatabaseError(error, sizeof(error));
+        LogError("[WhaleTracker] Failed to ensure whaletracker_online.is_admin: %s", error);
+    }
+
+    if (!SQLFastQuerySync("ALTER TABLE whaletracker_log_players ADD COLUMN IF NOT EXISTS is_admin TINYINT DEFAULT 0"))
+    {
+        char error[256];
+        GetSyncDatabaseError(error, sizeof(error));
+        LogError("[WhaleTracker] Failed to ensure whaletracker_log_players.is_admin: %s", error);
+    }
+}
+
 void RefreshPublicHostIp()
 {
     g_sPublicHostIp[0] = '\0';
@@ -974,10 +1044,10 @@ void InsertPlayerLogRecord(const int data[MATCH_STAT_COUNT], const char[] steamI
         "INSERT INTO whaletracker_log_players "
         ... "(log_id, steamid, personaname, kills, deaths, assists, damage, damage_taken, healing, headshots, backstabs, total_ubers, playtime, medic_drops, uber_drops, airshots, marketGardenHits, "
         ... "shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers, "
-        ... "best_streak, best_ubers_life, last_updated) "
+        ... "best_streak, best_ubers_life, is_admin, last_updated) "
         ... "VALUES ('%s', '%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, "
         ... "%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, "
-        ... "%d, %d, %d) "
+        ... "%d, %d, %d, %d) "
         ... "ON DUPLICATE KEY UPDATE "
         ... "personaname = VALUES(personaname), "
         ... "kills = VALUES(kills), "
@@ -1012,6 +1082,7 @@ void InsertPlayerLogRecord(const int data[MATCH_STAT_COUNT], const char[] steamI
         ... "hits_revolvers = VALUES(hits_revolvers), "
         ... "best_streak = VALUES(best_streak), "
         ... "best_ubers_life = VALUES(best_ubers_life), "
+        ... "is_admin = VALUES(is_admin), "
         ... "last_updated = VALUES(last_updated)",
         g_sCurrentLogId,
         steamId,
@@ -1048,6 +1119,7 @@ void InsertPlayerLogRecord(const int data[MATCH_STAT_COUNT], const char[] steamI
         data[MatchStat_HitsRevolvers],
         data[MatchStat_BestStreak],
         data[MatchStat_BestUbersLife],
+        data[MatchStat_IsAdmin],
         timestamp);
 
     QueueSaveQuery(query, 0, forceSync);
