@@ -5,9 +5,7 @@
         $playerCountRaw = count($log['players']);
     }
     $gamemodeRaw = $log['gamemode'] ?? 'Unknown';
-    $badgeSlug = wt_slugify($gamemodeRaw);
     $badgeLabel = wt_format_gamemode_label($gamemodeRaw);
-    $badgeIcon = wt_gamemode_icon_path($gamemodeRaw);
     $mapNameRaw = (string)($log['map'] ?? 'Unknown');
     $mapName = $mapNameRaw !== '' ? basename($mapNameRaw) : 'Unknown';
     $durationSeconds = (int)($log['duration'] ?? 0);
@@ -16,12 +14,7 @@
     ?>
     <div class="log-entry log-current" data-player-count="<?= $playerCountRaw ?>" data-started-at="<?= $startedAt ?>">
         <div class="log-summary">
-            <span class="gamemode-icon <?= $badgeIcon ? 'has-icon' : '' ?> gamemode-<?= htmlspecialchars($badgeSlug, ENT_QUOTES, 'UTF-8') ?>" title="<?= htmlspecialchars($gamemodeRaw ?? 'Unknown', ENT_QUOTES, 'UTF-8') ?>">
-                <?php if ($badgeIcon): ?>
-                    <img src="<?= htmlspecialchars($badgeIcon, ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy">
-                <?php endif; ?>
-                <span class="gamemode-label"><?= htmlspecialchars($badgeLabel, ENT_QUOTES, 'UTF-8') ?></span>
-            </span>
+            <span class="gamemode-label" title="<?= htmlspecialchars($gamemodeRaw ?? 'Unknown', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($badgeLabel, ENT_QUOTES, 'UTF-8') ?></span>
             <span class="log-title"><?= htmlspecialchars($mapName, ENT_QUOTES, 'UTF-8') ?> — <?= htmlspecialchars(wt_format_log_datetime($startedAt), ENT_QUOTES, 'UTF-8') ?> — <?= htmlspecialchars($durationText, ENT_QUOTES, 'UTF-8') ?></span>
             <span class="log-meta"><?= $playerCountRaw ?> player<?= $playerCountRaw === 1 ? '' : 's' ?></span>
         </div>

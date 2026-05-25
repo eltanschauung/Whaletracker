@@ -975,40 +975,20 @@ body {
     background: rgba(127, 200, 255, 0.12);
 }
 
-.gamemode-icon {
+.gamemode-label {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
     background: rgba(127, 200, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(127, 200, 255, 0.18);
     font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--text-primary);
+    font-size: 0.85rem;
+    color: #bfe4ff;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    overflow: hidden;
-}
-
-.gamemode-icon.has-icon {
-    gap: 0.35rem;
-    padding: 0.25rem 0.6rem;
-    height: auto;
-    min-width: 0;
-    border-radius: 999px;
-}
-
-.gamemode-icon img {
-    height: 1.4rem;
-    width: auto;
-    max-width: 100%;
-    object-fit: contain;
-}
-
-.gamemode-icon .gamemode-label {
-    font-size: 0.85rem;
+    white-space: nowrap;
 }
 
 .log-title {
@@ -1024,15 +1004,8 @@ body {
 }
 
 @media (max-width: 640px) {
-    .gamemode-icon {
-        min-width: 2rem;
-        height: 2rem;
-    }
-    .gamemode-icon.has-icon {
-        padding: 0.2rem 0.35rem;
-    }
-    .gamemode-icon img {
-        height: 1.1rem;
+    .gamemode-label {
+        padding: 0.16rem 0.45rem;
     }
     .log-title {
         font-size: 0.75rem;
