@@ -1931,6 +1931,23 @@ void ApplyAssistStats(WhaleStats stats)
 
 }
 
+bool ShouldSuppressDeathIncrementForCurrentPopulation()
+{
+    int capacity = WhaleTracker_GetCurrentServerCapacity();
+    if (capacity <= 0)
+    {
+        return false;
+    }
+
+    int lowPopulationThreshold = RoundToFloor(float(capacity) * 0.35);
+    if (lowPopulationThreshold <= 0)
+    {
+        return false;
+    }
+
+    return WhaleTracker_GetCurrentPlayerCount() <= lowPopulationThreshold;
+}
+
 bool ShouldSuppressDeathIncrementForCurrentGamemode()
 {
     if (GetFeatureStatus(FeatureType_Native, "DGM_IsSmallFormatGamemode") == FeatureStatus_Available)
@@ -1950,7 +1967,9 @@ bool ShouldSuppressDeathIncrementForCurrentGamemode()
 
 void ApplyCumulativeDeathStats(WhaleStats stats, bool countDeath = true)
 {
-    if (countDeath && !ShouldSuppressDeathIncrementForCurrentGamemode())
+    if (countDeath
+        && !ShouldSuppressDeathIncrementForCurrentGamemode()
+        && !ShouldSuppressDeathIncrementForCurrentPopulation())
     {
         stats.deaths++;
     }
