@@ -778,7 +778,7 @@ bool FindSeenMatch(const char[] search, char[] steamId, int steamIdLen, char[] m
         ... "OR LEFT(LOWER(COALESCE(pc.prename, '')), CHAR_LENGTH(q.term)) = q.term "
         ... "OR LEFT(LOWER(COALESCE(pc.name, '')), CHAR_LENGTH(q.term)) = q.term THEN 1 "
         ... "ELSE 2 END, "
-        ... "COALESCE(w.last_seen, 0) DESC, w.steamid ASC "
+        ... "COALESCE(w.playtime, 0) DESC, COALESCE(w.last_seen, 0) DESC, w.steamid ASC "
         ... "LIMIT 1",
         escapedSearch);
 
