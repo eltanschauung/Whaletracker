@@ -335,7 +335,8 @@ public Action Command_ShowLastSeen(int client, int args)
 
     char steamId[STEAMID64_LEN];
     char matchedName[256];
-    if (!FindSeenMatch(search, steamId, sizeof(steamId), matchedName, sizeof(matchedName)))
+    if (!FindOnlineSeenMatch(search, steamId, sizeof(steamId), matchedName, sizeof(matchedName))
+        && !FindSeenMatch(search, steamId, sizeof(steamId), matchedName, sizeof(matchedName)))
     {
         CPrintToChat(client, "{green}[WhaleTracker]{default} No cached name matched '%s'.", search);
         return Plugin_Handled;
@@ -639,6 +640,107 @@ bool TryGetFiltersSteamIdColorTag(const char[] steamId, char[] colorTag, int max
 
     TrimString(colorTag);
     return (colorTag[0] != '\0');
+}
+
+int GetSeenNameMatchRank(const char[] loweredSearch, const char[] name)
+{
+    if (loweredSearch[0] == '\0' || name[0] == '\0')
+    {
+        return 999;
+    }
+
+    char loweredName[256];
+    CopyLowercase(name, loweredName, sizeof(loweredName));
+
+    if (StrEqual(loweredName, loweredSearch, false))
+    {
+        return 0;
+    }
+
+    int matchIndex = StrContains(loweredName, loweredSearch, false);
+    if (matchIndex == 0)
+    {
+        return 1;
+    }
+
+    if (matchIndex > 0)
+    {
+        return 2;
+    }
+
+    return 999;
+}
+
+bool FindOnlineSeenMatch(const char[] search, char[] steamId, int steamIdLen, char[] matchedName, int matchedNameLen)
+{
+    steamId[0] = '\0';
+    matchedName[0] = '\0';
+
+    if (search[0] == '\0')
+    {
+        return false;
+    }
+
+    char loweredSearch[128];
+    CopyLowercase(search, loweredSearch, sizeof(loweredSearch));
+
+    int bestClient = 0;
+    int bestRank = 999;
+
+    for (int i = 1; i <= MaxClients; i++)
+    {
+        if (!IsClientConnected(i) || IsFakeClient(i))
+        {
+            continue;
+        }
+
+        char clientSteamId[STEAMID64_LEN];
+        if (!GetClientAuthId(i, AuthId_SteamID64, clientSteamId, sizeof(clientSteamId)))
+        {
+            continue;
+        }
+
+        int rank = 999;
+        if (StrEqual(clientSteamId, search, false))
+        {
+            rank = 0;
+        }
+        else
+        {
+            char displayName[256];
+            GetClientChatDisplayName(i, displayName, sizeof(displayName));
+            rank = GetSeenNameMatchRank(loweredSearch, displayName);
+
+            char clientName[256];
+            GetClientName(i, clientName, sizeof(clientName));
+            int clientNameRank = GetSeenNameMatchRank(loweredSearch, clientName);
+            if (clientNameRank < rank)
+            {
+                rank = clientNameRank;
+            }
+        }
+
+        if (rank < bestRank)
+        {
+            bestClient = i;
+            bestRank = rank;
+        }
+    }
+
+    if (bestClient <= 0 || bestRank >= 999)
+    {
+        return false;
+    }
+
+    GetClientAuthId(bestClient, AuthId_SteamID64, steamId, steamIdLen);
+    GetClientChatDisplayName(bestClient, matchedName, matchedNameLen);
+    if (matchedName[0] == '\0')
+    {
+        GetClientName(bestClient, matchedName, matchedNameLen);
+    }
+    TrimString(steamId);
+    TrimString(matchedName);
+    return (steamId[0] != '\0');
 }
 
 bool FindSeenMatch(const char[] search, char[] steamId, int steamIdLen, char[] matchedName, int matchedNameLen)
