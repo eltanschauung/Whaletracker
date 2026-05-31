@@ -128,6 +128,7 @@ enum struct WhaleStats
     int totalUbers;
     int totalMedicDrops;
     int totalAirshots;
+    int totalCrossbowHits;
     int totalMarketGardenHits;
     int totalHeadshots;
     int totalBackstabs;

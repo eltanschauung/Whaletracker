@@ -182,9 +182,13 @@ public void OnCrossbowBoltTouch(int entity, int other)
         weapon = GetEntPropEnt(entity, Prop_Send, "m_hLauncher");
     }
 
-    if (IsMedicCrossbowAirshot(attacker, other, weapon))
+    if (IsMedicCrossbowHit(attacker, other, weapon))
     {
-        RecordSupstatsAirshot(attacker, other);
+        RecordCrossbowHit(attacker);
+        if (IsVictimAirshotEligible(other))
+        {
+            RecordSupstatsAirshot(attacker, other);
+        }
     }
 }
 
@@ -339,6 +343,11 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 
     if (IsValidClient(victim) && !IsFakeClient(victim) && IsValidClient(attacker) && !IsFakeClient(attacker) && WhaleTracker_IsTrackingEnabled(attacker))
     {
+        if (IsMedicCrossbowHit(attacker, victim, weapon))
+        {
+            RecordCrossbowHit(attacker);
+        }
+
         if (IsSupstatsAirshot(attacker, victim, weapon, wasDirectHit))
         {
             RecordSupstatsAirshot(attacker, victim);
@@ -630,6 +639,11 @@ bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
 
 bool IsMedicCrossbowAirshot(int attacker, int victim, int weapon)
 {
+    return IsMedicCrossbowHit(attacker, victim, weapon) && IsVictimAirshotEligible(victim);
+}
+
+bool IsMedicCrossbowHit(int attacker, int victim, int weapon)
+{
     if (!IsValidClient(attacker) || IsFakeClient(attacker) || !IsValidClient(victim) || IsFakeClient(victim))
         return false;
 
@@ -649,7 +663,13 @@ bool IsMedicCrossbowAirshot(int attacker, int victim, int weapon)
         return false;
     }
 
-    return IsVictimAirshotEligible(victim);
+    return true;
+}
+
+void RecordCrossbowHit(int attacker)
+{
+    g_Stats[attacker].totalCrossbowHits += 1;
+    MarkClientDirty(attacker);
 }
 
 void RecordSupstatsAirshot(int attacker, int victim)
