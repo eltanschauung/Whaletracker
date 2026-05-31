@@ -135,12 +135,19 @@ public void Event_ExplosiveJumpLanded(Event event, const char[] name, bool dontB
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
-    if (entity <= MaxClients || !IsSupstatsDirectHitProjectileClassname(classname))
+    if (entity <= MaxClients)
     {
         return;
     }
 
-    SDKHook(entity, SDKHook_Touch, OnProjectileTouch);
+    if (IsSupstatsDirectHitProjectileClassname(classname))
+    {
+        SDKHook(entity, SDKHook_Touch, OnProjectileTouch);
+    }
+    else if (StrEqual(classname, "tf_projectile_healing_bolt", false))
+    {
+        SDKHook(entity, SDKHook_Touch, OnCrossbowBoltTouch);
+    }
 }
 
 public void OnProjectileTouch(int entity, int other)
@@ -148,6 +155,36 @@ public void OnProjectileTouch(int entity, int other)
     if (other > 0 && other <= MaxClients)
     {
         g_bPlayerTakenDirectHit[other] = true;
+    }
+}
+
+public void OnCrossbowBoltTouch(int entity, int other)
+{
+    if (!IsValidClient(other) || IsFakeClient(other))
+    {
+        return;
+    }
+
+    int attacker = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+    if (!IsValidClient(attacker) || IsFakeClient(attacker) || !WhaleTracker_IsTrackingEnabled(attacker))
+    {
+        return;
+    }
+
+    if (GetClientTeam(attacker) != GetClientTeam(other))
+    {
+        return;
+    }
+
+    int weapon = -1;
+    if (HasEntProp(entity, Prop_Send, "m_hLauncher"))
+    {
+        weapon = GetEntPropEnt(entity, Prop_Send, "m_hLauncher");
+    }
+
+    if (IsMedicCrossbowAirshot(attacker, other, weapon))
+    {
+        RecordSupstatsAirshot(attacker, other);
     }
 }
 
@@ -313,16 +350,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
     {
         if (IsSupstatsAirshot(attacker, victim, weapon, wasDirectHit))
         {
-            g_Stats[attacker].totalAirshots += 1;
-            g_MapStats[attacker].totalAirshots += 1;
-            if (g_hAirshotForward != null)
-            {
-                Call_StartForward(g_hAirshotForward);
-                Call_PushCell(attacker);
-                Call_PushCell(victim);
-                int _ret;
-                Call_Finish(_ret);
-            }
+            RecordSupstatsAirshot(attacker, victim);
         }
 
         if (IsMarketGardenerHit(attacker, weapon))
@@ -589,9 +617,6 @@ bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
     if (!IsValidClient(attacker) || IsFakeClient(attacker) || !IsValidClient(victim) || IsFakeClient(victim))
         return false;
 
-    if (GetClientTeam(victim) == GetClientTeam(attacker))
-        return false;
-
     int primary = GetPlayerWeaponSlot(attacker, 0);
     if (primary <= MaxClients || primary != weapon)
     {
@@ -601,20 +626,53 @@ bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
     TFClassType attackerClass = TF2_GetPlayerClass(attacker);
     if ((attackerClass == TFClass_Soldier || attackerClass == TFClass_DemoMan) && wasDirectHit)
     {
+        if (GetClientTeam(victim) == GetClientTeam(attacker))
+        {
+            return false;
+        }
+
         return IsVictimAirshotEligible(victim);
     }
 
-    if (attackerClass == TFClass_Medic)
+    return IsMedicCrossbowAirshot(attacker, victim, weapon);
+}
+
+bool IsMedicCrossbowAirshot(int attacker, int victim, int weapon)
+{
+    if (!IsValidClient(attacker) || IsFakeClient(attacker) || !IsValidClient(victim) || IsFakeClient(victim))
+        return false;
+
+    if (TF2_GetPlayerClass(attacker) != TFClass_Medic)
+        return false;
+
+    int primary = GetPlayerWeaponSlot(attacker, 0);
+    if (primary <= MaxClients || primary != weapon)
     {
-        char classname[64];
-        GetEntityClassname(weapon, classname, sizeof(classname));
-        if (StrEqual(classname, "tf_weapon_crossbow", false))
-        {
-            return IsVictimAirshotEligible(victim);
-        }
+        return false;
     }
 
-    return false;
+    char classname[64];
+    GetEntityClassname(weapon, classname, sizeof(classname));
+    if (!StrEqual(classname, "tf_weapon_crossbow", false))
+    {
+        return false;
+    }
+
+    return IsVictimAirshotEligible(victim);
+}
+
+void RecordSupstatsAirshot(int attacker, int victim)
+{
+    g_Stats[attacker].totalAirshots += 1;
+    g_MapStats[attacker].totalAirshots += 1;
+    if (g_hAirshotForward != null)
+    {
+        Call_StartForward(g_hAirshotForward);
+        Call_PushCell(attacker);
+        Call_PushCell(victim);
+        int _ret;
+        Call_Finish(_ret);
+    }
 }
 
 bool IsVictimAirshotEligible(int victim)
