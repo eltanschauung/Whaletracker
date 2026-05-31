@@ -184,7 +184,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (IsTopScoringPlayerOnTeam(victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "top_score_kill", victim);
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "top_score_kill", victim, 3.0, 5);
             }
             if (ConsumeMarketGardenKill(attacker, victim))
             {
@@ -215,7 +215,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (deathFlags & TF_DEATHFLAG_KILLERREVENGE)
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "player_revenge", victim);
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "player_revenge", victim, 3.0, 3);
             }
             attackerScoredMedicDrop = medicDrop;
             MarkClientDirty(attacker);
@@ -234,7 +234,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERREVENGE)
             {
-                ApplyBonusPoints(assister, 1, true, true, 1.0, "player_revenge", victim);
+                ApplyBonusPoints(assister, 1, true, true, 1.0, "player_revenge", victim, 3.0, 3);
             }
             MarkClientDirty(assister);
         }

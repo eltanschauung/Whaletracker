@@ -1866,14 +1866,14 @@ bool WhaleTracker_CheckDamageGate(int client, int damage)
     return false;
 }
 
-bool ApplyBonusPoints(int client, int points = 1, bool playSound = true, bool chatAlert = true, float randomChance = 1.0, const char[] type = "", int target = 0, float delay = 3.0)
+bool ApplyBonusPoints(int client, int points = 1, bool playSound = true, bool chatAlert = true, float randomChance = 1.0, const char[] type = "", int target = 0, float delay = 3.0, int perMap = 0)
 {
     if (GetFeatureStatus(FeatureType_Native, "PointsStore_ApplyBonusPoints") != FeatureStatus_Available)
     {
         return false;
     }
 
-    return PointsStore_ApplyBonusPoints(client, points, playSound, chatAlert, randomChance, type, target, delay);
+    return PointsStore_ApplyBonusPoints(client, points, playSound, chatAlert, randomChance, type, target, delay, perMap);
 }
 
 void BuildWeaponAccuracySegment(const WhaleStats stats, char[] buffer, int maxlen)
