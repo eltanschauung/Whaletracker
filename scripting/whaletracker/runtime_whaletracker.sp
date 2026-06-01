@@ -198,6 +198,7 @@ public void OnPluginStart()
     g_hPeriodicSaveTimer = CreateTimer(30.0, Timer_GlobalSave, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 
     g_hAirshotForward = CreateGlobalForward("WhaleTracker_OnAirshot", ET_Ignore, Param_Cell, Param_Cell);
+    g_hProjectileDirectHitForward = CreateGlobalForward("WhaleTracker_OnProjectileDirectHit", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
     g_hMedicDropForward = CreateGlobalForward("WhaleTracker_OnMedicDrop", ET_Ignore, Param_Cell, Param_Cell);
     g_hKillstreakForward = CreateGlobalForward("WhaleTracker_OnKillstreak", ET_Ignore, Param_Cell, Param_Cell);
     g_hKillstreakEndForward = CreateGlobalForward("WhaleTracker_OnKillstreakEnd", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
@@ -347,6 +348,12 @@ public void OnPluginEnd()
     {
         delete g_hAirshotForward;
         g_hAirshotForward = null;
+    }
+
+    if (g_hProjectileDirectHitForward != null)
+    {
+        delete g_hProjectileDirectHitForward;
+        g_hProjectileDirectHitForward = null;
     }
 
     if (g_hMedicDropForward != null)

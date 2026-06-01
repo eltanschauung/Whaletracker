@@ -31,6 +31,8 @@
 #define WT_MARKET_GARDENER_DEF_INDEX 416
 #define WT_HANDSHAKE_DEF_INDEX 609
 #define WT_AIRSHOT_MIN_HEIGHT 100.0 // Supstats2 uses a height of 170.0
+#define WT_DEMO_SYNC_WINDOW 0.5
+#define WT_DEMO_SYNC_KILL_CONFIRM_WINDOW 0.25
 #define WHALETRACKER_SCHEMA_VERSION 2
 #define TF_CLASS_HEAVY          6
 #define TF_CLASS_MEDIC          5
@@ -257,6 +259,7 @@ Handle g_hReconnectTimer = null;
 Handle g_hSchemaRetryTimer = null;
 Handle g_hSavePumpTimer = null;
 Handle g_hAirshotForward = null;
+Handle g_hProjectileDirectHitForward = null;
 Handle g_hMedicDropForward = null;
 Handle g_hKillstreakForward = null;
 Handle g_hKillstreakEndForward = null;

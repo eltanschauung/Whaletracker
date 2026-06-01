@@ -88,6 +88,17 @@ native int WhaleTracker_GetLastSeen(const char[] steamId64);
 forward void WhaleTracker_OnAirshot(int attacker, int victim);
 
 /**
+ * Fired when WhaleTracker records a valid enemy projectile direct hit.
+ *
+ * This fires after the projectile touch is confirmed by damage processing.
+ *
+ * @param attacker      Attacker client index.
+ * @param victim        Victim client index.
+ * @param weapon        Weapon entity index that caused the hit.
+ */
+forward void WhaleTracker_OnProjectileDirectHit(int attacker, int victim, int weapon);
+
+/**
  * Fired when WhaleTracker records a medic dropping a full uber.
  *
  * @param attacker      Attacker client index, or 0 if no valid attacker.

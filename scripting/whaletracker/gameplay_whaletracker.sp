@@ -2,6 +2,10 @@ bool g_bPlayerTakenDirectHit[MAXPLAYERS + 1];
 bool g_bInExplosiveJump[MAXPLAYERS + 1];
 int g_iPendingMarketGardenAttacker[MAXPLAYERS + 1];
 float g_fPendingMarketGardenTime[MAXPLAYERS + 1];
+int g_iPendingDemoSyncAttacker[MAXPLAYERS + 1];
+float g_fPendingDemoSyncStickyTime[MAXPLAYERS + 1];
+int g_iPendingDemoSyncKillAttacker[MAXPLAYERS + 1];
+float g_fPendingDemoSyncKillTime[MAXPLAYERS + 1];
 
 #define WT_MARKET_GARDEN_KILL_WINDOW 0.25
 
@@ -107,6 +111,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
     g_bPlayerTakenDirectHit[client] = false;
     g_bInExplosiveJump[client] = false;
     ResetMarketGardenKillCandidate(client);
+    ResetDemoSyncState(client);
     ResetLifeCounters(g_Stats[client]);
     ResetLifeCounters(g_MapStats[client]);
 }
@@ -231,6 +236,10 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 ApplyBonusPoints(attacker, 1, true, true, 1.0, "market_garden_kill", 0, 3.0, 5);
             }
+            if (ConsumeDemoSyncKill(attacker, victim))
+            {
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "demo_sync_kill");
+            }
             if (victimClass == TF_CLASS_MEDIC)
             {
                 if (medicDrop)
@@ -343,6 +352,23 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 
     if (IsValidClient(victim) && !IsFakeClient(victim) && IsValidClient(attacker) && !IsFakeClient(attacker) && WhaleTracker_IsTrackingEnabled(attacker))
     {
+        if (GetClientTeam(attacker) != GetClientTeam(victim))
+        {
+            if (IsWeaponClass(weapon, "tf_weapon_pipebomblauncher"))
+            {
+                MarkDemoSyncStickyDamage(attacker, victim);
+            }
+
+            if (IsValidProjectileDirectHit(attacker, victim, weapon, wasDirectHit))
+            {
+                FireProjectileDirectHitForward(attacker, victim, weapon);
+                if (IsWeaponClass(weapon, "tf_weapon_grenadelauncher"))
+                {
+                    MarkDemoSyncKillCandidate(attacker, victim);
+                }
+            }
+        }
+
         if (IsMedicCrossbowHit(attacker, victim, weapon))
         {
             RecordCrossbowHit(attacker);
@@ -586,6 +612,21 @@ void FireMultikillForward(int client, int kills)
     Call_Finish(_ret);
 }
 
+void FireProjectileDirectHitForward(int attacker, int victim, int weapon)
+{
+    if (g_hProjectileDirectHitForward == null)
+    {
+        return;
+    }
+
+    Call_StartForward(g_hProjectileDirectHitForward);
+    Call_PushCell(attacker);
+    Call_PushCell(victim);
+    Call_PushCell(weapon);
+    int _ret;
+    Call_Finish(_ret);
+}
+
 public void Event_ResetMultikillAll(Event event, const char[] name, bool dontBroadcast)
 {
     ResetMultikillAll();
@@ -777,6 +818,92 @@ void ResetMarketGardenKillCandidate(int client)
 
     g_iPendingMarketGardenAttacker[client] = 0;
     g_fPendingMarketGardenTime[client] = 0.0;
+}
+
+bool IsWeaponClass(int weapon, const char[] expectedClassname)
+{
+    if (weapon <= MaxClients || !IsValidEntity(weapon))
+    {
+        return false;
+    }
+
+    char classname[64];
+    GetEntityClassname(weapon, classname, sizeof(classname));
+    return StrEqual(classname, expectedClassname, false);
+}
+
+bool IsValidProjectileDirectHit(int attacker, int victim, int weapon, bool wasDirectHit)
+{
+    if (!wasDirectHit || !IsValidClient(attacker) || IsFakeClient(attacker) || !IsValidClient(victim) || IsFakeClient(victim))
+    {
+        return false;
+    }
+
+    if (GetClientTeam(attacker) == GetClientTeam(victim))
+    {
+        return false;
+    }
+
+    int primary = GetPlayerWeaponSlot(attacker, 0);
+    return primary > MaxClients && primary == weapon;
+}
+
+void MarkDemoSyncStickyDamage(int attacker, int victim)
+{
+    g_iPendingDemoSyncAttacker[victim] = attacker;
+    g_fPendingDemoSyncStickyTime[victim] = GetGameTime();
+}
+
+void MarkDemoSyncKillCandidate(int attacker, int victim)
+{
+    if (g_iPendingDemoSyncAttacker[victim] != attacker)
+    {
+        return;
+    }
+
+    if (GetGameTime() - g_fPendingDemoSyncStickyTime[victim] > WT_DEMO_SYNC_WINDOW)
+    {
+        ResetDemoSyncState(victim);
+        return;
+    }
+
+    g_iPendingDemoSyncKillAttacker[victim] = attacker;
+    g_fPendingDemoSyncKillTime[victim] = GetGameTime();
+}
+
+bool ConsumeDemoSyncKill(int attacker, int victim)
+{
+    if (!IsValidClient(attacker) || !IsValidClient(victim))
+    {
+        return false;
+    }
+
+    if (g_iPendingDemoSyncKillAttacker[victim] != attacker)
+    {
+        return false;
+    }
+
+    if (GetGameTime() - g_fPendingDemoSyncKillTime[victim] > WT_DEMO_SYNC_KILL_CONFIRM_WINDOW)
+    {
+        ResetDemoSyncState(victim);
+        return false;
+    }
+
+    ResetDemoSyncState(victim);
+    return true;
+}
+
+void ResetDemoSyncState(int client)
+{
+    if (client < 1 || client > MaxClients)
+    {
+        return;
+    }
+
+    g_iPendingDemoSyncAttacker[client] = 0;
+    g_fPendingDemoSyncStickyTime[client] = 0.0;
+    g_iPendingDemoSyncKillAttacker[client] = 0;
+    g_fPendingDemoSyncKillTime[client] = 0.0;
 }
 
 float DistanceAboveGroundBox(int victim)
