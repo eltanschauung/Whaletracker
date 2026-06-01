@@ -229,7 +229,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (ConsumeMarketGardenKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "market_garden_kill");
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "market_garden_kill", 0, 3.0, 5);
             }
             if (victimClass == TF_CLASS_MEDIC)
             {
@@ -242,7 +242,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 if (HasMultipleDominationsAfterKill(attacker, victim))
                 {
-                    ApplyBonusPoints(attacker, 1, true, true, 1.0, "multiple_dominations");
+                    ApplyBonusPoints(attacker, 1, true, true, 1.0, "multiple_dominations", 0, 3.0, 5);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERREVENGE)
@@ -261,7 +261,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 if (HasMultipleDominationsAfterKill(assister, victim))
                 {
-                    ApplyBonusPoints(assister, 1, true, true, 1.0, "multiple_dominations");
+                    ApplyBonusPoints(assister, 1, true, true, 1.0, "multiple_dominations", 0, 3.0, 5);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERREVENGE)
@@ -421,7 +421,7 @@ public void Event_UberDeployed(Event event, const char[] name, bool dontBroadcas
 
     ApplyUberStats(g_Stats[medic]);
     ApplyUberStats(g_MapStats[medic]);
-    ApplyBonusPoints(medic, 1, true, true, 1.0, "uber_deployed");
+    ApplyBonusPoints(medic, 1, true, true, 1.0, "uber_deployed", 0, 3.0, 3);
     MarkClientDirty(medic);
 }
 
