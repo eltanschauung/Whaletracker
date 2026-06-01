@@ -1931,8 +1931,28 @@ void ApplyAssistStats(WhaleStats stats)
 
 }
 
-bool ShouldSuppressDeathIncrementForCurrentPopulation()
+bool ShouldSuppressDeaths()
 {
+    if (GetFeatureStatus(FeatureType_Native, "DGM_IsSmallFormatGamemode") == FeatureStatus_Available)
+    {
+        if (DGM_IsSmallFormatGamemode())
+        {
+            return true;
+        }
+    }
+    else
+    {
+        char gamemode[64];
+
+        if (WhaleTracker_GetDgmGameMode(gamemode, sizeof(gamemode)) && gamemode[0])
+        {
+            if (StrEqual(gamemode, "mge", false) || StrEqual(gamemode, "ultiduo", false))
+            {
+                return true;
+            }
+        }
+    }
+
     int capacity = WhaleTracker_GetCurrentServerCapacity();
     if (capacity <= 0)
     {
@@ -1948,28 +1968,9 @@ bool ShouldSuppressDeathIncrementForCurrentPopulation()
     return WhaleTracker_GetCurrentPlayerCount() <= lowPopulationThreshold;
 }
 
-bool ShouldSuppressDeathIncrementForCurrentGamemode()
-{
-    if (GetFeatureStatus(FeatureType_Native, "DGM_IsSmallFormatGamemode") == FeatureStatus_Available)
-    {
-        return DGM_IsSmallFormatGamemode();
-    }
-
-    char gamemode[64];
-
-    if (!WhaleTracker_GetDgmGameMode(gamemode, sizeof(gamemode)) || !gamemode[0])
-    {
-        return false;
-    }
-
-    return StrEqual(gamemode, "mge", false) || StrEqual(gamemode, "ultiduo", false);
-}
-
 void ApplyCumulativeDeathStats(WhaleStats stats, bool countDeath = true)
 {
-    if (countDeath
-        && !ShouldSuppressDeathIncrementForCurrentGamemode()
-        && !ShouldSuppressDeathIncrementForCurrentPopulation())
+    if (countDeath && !ShouldSuppressDeaths())
     {
         stats.deaths++;
     }
