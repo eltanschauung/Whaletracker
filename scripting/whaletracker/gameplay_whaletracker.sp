@@ -6,6 +6,10 @@ int g_iPendingDemoSyncAttacker[MAXPLAYERS + 1];
 float g_fPendingDemoSyncStickyTime[MAXPLAYERS + 1];
 int g_iPendingDemoSyncKillAttacker[MAXPLAYERS + 1];
 float g_fPendingDemoSyncKillTime[MAXPLAYERS + 1];
+int g_iPendingSoldierSyncAttacker[MAXPLAYERS + 1];
+float g_fPendingSoldierSyncRocketTime[MAXPLAYERS + 1];
+int g_iPendingSoldierSyncKillAttacker[MAXPLAYERS + 1];
+float g_fPendingSoldierSyncKillTime[MAXPLAYERS + 1];
 
 #define WT_MARKET_GARDEN_KILL_WINDOW 0.25
 
@@ -112,6 +116,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
     g_bInExplosiveJump[client] = false;
     ResetMarketGardenKillCandidate(client);
     ResetDemoSyncState(client);
+    ResetSoldierSyncState(client);
     ResetLifeCounters(g_Stats[client]);
     ResetLifeCounters(g_MapStats[client]);
 }
@@ -238,7 +243,11 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (ConsumeDemoSyncKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "demo_sync_kill");
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "demo_sync_kill", 0, 3.0, WT_DEMO_SYNC_PER_MAP);
+            }
+            if (ConsumeSoldierSyncKill(attacker, victim))
+            {
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "soldier_sync_kill", 0, 3.0, WT_SOLDIER_SYNC_PER_MAP);
             }
             if (victimClass == TF_CLASS_MEDIC)
             {
@@ -359,6 +368,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
                 MarkDemoSyncStickyDamage(attacker, victim);
             }
 
+            bool isRocketLauncherDamage = IsWeaponClass(weapon, "tf_weapon_rocketlauncher");
             if (IsValidProjectileDirectHit(attacker, victim, weapon, wasDirectHit))
             {
                 FireProjectileDirectHitForward(attacker, victim, weapon);
@@ -366,6 +376,15 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
                 {
                     MarkDemoSyncKillCandidate(attacker, victim);
                 }
+                else if (isRocketLauncherDamage)
+                {
+                    MarkSoldierSyncKillCandidate(attacker, victim);
+                }
+            }
+
+            if (isRocketLauncherDamage)
+            {
+                MarkSoldierSyncRocketDamage(attacker, victim);
             }
         }
 
@@ -904,6 +923,64 @@ void ResetDemoSyncState(int client)
     g_fPendingDemoSyncStickyTime[client] = 0.0;
     g_iPendingDemoSyncKillAttacker[client] = 0;
     g_fPendingDemoSyncKillTime[client] = 0.0;
+}
+
+void MarkSoldierSyncRocketDamage(int attacker, int victim)
+{
+    g_iPendingSoldierSyncAttacker[victim] = attacker;
+    g_fPendingSoldierSyncRocketTime[victim] = GetGameTime();
+}
+
+void MarkSoldierSyncKillCandidate(int attacker, int victim)
+{
+    if (g_iPendingSoldierSyncAttacker[victim] != attacker)
+    {
+        return;
+    }
+
+    if (GetGameTime() - g_fPendingSoldierSyncRocketTime[victim] > WT_DEMO_SYNC_WINDOW)
+    {
+        ResetSoldierSyncState(victim);
+        return;
+    }
+
+    g_iPendingSoldierSyncKillAttacker[victim] = attacker;
+    g_fPendingSoldierSyncKillTime[victim] = GetGameTime();
+}
+
+bool ConsumeSoldierSyncKill(int attacker, int victim)
+{
+    if (!IsValidClient(attacker) || !IsValidClient(victim))
+    {
+        return false;
+    }
+
+    if (g_iPendingSoldierSyncKillAttacker[victim] != attacker)
+    {
+        return false;
+    }
+
+    if (GetGameTime() - g_fPendingSoldierSyncKillTime[victim] > WT_DEMO_SYNC_KILL_CONFIRM_WINDOW)
+    {
+        ResetSoldierSyncState(victim);
+        return false;
+    }
+
+    ResetSoldierSyncState(victim);
+    return true;
+}
+
+void ResetSoldierSyncState(int client)
+{
+    if (client < 1 || client > MaxClients)
+    {
+        return;
+    }
+
+    g_iPendingSoldierSyncAttacker[client] = 0;
+    g_fPendingSoldierSyncRocketTime[client] = 0.0;
+    g_iPendingSoldierSyncKillAttacker[client] = 0;
+    g_fPendingSoldierSyncKillTime[client] = 0.0;
 }
 
 float DistanceAboveGroundBox(int victim)

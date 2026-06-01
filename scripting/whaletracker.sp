@@ -33,6 +33,8 @@
 #define WT_AIRSHOT_MIN_HEIGHT 100.0 // Supstats2 uses a height of 170.0
 #define WT_DEMO_SYNC_WINDOW 0.5
 #define WT_DEMO_SYNC_KILL_CONFIRM_WINDOW 0.25
+#define WT_DEMO_SYNC_PER_MAP 5
+#define WT_SOLDIER_SYNC_PER_MAP 3
 #define WHALETRACKER_SCHEMA_VERSION 2
 #define TF_CLASS_HEAVY          6
 #define TF_CLASS_MEDIC          5
