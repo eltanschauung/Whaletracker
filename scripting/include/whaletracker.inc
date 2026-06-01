@@ -906,19 +906,22 @@ void RefreshHostAddress()
     RefreshPublicHostIp();
 }
 
-bool WhaleTracker_IsNativeAvailable(const char[] nativeName)
-{
-    return GetFeatureStatus(FeatureType_Native, nativeName) == FeatureStatus_Available;
-}
-
 bool WhaleTracker_ShouldUseMatchLogs()
 {
     return (g_hEnableMatchLogs != null && g_hEnableMatchLogs.BoolValue);
 }
 
-bool WhaleTracker_UseDeferredSavePump()
+bool WhaleTracker_RunSchemaQuery(const char[] query, const char[] description)
 {
-    return (g_hDeferredSavePump != null && g_hDeferredSavePump.BoolValue);
+    if (SQLFastQuerySync(query))
+    {
+        return true;
+    }
+
+    char error[256];
+    GetSyncDatabaseError(error, sizeof(error));
+    LogError("[WhaleTracker] Failed to ensure %s: %s", description, error);
+    return false;
 }
 
 void WhaleTracker_EnsureAdminStatusColumns()
@@ -928,32 +931,15 @@ void WhaleTracker_EnsureAdminStatusColumns()
         return;
     }
 
-    if (!SQLFastQuerySync("ALTER TABLE whaletracker ADD COLUMN IF NOT EXISTS is_admin TINYINT(1) DEFAULT 0"))
-    {
-        char error[256];
-        GetSyncDatabaseError(error, sizeof(error));
-        LogError("[WhaleTracker] Failed to ensure whaletracker.is_admin: %s", error);
-    }
-
-    if (!SQLFastQuerySync("ALTER TABLE whaletracker_online ADD COLUMN IF NOT EXISTS is_admin TINYINT(1) DEFAULT 0"))
-    {
-        char error[256];
-        GetSyncDatabaseError(error, sizeof(error));
-        LogError("[WhaleTracker] Failed to ensure whaletracker_online.is_admin: %s", error);
-    }
-
-    if (!SQLFastQuerySync("ALTER TABLE whaletracker_log_players ADD COLUMN IF NOT EXISTS is_admin TINYINT DEFAULT 0"))
-    {
-        char error[256];
-        GetSyncDatabaseError(error, sizeof(error));
-        LogError("[WhaleTracker] Failed to ensure whaletracker_log_players.is_admin: %s", error);
-    }
+    WhaleTracker_RunSchemaQuery("ALTER TABLE whaletracker ADD COLUMN IF NOT EXISTS is_admin TINYINT(1) DEFAULT 0", "whaletracker.is_admin");
+    WhaleTracker_RunSchemaQuery("ALTER TABLE whaletracker_online ADD COLUMN IF NOT EXISTS is_admin TINYINT(1) DEFAULT 0", "whaletracker_online.is_admin");
+    WhaleTracker_RunSchemaQuery("ALTER TABLE whaletracker_log_players ADD COLUMN IF NOT EXISTS is_admin TINYINT DEFAULT 0", "whaletracker_log_players.is_admin");
 }
 
 void RefreshPublicHostIp()
 {
     g_sPublicHostIp[0] = '\0';
-    if (WhaleTracker_IsNativeAvailable("SteamWorks_GetPublicIP"))
+    if (GetFeatureStatus(FeatureType_Native, "SteamWorks_GetPublicIP") == FeatureStatus_Available)
     {
         int addr[4];
         if (SteamWorks_GetPublicIP(addr))
@@ -1170,19 +1156,14 @@ bool WhaleTracker_GetDgmGameMode(char[] gamemode, int gamemodeLen)
     }
 
     gamemode[0] = '\0';
-    if (GetFeatureStatus(FeatureType_Native, "DGM_GetGameMode") != FeatureStatus_Available)
+    if (GetFeatureStatus(FeatureType_Native, "DGM_GetGameMode") == FeatureStatus_Available
+        && DGM_GetGameMode(gamemode, gamemodeLen)
+        && gamemode[0])
     {
-        strcopy(gamemode, gamemodeLen, "Unknown");
-        return false;
+        return true;
     }
-
-    if (!DGM_GetGameMode(gamemode, gamemodeLen) || !gamemode[0])
-    {
-        strcopy(gamemode, gamemodeLen, "Unknown");
-        return false;
-    }
-
-    return true;
+    strcopy(gamemode, gamemodeLen, "Unknown");
+    return false;
 }
 
 void WhaleTracker_EnsureRoundStatisticsTable()
@@ -1215,12 +1196,7 @@ void WhaleTracker_EnsureRoundStatisticsTable()
         ... "KEY idx_host_map_time (host_port, map_name, recorded_at)"
         ... ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-    if (!SQLFastQuerySync(query))
-    {
-        char error[256];
-        GetSyncDatabaseError(error, sizeof(error));
-        LogError("[WhaleTracker] Failed to ensure round statistics table: %s", error);
-    }
+    WhaleTracker_RunSchemaQuery(query, "round statistics table");
 }
 
 int WhaleTracker_GetCurrentPlayerCount()
@@ -1259,21 +1235,19 @@ int WhaleTracker_GetCurrentServerCapacity()
 
 void WhaleTracker_GetTeamName(int team, char[] buffer, int maxlen)
 {
-    switch (team)
+    if (team == 2)
     {
-        case 2:
-        {
-            strcopy(buffer, maxlen, "RED");
-        }
-        case 3:
-        {
-            strcopy(buffer, maxlen, "BLU");
-        }
-        default:
-        {
-            strcopy(buffer, maxlen, "Unknown");
-        }
+        strcopy(buffer, maxlen, "RED");
+        return;
     }
+
+    if (team == 3)
+    {
+        strcopy(buffer, maxlen, "BLU");
+        return;
+    }
+
+    strcopy(buffer, maxlen, "Unknown");
 }
 
 bool WhaleTracker_GetClientSteamId64(int client, char[] buffer, int maxlen)
@@ -2109,7 +2083,7 @@ void PumpSaveQueue()
 
 void RequestPumpSaveQueue()
 {
-    if (!WhaleTracker_UseDeferredSavePump())
+    if (g_hDeferredSavePump == null || !g_hDeferredSavePump.BoolValue)
     {
         PumpSaveQueue();
         return;
