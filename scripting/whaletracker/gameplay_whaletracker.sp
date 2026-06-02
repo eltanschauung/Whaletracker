@@ -240,7 +240,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (ShouldAwardTopScoringPlayerBonus() && IsTopScoringPlayerOnTeam(victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "top_score_kill", victim, 3.0, 0); // Temporarily disabled per-map cap; old cap: 5
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "top_score_kill", victim, 3.0, 15);
             }
             if (ConsumeMarketGardenKill(attacker, victim))
             {
