@@ -368,7 +368,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
                 MarkDemoSyncStickyDamage(attacker, victim);
             }
 
-            bool isRocketLauncherDamage = IsWeaponClass(weapon, "tf_weapon_rocketlauncher");
+            bool isRocketLauncherDamage = IsSoldierSyncRocketLauncherDamage(weapon);
             if (IsValidProjectileDirectHit(attacker, victim, weapon, wasDirectHit))
             {
                 FireProjectileDirectHitForward(attacker, victim, weapon);
@@ -376,14 +376,11 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
                 {
                     MarkDemoSyncKillCandidate(attacker, victim);
                 }
-                else if (isRocketLauncherDamage)
-                {
-                    MarkSoldierSyncKillCandidate(attacker, victim);
-                }
             }
 
             if (isRocketLauncherDamage)
             {
+                MarkSoldierSyncKillCandidate(attacker, victim);
                 MarkSoldierSyncRocketDamage(attacker, victim);
             }
         }
@@ -849,6 +846,16 @@ bool IsWeaponClass(int weapon, const char[] expectedClassname)
     char classname[64];
     GetEntityClassname(weapon, classname, sizeof(classname));
     return StrEqual(classname, expectedClassname, false);
+}
+
+bool IsSoldierSyncRocketLauncherDamage(int weapon)
+{
+    if (!IsWeaponClass(weapon, "tf_weapon_rocketlauncher"))
+    {
+        return false;
+    }
+
+    return GetWeaponDefIndexSafe(weapon) != WT_SOLDIER_SYNC_EXCLUDED_DEF_INDEX;
 }
 
 bool IsValidProjectileDirectHit(int attacker, int victim, int weapon, bool wasDirectHit)
