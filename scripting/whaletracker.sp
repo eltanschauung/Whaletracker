@@ -34,8 +34,8 @@
 #define WT_DEMO_SYNC_WINDOW 0.5
 #define WT_SOLDIER_SYNC_WINDOW 1.0
 #define WT_DEMO_SYNC_KILL_CONFIRM_WINDOW 0.25
-#define WT_DEMO_SYNC_PER_MAP 5
-#define WT_SOLDIER_SYNC_PER_MAP 3
+#define WT_DEMO_SYNC_PER_MAP 0 // Temporarily disabled per-map cap; old cap: 5
+#define WT_SOLDIER_SYNC_PER_MAP 0 // Temporarily disabled per-map cap; old cap: 3
 #define WT_SOLDIER_SYNC_EXCLUDED_DEF_INDEX 730
 #define WHALETRACKER_SCHEMA_VERSION 2
 #define TF_CLASS_HEAVY          6

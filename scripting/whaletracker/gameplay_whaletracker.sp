@@ -235,11 +235,11 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (IsTopScoringPlayerOnTeam(victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "top_score_kill", victim, 3.0, 5);
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "top_score_kill", victim, 3.0, 0); // Temporarily disabled per-map cap; old cap: 5
             }
             if (ConsumeMarketGardenKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "market_garden_kill", 0, 3.0, 5);
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "market_garden_kill", 0, 3.0, 0); // Temporarily disabled per-map cap; old cap: 5
             }
             if (ConsumeDemoSyncKill(attacker, victim))
             {
@@ -260,12 +260,12 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 if (HasMultipleDominationsAfterKill(attacker, victim))
                 {
-                    ApplyBonusPoints(attacker, 1, true, true, 1.0, "multiple_dominations", 0, 3.0, 5);
+                    ApplyBonusPoints(attacker, 1, true, true, 1.0, "multiple_dominations", 0, 3.0, 0); // Temporarily disabled per-map cap; old cap: 5
                 }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERREVENGE)
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "player_revenge", victim, 3.0, 3);
+                ApplyBonusPoints(attacker, 1, true, true, 1.0, "player_revenge", victim, 3.0, 0); // Temporarily disabled per-map cap; old cap: 3
             }
             attackerScoredMedicDrop = medicDrop;
             MarkClientDirty(attacker);
@@ -279,12 +279,12 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 if (HasMultipleDominationsAfterKill(assister, victim))
                 {
-                    ApplyBonusPoints(assister, 1, true, true, 1.0, "multiple_dominations", 0, 3.0, 5);
+                    ApplyBonusPoints(assister, 1, true, true, 1.0, "multiple_dominations", 0, 3.0, 0); // Temporarily disabled per-map cap; old cap: 5
                 }
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERREVENGE)
             {
-                ApplyBonusPoints(assister, 1, true, true, 1.0, "player_revenge", victim, 3.0, 3);
+                ApplyBonusPoints(assister, 1, true, true, 1.0, "player_revenge", victim, 3.0, 0); // Temporarily disabled per-map cap; old cap: 3
             }
             MarkClientDirty(assister);
         }
@@ -463,7 +463,7 @@ public void Event_UberDeployed(Event event, const char[] name, bool dontBroadcas
 
     ApplyUberStats(g_Stats[medic]);
     ApplyUberStats(g_MapStats[medic]);
-    ApplyBonusPoints(medic, 1, true, true, 1.0, "uber_deployed", 0, 3.0, 3);
+    ApplyBonusPoints(medic, 1, true, true, 1.0, "uber_deployed", 0, 3.0, 0); // Temporarily disabled per-map cap; old cap: 3
     MarkClientDirty(medic);
 }
 
