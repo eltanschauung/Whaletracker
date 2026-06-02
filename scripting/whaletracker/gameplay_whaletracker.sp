@@ -247,7 +247,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (ConsumeSoldierSyncKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "soldier_sync_kill", 0, 3.0, WT_SOLDIER_SYNC_PER_MAP);
+                ApplyBonusPoints(attacker, 2, true, true, 1.0, "soldier_sync_kill", 0, 3.0, WT_SOLDIER_SYNC_PER_MAP);
             }
             if (victimClass == TF_CLASS_MEDIC)
             {
