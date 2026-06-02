@@ -945,7 +945,7 @@ void MarkSoldierSyncKillCandidate(int attacker, int victim)
         return;
     }
 
-    if (GetGameTime() - g_fPendingSoldierSyncRocketTime[victim] > WT_DEMO_SYNC_WINDOW)
+    if (GetGameTime() - g_fPendingSoldierSyncRocketTime[victim] > WT_SOLDIER_SYNC_WINDOW)
     {
         ResetSoldierSyncState(victim);
         return;
