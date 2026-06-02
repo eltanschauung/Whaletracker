@@ -368,7 +368,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
                 MarkDemoSyncStickyDamage(attacker, victim);
             }
 
-            bool isRocketLauncherDamage = IsSoldierSyncRocketLauncherDamage(weapon);
+            bool isRocketLauncherDamage = IsSoldierSyncRocketLauncherDamage(attacker, weapon);
             if (IsValidProjectileDirectHit(attacker, victim, weapon, wasDirectHit))
             {
                 FireProjectileDirectHitForward(attacker, victim, weapon);
@@ -848,8 +848,13 @@ bool IsWeaponClass(int weapon, const char[] expectedClassname)
     return StrEqual(classname, expectedClassname, false);
 }
 
-bool IsSoldierSyncRocketLauncherDamage(int weapon)
+bool IsSoldierSyncRocketLauncherDamage(int attacker, int weapon)
 {
+    if (!IsValidClient(attacker) || !g_bInExplosiveJump[attacker])
+    {
+        return false;
+    }
+
     if (!IsWeaponClass(weapon, "tf_weapon_rocketlauncher"))
     {
         return false;
