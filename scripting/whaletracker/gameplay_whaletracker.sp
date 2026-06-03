@@ -1,4 +1,5 @@
 bool g_bPlayerTakenDirectHit[MAXPLAYERS + 1];
+bool g_bPlayerTakenReflectDirectHit[MAXPLAYERS + 1];
 bool g_bInExplosiveJump[MAXPLAYERS + 1];
 int g_iPendingMarketGardenAttacker[MAXPLAYERS + 1];
 float g_fPendingMarketGardenTime[MAXPLAYERS + 1];
@@ -118,6 +119,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
         return;
 
     g_bPlayerTakenDirectHit[client] = false;
+    g_bPlayerTakenReflectDirectHit[client] = false;
     g_bInExplosiveJump[client] = false;
     ResetMarketGardenKillCandidate(client);
     ResetDemoSyncState(client);
@@ -155,11 +157,12 @@ public void OnEntityCreated(int entity, const char[] classname)
         return;
     }
 
-    if (IsSupstatsDirectHitProjectileClassname(classname))
+    if (IsSupstatsDirectHitProjectileClassname(classname) || IsReflectBonusProjectileClassname(classname))
     {
         SDKHook(entity, SDKHook_Touch, OnProjectileTouch);
     }
-    else if (StrEqual(classname, "tf_projectile_healing_bolt", false))
+
+    if (StrEqual(classname, "tf_projectile_healing_bolt", false))
     {
         SDKHook(entity, SDKHook_Touch, OnCrossbowBoltTouch);
     }
@@ -169,7 +172,18 @@ public void OnProjectileTouch(int entity, int other)
 {
     if (other > 0 && other <= MaxClients)
     {
-        g_bPlayerTakenDirectHit[other] = true;
+        char classname[64];
+        GetEntityClassname(entity, classname, sizeof(classname));
+
+        if (IsSupstatsDirectHitProjectileClassname(classname))
+        {
+            g_bPlayerTakenDirectHit[other] = true;
+        }
+
+        if (IsReflectBonusProjectileClassname(classname))
+        {
+            g_bPlayerTakenReflectDirectHit[other] = true;
+        }
     }
 }
 
@@ -330,10 +344,22 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
         damageInt = 0;
     }
 
+    bool wasDirectHit = false;
+    bool wasReflectDirectHit = false;
+    if (IsValidClient(victim))
+    {
+        wasDirectHit = g_bPlayerTakenDirectHit[victim];
+        wasReflectDirectHit = g_bPlayerTakenReflectDirectHit[victim];
+        g_bPlayerTakenDirectHit[victim] = false;
+        g_bPlayerTakenReflectDirectHit[victim] = false;
+    }
+
+    bool reflectBonusEligible = IsReflectBonusDamage(attacker, victim, inflictor);
+
     // Gate expensive tracking: allow attackers to become eligible after 200 damage dealt and only if not spectator.
     if (IsValidClient(attacker) && !IsFakeClient(attacker) && GetClientTeam(attacker) > 1 && !g_bTrackEligible[attacker])
     {
-        if (!WhaleTracker_CheckDamageGate(attacker, damageInt))
+        if (!WhaleTracker_CheckDamageGate(attacker, damageInt) && !reflectBonusEligible)
         {
             // Still below threshold; skip further processing for this attacker.
             return Plugin_Continue;
@@ -357,17 +383,15 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
     if (damage <= 0.0)
         return Plugin_Continue;
 
-    bool wasDirectHit = false;
-    if (IsValidClient(victim))
-    {
-        wasDirectHit = g_bPlayerTakenDirectHit[victim];
-        g_bPlayerTakenDirectHit[victim] = false;
-    }
-
     if (IsValidClient(victim) && !IsFakeClient(victim) && IsValidClient(attacker) && !IsFakeClient(attacker) && WhaleTracker_IsTrackingEnabled(attacker))
     {
         if (GetClientTeam(attacker) != GetClientTeam(victim))
         {
+            if (reflectBonusEligible)
+            {
+                AwardReflectBonus(attacker, wasReflectDirectHit);
+            }
+
             if (IsWeaponClass(weapon, "tf_weapon_pipebomblauncher"))
             {
                 MarkDemoSyncStickyDamage(attacker, victim);
@@ -764,6 +788,59 @@ bool IsSupstatsDirectHitProjectileClassname(const char[] classname)
 {
     return StrEqual(classname, "tf_projectile_rocket", false)
         || StrEqual(classname, "tf_projectile_pipe", false);
+}
+
+bool IsReflectBonusProjectileClassname(const char[] classname)
+{
+    return StrEqual(classname, "tf_projectile_arrow", false)
+        || StrEqual(classname, "tf_projectile_healing_bolt", false)
+        || StrEqual(classname, "tf_projectile_pipe", false)
+        || StrEqual(classname, "tf_projectile_pipe_remote", false)
+        || StrEqual(classname, "tf_projectile_rocket", false)
+        || StrEqual(classname, "tf_projectile_sentryrocket", false)
+        || StrEqual(classname, "tf_projectile_stun_ball", false);
+}
+
+bool IsReflectBonusInflictor(int inflictor)
+{
+    if (inflictor <= MaxClients || !IsValidEntity(inflictor))
+    {
+        return false;
+    }
+
+    char classname[64];
+    GetEntityClassname(inflictor, classname, sizeof(classname));
+    return IsReflectBonusProjectileClassname(classname);
+}
+
+bool IsReflectBonusDamage(int attacker, int victim, int inflictor)
+{
+    if (!IsValidClient(attacker) || IsFakeClient(attacker) || !IsValidClient(victim) || IsFakeClient(victim))
+    {
+        return false;
+    }
+
+    if (!WhaleTracker_IsTrackingEnabled(attacker) || TF2_GetPlayerClass(attacker) != TFClass_Pyro)
+    {
+        return false;
+    }
+
+    if (GetClientTeam(attacker) == GetClientTeam(victim))
+    {
+        return false;
+    }
+
+    return IsReflectBonusInflictor(inflictor);
+}
+
+void AwardReflectBonus(int attacker, bool wasDirectHit)
+{
+    ApplyBonusPoints(attacker, 1, true, true, 1.0, "reflect", 0, 3.0, 0);
+
+    if (wasDirectHit)
+    {
+        ApplyBonusPoints(attacker, 2, true, true, 1.0, "reflect_direct_hit", 0, 3.0, 0);
+    }
 }
 
 int GetWeaponDefIndexSafe(int weapon)
