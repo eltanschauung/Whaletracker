@@ -20,42 +20,24 @@
 #define STEAMID64_LEN 32
 #define SAVE_QUERY_MAXLEN 4096
 #define WT_BONUS_CHANCE_ALWAYS 1.0
-#define WT_BONUS_DEFAULT_DELAY 3.0
 #define MAX_CONCURRENT_SAVE_QUERIES 4
 #define WT_SECONDS_PER_HOUR 3600
-#define WHALE_RANK_MIN_KD_SUM 200
 #define WT_TRACE_HULL_HALF_WIDTH 24.0
-#define WHALE_RANK_MIN_PLAYTIME_SECONDS 10800
 #define WT_TEAM_RED 2
 #define WT_SECONDS_PER_MINUTE 60
 #define WT_WHALE_POINTS_LOG_BASE_E 2.718281828
 #define WHALE_POINTS_SQL_EXPR "ROUND(1000.0 * SQRT(((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)) / (((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)) + 400.0)) * (((CASE WHEN playtime > 0 THEN playtime ELSE 0 END) / 3600.0) / (((CASE WHEN playtime > 0 THEN playtime ELSE 0 END) / 3600.0) + 20.0)) * ((5.0 * (((CASE WHEN kills > 0 THEN kills ELSE 0 END) + ((CASE WHEN assists > 0 THEN assists ELSE 0 END) * 0.35)) / ((CASE WHEN deaths > 0 THEN deaths ELSE 0 END) + 20.0))) + LN(1.0 + ((CASE WHEN damage_dealt > 0 THEN damage_dealt ELSE 0 END) / (150.0 * ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END))))) + (0.60 * LN(1.0 + ((CASE WHEN healing > 0 THEN healing ELSE 0 END) / (100.0 * ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)))))) + (0.90 * LN(1.0 + ((60.0 * (CASE WHEN total_ubers > 0 THEN total_ubers ELSE 0 END)) / ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)))))))"
-#define WHALE_KILLSTREAK_BONUS_INTERVAL 5
 #define WT_TEAM_BLUE 3
 #define WT_TEAM_FIRST_PLAYING WT_TEAM_RED
 #define WHALE_LEADERBOARD_PAGE_SIZE 10
-#define WT_DEMO_SYNC_KILL_CONFIRM_WINDOW 0.25
 #define WT_SCORE_PROP_AVAILABLE 1
 #define WT_SCORE_PROP_MISSING 2
 #define WT_WHALE_POINTS_MAX_FLOAT 2147483000.0
 #define WHALETRACKER_SCHEMA_VERSION 2
 #define DB_CONFIG_DEFAULT "default"
-#define WHALE_MULTIKILL_MAX_LEVEL 5
-#define WT_MULTIKILL_MIN_LEVEL 2
-#define WT_TOP_SCORE_MIN_PLAYERS 8
-#define WT_TOP_SCORE_PER_MAP_LIMIT 15
-#define WT_DAMAGE_TRACKING_GATE 200
-#define WT_DAMAGE_SANITY_MAX 500
-#define WT_MULTIKILL_DEFAULT_WINDOW 3.0
 #define WT_TRACE_DOWN_DISTANCE -16384.0
-#define WT_MIN_MATCH_RATE_MINUTES 1.0
 #define WT_MARKET_GARDENER_DEF_INDEX 416
 #define WT_HANDSHAKE_DEF_INDEX 609
-#define WT_AIRSHOT_MIN_HEIGHT 100.0 // Supstats2 uses a height of 170.0
-#define WT_DEMO_SYNC_WINDOW 0.5
-#define WT_SOLDIER_SYNC_WINDOW 1.0
-#define WT_DEMO_SYNC_PER_MAP 0 // Temporarily disabled per-map cap; old cap: 5
-#define WT_SOLDIER_SYNC_PER_MAP 0 // Temporarily disabled per-map cap; old cap: 3
 #define WT_SOLDIER_SYNC_EXCLUDED_DEF_INDEX 730
 #define WT_SCORE_PROP_UNKNOWN 0
 #define WT_WHALE_POINTS_SCALE 1000.0
@@ -146,7 +128,6 @@ enum WeaponCategory
     WeaponCategory_Count = WeaponCategory_Revolvers
 }
 #define WEAPON_CATEGORY_COUNT 8
-#define HITSCAN_ACCURACY_HIT_DEBOUNCE 0.05
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int damagecustom);
 void RequestClientStateLoads(int client);
@@ -288,6 +269,24 @@ ConVar g_hHostIpCvar = null;
 ConVar g_hHostPortCvar = null;
 ConVar g_hServerFlags = null;
 ConVar g_hMultikillWindow = null;
+ConVar g_hBonusDefaultDelay = null;
+ConVar g_hRankMinKdSum = null;
+ConVar g_hRankMinPlaytimeSeconds = null;
+ConVar g_hKillstreakBonusInterval = null;
+ConVar g_hSyncKillConfirmWindow = null;
+ConVar g_hTopScoreMinPlayers = null;
+ConVar g_hTopScorePerMapLimit = null;
+ConVar g_hDamageTrackingGate = null;
+ConVar g_hDamageSanityMax = null;
+ConVar g_hMinMatchRateMinutes = null;
+ConVar g_hAirshotMinHeight = null;
+ConVar g_hDemoSyncWindow = null;
+ConVar g_hSoldierSyncWindow = null;
+ConVar g_hDemoSyncPerMap = null;
+ConVar g_hSoldierSyncPerMap = null;
+ConVar g_hHitscanAccuracyHitDebounce = null;
+ConVar g_hMarketGardenKillWindow = null;
+ConVar g_hPeriodicSaveInterval = null;
 
 char g_sDatabaseConfig[64];
 ArrayList g_SaveQueue = null;
@@ -309,6 +308,113 @@ bool g_bFavoriteClassPending[MAXPLAYERS + 1];
 int g_iFavoriteClassCache[MAXPLAYERS + 1];
 float g_fMultikillChainExpiresAt[MAXPLAYERS + 1];
 int g_iMultikillChainKills[MAXPLAYERS + 1];
+
+float WT_GetConVarFloat(ConVar convar, float fallback)
+{
+    return convar != null ? convar.FloatValue : fallback;
+}
+
+int WT_GetConVarInt(ConVar convar, int fallback)
+{
+    return convar != null ? convar.IntValue : fallback;
+}
+
+float WT_GetBonusDefaultDelay()
+{
+    return WT_GetConVarFloat(g_hBonusDefaultDelay, 3.0);
+}
+
+int WT_GetRankMinKdSum()
+{
+    return WT_GetConVarInt(g_hRankMinKdSum, 200);
+}
+
+int WT_GetRankMinPlaytimeSeconds()
+{
+    return WT_GetConVarInt(g_hRankMinPlaytimeSeconds, 10800);
+}
+
+int WT_GetKillstreakBonusInterval()
+{
+    int interval = WT_GetConVarInt(g_hKillstreakBonusInterval, 5);
+    return interval < 1 ? 1 : interval;
+}
+
+float WT_GetSyncKillConfirmWindow()
+{
+    return WT_GetConVarFloat(g_hSyncKillConfirmWindow, 0.25);
+}
+
+int WT_GetTopScoreMinPlayers()
+{
+    return WT_GetConVarInt(g_hTopScoreMinPlayers, 8);
+}
+
+int WT_GetTopScorePerMapLimit()
+{
+    return WT_GetConVarInt(g_hTopScorePerMapLimit, 15);
+}
+
+int WT_GetDamageTrackingGate()
+{
+    return WT_GetConVarInt(g_hDamageTrackingGate, 200);
+}
+
+int WT_GetDamageSanityMax()
+{
+    return WT_GetConVarInt(g_hDamageSanityMax, 500);
+}
+
+float WT_GetMultikillWindow()
+{
+    return WT_GetConVarFloat(g_hMultikillWindow, 3.0);
+}
+
+float WT_GetMinMatchRateMinutes()
+{
+    return WT_GetConVarFloat(g_hMinMatchRateMinutes, 1.0);
+}
+
+float WT_GetAirshotMinHeight()
+{
+    return WT_GetConVarFloat(g_hAirshotMinHeight, 100.0);
+}
+
+float WT_GetDemoSyncWindow()
+{
+    return WT_GetConVarFloat(g_hDemoSyncWindow, 0.5);
+}
+
+float WT_GetSoldierSyncWindow()
+{
+    return WT_GetConVarFloat(g_hSoldierSyncWindow, 1.0);
+}
+
+int WT_GetDemoSyncPerMap()
+{
+    return WT_GetConVarInt(g_hDemoSyncPerMap, 0);
+}
+
+int WT_GetSoldierSyncPerMap()
+{
+    return WT_GetConVarInt(g_hSoldierSyncPerMap, 0);
+}
+
+float WT_GetHitscanAccuracyHitDebounce()
+{
+    return WT_GetConVarFloat(g_hHitscanAccuracyHitDebounce, 0.05);
+}
+
+float WT_GetMarketGardenKillWindow()
+{
+    return WT_GetConVarFloat(g_hMarketGardenKillWindow, 0.25);
+}
+
+float WT_GetPeriodicSaveInterval()
+{
+    float interval = WT_GetConVarFloat(g_hPeriodicSaveInterval, 30.0);
+    return interval < 1.0 ? 1.0 : interval;
+}
 
 char g_SaveQueryBuffers[MAX_CONCURRENT_SAVE_QUERIES][SAVE_QUERY_MAXLEN];
 int g_SaveQueryUserIds[MAX_CONCURRENT_SAVE_QUERIES];
