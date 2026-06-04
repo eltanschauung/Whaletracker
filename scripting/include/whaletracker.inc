@@ -291,7 +291,8 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
 
     int now = GetTime();
     float engineNow = GetEngineTime();
-    int playerCount = WhaleTracker_GetCurrentPlayerCount();
+    int onlinePlayerCount = WhaleTracker_GetOnlinePlayerCount();
+    int serverPlayerCount = WhaleTracker_GetCurrentPlayerCount();
     int visibleMax = WhaleTracker_GetCurrentServerCapacity();
 
     char query[SAVE_QUERY_MAXLEN];
@@ -377,7 +378,7 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
         if (!IsClientInGame(client) || IsFakeClient(client))
             continue;
 
-        if (!QueueClientOnlineSnapshot(client, now, engineNow, playerCount, visibleMax, escapedMapName, escapedHostIp, false))
+        if (!QueueClientOnlineSnapshot(client, now, engineNow, onlinePlayerCount, visibleMax, escapedMapName, escapedHostIp, false))
             continue;
 
         int snapshotData[MATCH_STAT_COUNT];
@@ -402,7 +403,7 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
         ... "VALUES ('%s', %d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %d)",
         escapedHostIp,
         g_iHostPort,
-        playerCount,
+        serverPlayerCount,
         visibleMax,
         escapedGameName,
         escapedGameUrl,
@@ -414,7 +415,7 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
     QueueSaveQuery(query, 0, false);
 
     int duration = (g_iMatchStartTime > 0) ? (now - g_iMatchStartTime) : 0;
-    InsertMatchLogRecord(now, duration, playerCount, false);
+    InsertMatchLogRecord(now, duration, serverPlayerCount, false);
 
     return Plugin_Continue;
 }
@@ -1206,6 +1207,11 @@ int WhaleTracker_GetCurrentPlayerCount()
         return DGM_RealPlayerCount();
     }
 
+    return GetClientCount(false);
+}
+
+int WhaleTracker_GetOnlinePlayerCount()
+{
     return GetClientCount(false);
 }
 
