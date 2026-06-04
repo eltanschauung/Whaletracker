@@ -66,7 +66,8 @@ void PrintUnrankedWhalePointsMessage(int client, int target)
         int combined = g_Stats[target].kills + g_Stats[target].deaths;
         int playtime = (g_Stats[target].playtime > 0) ? g_Stats[target].playtime : 0;
         float hours = float(playtime) / float(WT_SECONDS_PER_HOUR);
-        CPrintToChatEx(client, target, "{green}[WhaleTracker]{default} %s{default} is unranked until Kills + Deaths reaches at least %d and playtime reaches 3 hours (current: %d K+D, %.2f hours).", displayName, WHALE_RANK_MIN_KD_SUM, combined, hours);
+        float requiredHours = float(WT_GetRankMinPlaytimeSeconds()) / float(WT_SECONDS_PER_HOUR);
+        CPrintToChatEx(client, target, "{green}[WhaleTracker]{default} %s{default} is unranked until Kills + Deaths reaches at least %d and playtime reaches %.2f hours (current: %d K+D, %.2f hours).", displayName, WT_GetRankMinKdSum(), requiredHours, combined, hours);
         return;
     }
 
@@ -177,8 +178,8 @@ void QueryLiveWhalePointsRank(int client, int target, bool broadcast, bool showH
         ... "WHERE ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) >= %d "
         ... "AND (CASE WHEN playtime > 0 THEN playtime ELSE 0 END) >= %d "
         ... "AND (%s > %d OR (%s = %d AND steamid < '%s'))",
-        WHALE_RANK_MIN_KD_SUM,
-        WHALE_RANK_MIN_PLAYTIME_SECONDS,
+        WT_GetRankMinKdSum(),
+        WT_GetRankMinPlaytimeSeconds(),
         WHALE_POINTS_SQL_EXPR,
         points,
         WHALE_POINTS_SQL_EXPR,
@@ -243,7 +244,7 @@ Action HandleShowPointsCommand(int client, int target, bool broadcast, bool show
 
     int combined = g_Stats[target].kills + g_Stats[target].deaths;
     int playtime = (g_Stats[target].playtime > 0) ? g_Stats[target].playtime : 0;
-    if (combined < WHALE_RANK_MIN_KD_SUM || playtime < WHALE_RANK_MIN_PLAYTIME_SECONDS)
+    if (combined < WT_GetRankMinKdSum() || playtime < WT_GetRankMinPlaytimeSeconds())
     {
         PrintUnrankedWhalePointsMessage(client, target);
         return Plugin_Handled;
@@ -1165,7 +1166,7 @@ int GetWhalePointsForStats(const WhaleStats stats)
     int safePlaytime = (stats.playtime > 0) ? stats.playtime : 0;
     int safeEngagement = safeKills + safeDeaths;
 
-    if (safeEngagement < WHALE_RANK_MIN_KD_SUM || safePlaytime < WHALE_RANK_MIN_PLAYTIME_SECONDS)
+    if (safeEngagement < WT_GetRankMinKdSum() || safePlaytime < WT_GetRankMinPlaytimeSeconds())
     {
         return 0;
     }
