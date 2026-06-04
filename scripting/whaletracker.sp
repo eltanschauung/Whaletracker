@@ -17,46 +17,46 @@
 #pragma newdecls required
 
 #define STEAMID64_LEN 32
-#define MENU_TITLE "Whale Tracker Stats"
-#define DB_CONFIG_DEFAULT "default"
 #define SAVE_QUERY_MAXLEN 4096
-#define MAX_CONCURRENT_SAVE_QUERIES 4
-#define WHALE_POINTS_SQL_EXPR "ROUND(1000.0 * SQRT(((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)) / (((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)) + 400.0)) * (((CASE WHEN playtime > 0 THEN playtime ELSE 0 END) / 3600.0) / (((CASE WHEN playtime > 0 THEN playtime ELSE 0 END) / 3600.0) + 20.0)) * ((5.0 * (((CASE WHEN kills > 0 THEN kills ELSE 0 END) + ((CASE WHEN assists > 0 THEN assists ELSE 0 END) * 0.35)) / ((CASE WHEN deaths > 0 THEN deaths ELSE 0 END) + 20.0))) + LN(1.0 + ((CASE WHEN damage_dealt > 0 THEN damage_dealt ELSE 0 END) / (150.0 * ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END))))) + (0.60 * LN(1.0 + ((CASE WHEN healing > 0 THEN healing ELSE 0 END) / (100.0 * ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)))))) + (0.90 * LN(1.0 + ((60.0 * (CASE WHEN total_ubers > 0 THEN total_ubers ELSE 0 END)) / ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)))))))"
-#define WHALE_RANK_MIN_KD_SUM 200
-#define WHALE_RANK_MIN_PLAYTIME_SECONDS 10800
-#define WHALE_KILLSTREAK_BONUS_INTERVAL 5
-#define WHALE_MULTIKILL_MAX_LEVEL 5
-#define WT_MULTIKILL_MIN_LEVEL 2
-#define WT_TEAM_SPECTATOR 1
-#define WT_TEAM_RED 2
-#define WT_TEAM_BLUE 3
-#define WT_TEAM_FIRST_PLAYING WT_TEAM_RED
-#define WT_TOP_SCORE_MIN_PLAYERS 8
-#define WT_TOP_SCORE_PER_MAP_LIMIT 15
-#define WT_BONUS_POINTS_SOUND "xp_gain"
 #define WT_BONUS_CHANCE_ALWAYS 1.0
 #define WT_BONUS_DEFAULT_DELAY 3.0
+#define MAX_CONCURRENT_SAVE_QUERIES 4
+#define WT_SECONDS_PER_HOUR 3600
+#define WHALE_RANK_MIN_KD_SUM 200
+#define WT_TRACE_HULL_HALF_WIDTH 24.0
+#define WHALE_RANK_MIN_PLAYTIME_SECONDS 10800
+#define WT_TEAM_RED 2
+#define WT_SECONDS_PER_MINUTE 60
+#define WT_WHALE_POINTS_LOG_BASE_E 2.718281828
+#define WHALE_POINTS_SQL_EXPR "ROUND(1000.0 * SQRT(((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)) / (((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)) + 400.0)) * (((CASE WHEN playtime > 0 THEN playtime ELSE 0 END) / 3600.0) / (((CASE WHEN playtime > 0 THEN playtime ELSE 0 END) / 3600.0) + 20.0)) * ((5.0 * (((CASE WHEN kills > 0 THEN kills ELSE 0 END) + ((CASE WHEN assists > 0 THEN assists ELSE 0 END) * 0.35)) / ((CASE WHEN deaths > 0 THEN deaths ELSE 0 END) + 20.0))) + LN(1.0 + ((CASE WHEN damage_dealt > 0 THEN damage_dealt ELSE 0 END) / (150.0 * ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END))))) + (0.60 * LN(1.0 + ((CASE WHEN healing > 0 THEN healing ELSE 0 END) / (100.0 * ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)))))) + (0.90 * LN(1.0 + ((60.0 * (CASE WHEN total_ubers > 0 THEN total_ubers ELSE 0 END)) / ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)))))))"
+#define WHALE_KILLSTREAK_BONUS_INTERVAL 5
+#define WT_TEAM_BLUE 3
+#define WT_TEAM_FIRST_PLAYING WT_TEAM_RED
+#define WHALE_LEADERBOARD_PAGE_SIZE 10
+#define WT_DEMO_SYNC_KILL_CONFIRM_WINDOW 0.25
+#define WT_SCORE_PROP_AVAILABLE 1
+#define WT_SCORE_PROP_MISSING 2
+#define WT_WHALE_POINTS_MAX_FLOAT 2147483000.0
+#define WHALETRACKER_SCHEMA_VERSION 2
+#define DB_CONFIG_DEFAULT "default"
+#define WHALE_MULTIKILL_MAX_LEVEL 5
+#define WT_MULTIKILL_MIN_LEVEL 2
+#define WT_TOP_SCORE_MIN_PLAYERS 8
+#define WT_TOP_SCORE_PER_MAP_LIMIT 15
 #define WT_DAMAGE_TRACKING_GATE 200
 #define WT_DAMAGE_SANITY_MAX 500
 #define WT_MULTIKILL_DEFAULT_WINDOW 3.0
-#define WT_TRACE_HULL_HALF_WIDTH 24.0
 #define WT_TRACE_DOWN_DISTANCE -16384.0
-#define WT_SECONDS_PER_MINUTE 60
-#define WT_SECONDS_PER_HOUR 3600
 #define WT_MIN_MATCH_RATE_MINUTES 1.0
-#define WHALE_LEADERBOARD_PAGE_SIZE 10
 #define WT_MARKET_GARDENER_DEF_INDEX 416
 #define WT_HANDSHAKE_DEF_INDEX 609
 #define WT_AIRSHOT_MIN_HEIGHT 100.0 // Supstats2 uses a height of 170.0
 #define WT_DEMO_SYNC_WINDOW 0.5
 #define WT_SOLDIER_SYNC_WINDOW 1.0
-#define WT_DEMO_SYNC_KILL_CONFIRM_WINDOW 0.25
 #define WT_DEMO_SYNC_PER_MAP 0 // Temporarily disabled per-map cap; old cap: 5
 #define WT_SOLDIER_SYNC_PER_MAP 0 // Temporarily disabled per-map cap; old cap: 3
 #define WT_SOLDIER_SYNC_EXCLUDED_DEF_INDEX 730
 #define WT_SCORE_PROP_UNKNOWN 0
-#define WT_SCORE_PROP_AVAILABLE 1
-#define WT_SCORE_PROP_MISSING 2
 #define WT_WHALE_POINTS_SCALE 1000.0
 #define WT_WHALE_POINTS_COMBAT_WEIGHT 5.0
 #define WT_WHALE_POINTS_ASSIST_WEIGHT 0.35
@@ -68,12 +68,12 @@
 #define WT_WHALE_POINTS_UBER_SCALE 60.0
 #define WT_WHALE_POINTS_CONFIDENCE_ENGAGEMENT_OFFSET 400.0
 #define WT_WHALE_POINTS_CONFIDENCE_HOURS_OFFSET 20.0
-#define WT_WHALE_POINTS_LOG_BASE_E 2.718281828
-#define WT_WHALE_POINTS_MAX_FLOAT 2147483000.0
 #define WT_NATIVE_MAX_PLAYTIME_HOURS 596523
-#define WHALETRACKER_SCHEMA_VERSION 2
-#define TF_CLASS_HEAVY          6
 #define TF_CLASS_MEDIC          5
+#define MENU_TITLE "Whale Tracker Stats"
+#define WT_TEAM_SPECTATOR 1
+#define WT_BONUS_POINTS_SOUND "xp_gain"
+#define TF_CLASS_HEAVY          6
 
 native int Filters_GetChatName(int client, char[] buffer, int maxlen);
 native int Filters_GetSteamIdColorTag(const char[] steamId, char[] buffer, int maxlen);
