@@ -1753,7 +1753,7 @@ bool ShouldDebounceAccuracyHit(int client, int weaponCategory)
 
     float now = GetEngineTime();
     float lastHit = g_fLastHitscanAccuracyHit[client][weaponCategory];
-    if (lastHit > 0.0 && now - lastHit <= HITSCAN_ACCURACY_HIT_DEBOUNCE)
+    if (lastHit > 0.0 && now - lastHit <= WT_GetHitscanAccuracyHitDebounce())
     {
         return true;
     }
@@ -1838,7 +1838,7 @@ bool WhaleTracker_CheckDamageGate(int client, int damage)
         return false;
     }
     g_iDamageGate[client] += damage;
-    if (g_iDamageGate[client] >= WT_DAMAGE_TRACKING_GATE)
+    if (g_iDamageGate[client] >= WT_GetDamageTrackingGate())
     {
         g_bTrackEligible[client] = true;
         return true;
