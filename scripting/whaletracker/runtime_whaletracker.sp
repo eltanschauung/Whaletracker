@@ -289,6 +289,8 @@ public void OnPluginStart()
         1.0
     );
 
+    AutoExecConfig(true, "whaletracker");
+
     if (g_hVisibleMaxPlayers == null)
     {
         g_hVisibleMaxPlayers = FindConVar("sv_visiblemaxplayers");
