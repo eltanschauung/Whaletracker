@@ -16,6 +16,7 @@
 #include <adt_trie>
 #pragma newdecls required
 
+// Sorted by reference count
 #define STEAMID64_LEN 32
 #define SAVE_QUERY_MAXLEN 4096
 #define WT_BONUS_CHANCE_ALWAYS 1.0
