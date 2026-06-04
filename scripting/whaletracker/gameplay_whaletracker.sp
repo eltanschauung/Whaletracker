@@ -21,7 +21,7 @@ public void Event_RoundWin(Event event, const char[] name, bool dontBroadcast)
 
 bool ShouldAwardTopScoringPlayerBonus()
 {
-    return WhaleTracker_GetCurrentPlayerCount() >= 8;
+    return WhaleTracker_GetCurrentPlayerCount() >= WT_TOP_SCORE_MIN_PLAYERS;
 }
 
 bool IsTopScoringPlayerOnTeam(int client)
@@ -32,7 +32,7 @@ bool IsTopScoringPlayerOnTeam(int client)
     }
 
     int team = GetClientTeam(client);
-    if (team != 2 && team != 3)
+    if (team != WT_TEAM_RED && team != WT_TEAM_BLUE)
     {
         return false;
     }
@@ -96,19 +96,19 @@ bool HasMultipleDominationsAfterKill(int client, int victim)
 
 int GetTrackedClientScore(int client)
 {
-    static int scorePropState = 0;
-    if (scorePropState == 2 || (scorePropState == 1 && !HasEntProp(client, Prop_Send, "m_iScore")))
+    static int scorePropState = WT_SCORE_PROP_UNKNOWN;
+    if (scorePropState == WT_SCORE_PROP_MISSING || (scorePropState == WT_SCORE_PROP_AVAILABLE && !HasEntProp(client, Prop_Send, "m_iScore")))
     {
         return GetClientFrags(client);
     }
 
     if (HasEntProp(client, Prop_Send, "m_iScore"))
     {
-        scorePropState = 1;
+        scorePropState = WT_SCORE_PROP_AVAILABLE;
         return GetEntProp(client, Prop_Send, "m_iScore");
     }
 
-    scorePropState = 2;
+    scorePropState = WT_SCORE_PROP_MISSING;
     return GetClientFrags(client);
 }
 
@@ -254,37 +254,37 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (ShouldAwardTopScoringPlayerBonus() && IsTopScoringPlayerOnTeam(victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "top_score_kill", victim, 3.0, 15);
+                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "top_score_kill", victim, WT_BONUS_DEFAULT_DELAY, WT_TOP_SCORE_PER_MAP_LIMIT);
             }
             if (ConsumeMarketGardenKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "market_garden_kill", 0, 3.0, 0); // Temporarily disabled per-map cap; old cap: 5
+                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "market_garden_kill", 0, WT_BONUS_DEFAULT_DELAY, 0); // Temporarily disabled per-map cap; old cap: 5
             }
             if (ConsumeDemoSyncKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "demo_sync_kill", 0, 3.0, WT_DEMO_SYNC_PER_MAP);
+                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "demo_sync_kill", 0, WT_BONUS_DEFAULT_DELAY, WT_DEMO_SYNC_PER_MAP);
             }
             if (ConsumeSoldierSyncKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 2, true, true, 1.0, "soldier_sync_kill", 0, 3.0, WT_SOLDIER_SYNC_PER_MAP);
+                ApplyBonusPoints(attacker, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "soldier_sync_kill", 0, WT_BONUS_DEFAULT_DELAY, WT_SOLDIER_SYNC_PER_MAP);
             }
             if (victimClass == TF_CLASS_MEDIC)
             {
                 if (medicDrop)
                 {
-                    ApplyBonusPoints(attacker, 3, true, true, 1.0, "medic_uber_drop_kill");
+                    ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "medic_uber_drop_kill");
                 }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERDOMINATION)
             {
                 if (HasMultipleDominationsAfterKill(attacker, victim))
                 {
-                    ApplyBonusPoints(attacker, 1, true, true, 1.0, "multiple_dominations", 0, 3.0, 0); // Temporarily disabled per-map cap; old cap: 5
+                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_BONUS_DEFAULT_DELAY, 0); // Temporarily disabled per-map cap; old cap: 5
                 }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERREVENGE)
             {
-                ApplyBonusPoints(attacker, 1, true, true, 1.0, "player_revenge", victim, 3.0, 0); // Temporarily disabled per-map cap; old cap: 3
+                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "player_revenge", victim, WT_BONUS_DEFAULT_DELAY, 0); // Temporarily disabled per-map cap; old cap: 3
             }
             attackerScoredMedicDrop = medicDrop;
             MarkClientDirty(attacker);
@@ -298,12 +298,12 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 if (HasMultipleDominationsAfterKill(assister, victim))
                 {
-                    ApplyBonusPoints(assister, 1, true, true, 1.0, "multiple_dominations", 0, 3.0, 0); // Temporarily disabled per-map cap; old cap: 5
+                    ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_BONUS_DEFAULT_DELAY, 0); // Temporarily disabled per-map cap; old cap: 5
                 }
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERREVENGE)
             {
-                ApplyBonusPoints(assister, 1, true, true, 1.0, "player_revenge", victim, 3.0, 0); // Temporarily disabled per-map cap; old cap: 3
+                ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "player_revenge", victim, WT_BONUS_DEFAULT_DELAY, 0); // Temporarily disabled per-map cap; old cap: 3
             }
             MarkClientDirty(assister);
         }
@@ -339,7 +339,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
         return Plugin_Continue;
 
     int damageInt = RoundToFloor(damage);
-    if (damageInt < 0 || damageInt > 500)
+    if (damageInt < 0 || damageInt > WT_DAMAGE_SANITY_MAX)
     {
         damageInt = 0;
     }
@@ -356,8 +356,8 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 
     bool reflectBonusEligible = IsReflectBonusDamage(attacker, victim, inflictor);
 
-    // Gate expensive tracking: allow attackers to become eligible after 200 damage dealt and only if not spectator.
-    if (IsValidClient(attacker) && !IsFakeClient(attacker) && GetClientTeam(attacker) > 1 && !g_bTrackEligible[attacker])
+    // Gate expensive tracking until an attacker has dealt enough damage and is not spectator.
+    if (IsValidClient(attacker) && !IsFakeClient(attacker) && GetClientTeam(attacker) >= WT_TEAM_FIRST_PLAYING && !g_bTrackEligible[attacker])
     {
         if (!WhaleTracker_CheckDamageGate(attacker, damageInt) && !reflectBonusEligible)
         {
@@ -366,7 +366,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
         }
     }
     // Victims in spectator are ignored.
-    if (IsValidClient(victim) && GetClientTeam(victim) <= 1)
+    if (IsValidClient(victim) && GetClientTeam(victim) < WT_TEAM_FIRST_PLAYING)
     {
         return Plugin_Continue;
     }
@@ -492,7 +492,7 @@ public void Event_UberDeployed(Event event, const char[] name, bool dontBroadcas
 
     ApplyUberStats(g_Stats[medic]);
     ApplyUberStats(g_MapStats[medic]);
-    ApplyBonusPoints(medic, 1, true, true, 1.0, "uber_deployed", 0, 3.0, 0); // Temporarily disabled per-map cap; old cap: 3
+    ApplyBonusPoints(medic, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "uber_deployed", 0, WT_BONUS_DEFAULT_DELAY, 0); // Temporarily disabled per-map cap; old cap: 3
     MarkClientDirty(medic);
 }
 
@@ -567,8 +567,8 @@ void BuildMedicDropTeamColorTag(int client, char[] colorTag, int maxlen)
 {
     switch (GetClientTeam(client))
     {
-        case 2: strcopy(colorTag, maxlen, "{red}");
-        case 3: strcopy(colorTag, maxlen, "{blue}");
+        case WT_TEAM_RED: strcopy(colorTag, maxlen, "{red}");
+        case WT_TEAM_BLUE: strcopy(colorTag, maxlen, "{blue}");
         default: strcopy(colorTag, maxlen, "{default}");
     }
 }
@@ -619,7 +619,7 @@ void FireKillstreakEndForward(int attacker, int victim, int killstreak)
 void RegisterMultikill(int client)
 {
     float now = GetGameTime();
-    float window = 3.0;
+    float window = WT_MULTIKILL_DEFAULT_WINDOW;
     if (g_hMultikillWindow != null)
     {
         window = g_hMultikillWindow.FloatValue;
@@ -637,7 +637,7 @@ void RegisterMultikill(int client)
     g_fMultikillChainExpiresAt[client] = now + window;
 
     int kills = g_iMultikillChainKills[client];
-    if (kills >= 2 && kills <= WHALE_MULTIKILL_MAX_LEVEL)
+    if (kills >= WT_MULTIKILL_MIN_LEVEL && kills <= WHALE_MULTIKILL_MAX_LEVEL)
     {
         FireMultikillForward(client, kills);
     }
@@ -835,11 +835,11 @@ bool IsReflectBonusDamage(int attacker, int victim, int inflictor)
 
 void AwardReflectBonus(int attacker, bool wasDirectHit)
 {
-    ApplyBonusPoints(attacker, 1, true, true, 1.0, "reflect", 0, 3.0, 0);
+    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "reflect", 0, WT_BONUS_DEFAULT_DELAY, 0);
 
     if (wasDirectHit)
     {
-        ApplyBonusPoints(attacker, 2, true, true, 1.0, "reflect_direct_hit", 0, 3.0, 0);
+        ApplyBonusPoints(attacker, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "reflect_direct_hit", 0, WT_BONUS_DEFAULT_DELAY, 0);
     }
 }
 
@@ -1081,9 +1081,9 @@ float DistanceAboveGroundBox(int victim)
 {
     float start[3];
     float end[3];
-    float hullMins[3] = { -24.0, -24.0, 0.0 };
-    float hullMaxs[3] = { 24.0, 24.0, 0.0 };
-    float direction[3] = { 0.0, 0.0, -16384.0 };
+    float hullMins[3] = { -WT_TRACE_HULL_HALF_WIDTH, -WT_TRACE_HULL_HALF_WIDTH, 0.0 };
+    float hullMaxs[3] = { WT_TRACE_HULL_HALF_WIDTH, WT_TRACE_HULL_HALF_WIDTH, 0.0 };
+    float direction[3] = { 0.0, 0.0, WT_TRACE_DOWN_DISTANCE };
 
     GetClientAbsOrigin(victim, start);
     AddVectors(direction, start, end);
@@ -1118,9 +1118,9 @@ void FormatMatchDuration(int seconds, char[] buffer, int maxlen)
         return;
     }
 
-    int hours = seconds / 3600;
-    int minutes = (seconds % 3600) / 60;
-    int secs = seconds % 60;
+    int hours = seconds / WT_SECONDS_PER_HOUR;
+    int minutes = (seconds % WT_SECONDS_PER_HOUR) / WT_SECONDS_PER_MINUTE;
+    int secs = seconds % WT_SECONDS_PER_MINUTE;
 
     if (hours > 0)
     {
@@ -1229,8 +1229,8 @@ void SendMatchStatsMessage(int viewer, int target)
 
     float kd = (deaths > 0) ? float(kills) / float(deaths) : float(kills);
     float dpm = 0.0, dtpm = 0.0;
-    float minutes = (matchStats.playtime > 0) ? float(matchStats.playtime) / 60.0 : 0.0;
-    if (minutes > 1.0)
+    float minutes = (matchStats.playtime > 0) ? float(matchStats.playtime) / float(WT_SECONDS_PER_MINUTE) : 0.0;
+    if (minutes > WT_MIN_MATCH_RATE_MINUTES)
     {
         dpm = (minutes > 0.0) ? float(damage) / minutes : 0.0;
         dtpm = (minutes > 0.0) ? float(damageTaken) / minutes : 0.0;
