@@ -1,3 +1,10 @@
+#define WT_DEFAULT_ONLINE_UPDATE_INTERVAL "10.0"
+#define WT_MIN_ONLINE_UPDATE_INTERVAL 1.0
+#define WT_MAX_ONLINE_UPDATE_INTERVAL 300.0
+#define WT_PERIODIC_SAVE_INTERVAL 30.0
+#define WT_INITIAL_RECONNECT_DELAY 1.0
+#define WT_RUNTIME_QUICK_RECONNECT_DELAY 2.0
+
 public Plugin myinfo =
 {
     name = "WhaleTracker",
@@ -48,14 +55,14 @@ public void GetSyncDatabaseError(char[] error, int maxlen)
 
 float WhaleTracker_GetOnlineUpdateInterval()
 {
-    float interval = 10.0;
+    float interval = StringToFloat(WT_DEFAULT_ONLINE_UPDATE_INTERVAL);
     if (g_hOnlineUpdateInterval != null)
     {
         interval = GetConVarFloat(g_hOnlineUpdateInterval);
     }
-    if (interval < 1.0)
+    if (interval < WT_MIN_ONLINE_UPDATE_INTERVAL)
     {
-        interval = 1.0;
+        interval = WT_MIN_ONLINE_UPDATE_INTERVAL;
     }
     return interval;
 }
@@ -100,13 +107,13 @@ public void OnPluginStart()
     g_hGameUrl = CreateConVar("sm_whaletracker_game_url", "440", "Steam store app ID used for WhaleTracker server snapshots.");
     g_hOnlineUpdateInterval = CreateConVar(
         "sm_whaletracker_online_update_interval",
-        "10.0",
+        WT_DEFAULT_ONLINE_UPDATE_INTERVAL,
         "Seconds between whaletracker_online and whaletracker_servers updates.",
         FCVAR_NONE,
         true,
-        1.0,
+        WT_MIN_ONLINE_UPDATE_INTERVAL,
         true,
-        300.0
+        WT_MAX_ONLINE_UPDATE_INTERVAL
     );
     g_hOnlineUpdateInterval.AddChangeHook(ConVarChanged_OnlineUpdateInterval);
 
@@ -195,7 +202,7 @@ public void OnPluginStart()
     {
         CloseHandle(g_hPeriodicSaveTimer);
     }
-    g_hPeriodicSaveTimer = CreateTimer(30.0, Timer_GlobalSave, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+    g_hPeriodicSaveTimer = CreateTimer(WT_PERIODIC_SAVE_INTERVAL, Timer_GlobalSave, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 
     g_hAirshotForward = CreateGlobalForward("WhaleTracker_OnAirshot", ET_Ignore, Param_Cell, Param_Cell);
     g_hProjectileDirectHitForward = CreateGlobalForward("WhaleTracker_OnProjectileDirectHit", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
@@ -222,7 +229,7 @@ public void OnMapStart()
 {
     if (!WhaleTracker_IsDatabaseHealthy())
     {
-        WhaleTracker_ScheduleReconnect(1.0);
+        WhaleTracker_ScheduleReconnect(WT_INITIAL_RECONNECT_DELAY);
     }
 
     FinalizeCurrentMatch(false);
@@ -593,7 +600,7 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
         LogError("[WhaleTracker] Failed to query points cache for join message: %s", error);
         if (WhaleTracker_IsConnectionLostError(error))
         {
-            WhaleTracker_ScheduleReconnect(2.0);
+            WhaleTracker_ScheduleReconnect(WT_RUNTIME_QUICK_RECONNECT_DELAY);
         }
         return;
     }
