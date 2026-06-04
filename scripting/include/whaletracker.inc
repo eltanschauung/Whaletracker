@@ -1832,7 +1832,7 @@ bool WhaleTracker_CheckDamageGate(int client, int damage)
         return false;
     }
     g_iDamageGate[client] += damage;
-    if (g_iDamageGate[client] >= 200)
+    if (g_iDamageGate[client] >= WT_DAMAGE_TRACKING_GATE)
     {
         g_bTrackEligible[client] = true;
         return true;
