@@ -1,7 +1,6 @@
 #define WT_MIN_ONLINE_UPDATE_INTERVAL 1.0
 #define WT_DEFAULT_ONLINE_UPDATE_INTERVAL "10.0"
 #define WT_MAX_ONLINE_UPDATE_INTERVAL 300.0
-#define WT_PERIODIC_SAVE_INTERVAL 30.0
 #define WT_INITIAL_RECONNECT_DELAY 1.0
 #define WT_RUNTIME_QUICK_RECONNECT_DELAY 2.0
 
@@ -145,6 +144,150 @@ public void OnPluginStart()
         true,
         0.1
     );
+    g_hBonusDefaultDelay = CreateConVar(
+        "sm_whaletracker_bonus_default_delay",
+        "3.0",
+        "Seconds to delay gameplay currency awards by default.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hRankMinKdSum = CreateConVar(
+        "sm_whaletracker_rank_min_kd_sum",
+        "200",
+        "Minimum lifetime kills plus deaths required to appear ranked.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hRankMinPlaytimeSeconds = CreateConVar(
+        "sm_whaletracker_rank_min_playtime_seconds",
+        "10800",
+        "Minimum lifetime playtime in seconds required to appear ranked.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hKillstreakBonusInterval = CreateConVar(
+        "sm_whaletracker_killstreak_bonus_interval",
+        "5",
+        "Killstreak interval used for WhaleTracker killstreak forwards and awards.",
+        FCVAR_NONE,
+        true,
+        1.0
+    );
+    g_hSyncKillConfirmWindow = CreateConVar(
+        "sm_whaletracker_sync_kill_confirm_window",
+        "0.25",
+        "Seconds after a sync kill candidate to confirm the kill.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hTopScoreMinPlayers = CreateConVar(
+        "sm_whaletracker_top_score_min_players",
+        "8",
+        "Minimum real players required for top-scoring player kill awards.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hTopScorePerMapLimit = CreateConVar(
+        "sm_whaletracker_top_score_per_map_limit",
+        "15",
+        "Per-map award cap for top-scoring player kills; 0 disables the cap.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hDamageTrackingGate = CreateConVar(
+        "sm_whaletracker_damage_tracking_gate",
+        "200",
+        "Damage threshold before a client is considered track-eligible.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hDamageSanityMax = CreateConVar(
+        "sm_whaletracker_damage_sanity_max",
+        "500",
+        "Maximum single damage event accepted for WhaleTracker damage stats.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hMinMatchRateMinutes = CreateConVar(
+        "sm_whaletracker_min_match_rate_minutes",
+        "1.0",
+        "Minimum match playtime minutes before rate stats like damage per minute are shown.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hAirshotMinHeight = CreateConVar(
+        "sm_whaletracker_airshot_min_height",
+        "100.0",
+        "Minimum height above ground required for airshot tracking.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hDemoSyncWindow = CreateConVar(
+        "sm_whaletracker_demo_sync_window",
+        "0.5",
+        "Seconds between sticky damage and grenade direct kill for demo sync awards.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hSoldierSyncWindow = CreateConVar(
+        "sm_whaletracker_soldier_sync_window",
+        "1.0",
+        "Seconds between rocket damage and rocket kill for soldier sync awards.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hDemoSyncPerMap = CreateConVar(
+        "sm_whaletracker_demo_sync_per_map",
+        "0",
+        "Per-map award cap for demo sync kills; 0 disables the cap.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hSoldierSyncPerMap = CreateConVar(
+        "sm_whaletracker_soldier_sync_per_map",
+        "0",
+        "Per-map award cap for soldier sync kills; 0 disables the cap.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hHitscanAccuracyHitDebounce = CreateConVar(
+        "sm_whaletracker_hitscan_accuracy_hit_debounce",
+        "0.05",
+        "Seconds to debounce hitscan accuracy hit tracking.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hMarketGardenKillWindow = CreateConVar(
+        "sm_whaletracker_market_garden_kill_window",
+        "0.25",
+        "Seconds after a market garden hit to confirm a market garden kill.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
+    g_hPeriodicSaveInterval = CreateConVar(
+        "sm_whaletracker_periodic_save_interval",
+        "30.0",
+        "Seconds between periodic WhaleTracker save passes.",
+        FCVAR_NONE,
+        true,
+        1.0
+    );
 
     if (g_hVisibleMaxPlayers == null)
     {
@@ -202,7 +345,7 @@ public void OnPluginStart()
     {
         CloseHandle(g_hPeriodicSaveTimer);
     }
-    g_hPeriodicSaveTimer = CreateTimer(WT_PERIODIC_SAVE_INTERVAL, Timer_GlobalSave, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+    g_hPeriodicSaveTimer = CreateTimer(WT_GetPeriodicSaveInterval(), Timer_GlobalSave, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 
     g_hAirshotForward = CreateGlobalForward("WhaleTracker_OnAirshot", ET_Ignore, Param_Cell, Param_Cell);
     g_hProjectileDirectHitForward = CreateGlobalForward("WhaleTracker_OnProjectileDirectHit", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
