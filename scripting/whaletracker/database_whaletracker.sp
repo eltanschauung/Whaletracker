@@ -1,3 +1,8 @@
+#define WT_DATABASE_RECONNECT_DELAY 5.0
+#define WT_DATABASE_QUICK_RECONNECT_DELAY 2.0
+#define WT_SCHEMA_READY_RETRY_DELAY 2.0
+#define WT_ONLINE_STALE_SECONDS 120
+
 void WhaleTracker_MaybeMarkDatabaseReady()
 {
     if (g_bDatabaseReady
@@ -114,7 +119,7 @@ public void T_SQLConnect(Database db, const char[] error, any data)
         g_bDatabaseReady = false;
         g_bAsyncDatabaseConnected = false;
         g_bDatabaseConnectInFlight = false;
-        WhaleTracker_ScheduleReconnect(5.0);
+        WhaleTracker_ScheduleReconnect(WT_DATABASE_RECONNECT_DELAY);
         return;
     }
 
@@ -135,7 +140,7 @@ public void T_SQLSyncConnect(Database db, const char[] error, any data)
         LogError("[WhaleTracker] Sync database connection failed: %s", error);
         g_bSyncDatabaseConnected = false;
         g_bDatabaseConnectInFlight = false;
-        WhaleTracker_ScheduleReconnect(5.0);
+        WhaleTracker_ScheduleReconnect(WT_DATABASE_RECONNECT_DELAY);
         return;
     }
 
@@ -164,11 +169,11 @@ public void WhaleTracker_SchemaVersionCallback(Database db, DBResultSet results,
         LogError("[WhaleTracker] Failed to verify schema version: %s", error);
         if (WhaleTracker_IsConnectionLostError(error))
         {
-            WhaleTracker_ScheduleReconnect(5.0);
+            WhaleTracker_ScheduleReconnect(WT_DATABASE_RECONNECT_DELAY);
         }
         else
         {
-            WhaleTracker_ScheduleSchemaReadyCheck(2.0);
+            WhaleTracker_ScheduleSchemaReadyCheck(WT_SCHEMA_READY_RETRY_DELAY);
         }
         return;
     }
@@ -183,7 +188,7 @@ public void WhaleTracker_SchemaVersionCallback(Database db, DBResultSet results,
 
     if (version < WHALETRACKER_SCHEMA_VERSION)
     {
-        WhaleTracker_ScheduleSchemaReadyCheck(2.0);
+        WhaleTracker_ScheduleSchemaReadyCheck(WT_SCHEMA_READY_RETRY_DELAY);
         return;
     }
 
@@ -251,7 +256,7 @@ void LoadClientOnlineSnapshot(int client)
         g_Stats[client].steamId,
         g_iHostPort,
         escapedMapName,
-        GetTime() - 120);
+        GetTime() - WT_ONLINE_STALE_SECONDS);
 
     g_hDatabase.Query(WhaleTracker_LoadOnlineSnapshotCallback, query, GetClientUserId(client));
 }
@@ -298,7 +303,7 @@ public void WhaleTracker_LoadCallback(Database db, DBResultSet results, const ch
         LogError("[WhaleTracker] Failed to load stats for %N: %s", index, error);
         if (WhaleTracker_IsConnectionLostError(error))
         {
-            WhaleTracker_ScheduleReconnect(2.0);
+            WhaleTracker_ScheduleReconnect(WT_DATABASE_QUICK_RECONNECT_DELAY);
         }
         WhaleTracker_RefreshClientTrackingState(index);
         return;
@@ -370,7 +375,7 @@ public void WhaleTracker_LoadOnlineSnapshotCallback(Database db, DBResultSet res
         LogError("[WhaleTracker] Failed to restore online snapshot for %N: %s", client, error);
         if (WhaleTracker_IsConnectionLostError(error))
         {
-            WhaleTracker_ScheduleReconnect(2.0);
+            WhaleTracker_ScheduleReconnect(WT_DATABASE_QUICK_RECONNECT_DELAY);
         }
         g_MapStats[client].loaded = true;
         g_MapStats[client].connectTime = GetEngineTime();
@@ -661,7 +666,7 @@ public void WhaleTracker_SaveCallback(Database db, DBResultSet results, const ch
 
         if (WhaleTracker_IsConnectionLostError(error))
         {
-            WhaleTracker_ScheduleReconnect(2.0);
+            WhaleTracker_ScheduleReconnect(WT_DATABASE_QUICK_RECONNECT_DELAY);
         }
     }
 
