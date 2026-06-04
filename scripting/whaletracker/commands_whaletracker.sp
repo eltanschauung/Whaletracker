@@ -1,3 +1,5 @@
+#define WT_COMMAND_QUICK_RECONNECT_DELAY 2.0
+
 public Action Command_ShowStats(int client, int args)
 {
     if (!IsValidClient(client) || IsFakeClient(client))
@@ -63,7 +65,7 @@ void PrintUnrankedWhalePointsMessage(int client, int target)
     {
         int combined = g_Stats[target].kills + g_Stats[target].deaths;
         int playtime = (g_Stats[target].playtime > 0) ? g_Stats[target].playtime : 0;
-        float hours = float(playtime) / 3600.0;
+        float hours = float(playtime) / float(WT_SECONDS_PER_HOUR);
         CPrintToChatEx(client, target, "{green}[WhaleTracker]{default} %s{default} is unranked until Kills + Deaths reaches at least %d and playtime reaches 3 hours (current: %d K+D, %.2f hours).", displayName, WHALE_RANK_MIN_KD_SUM, combined, hours);
         return;
     }
@@ -212,7 +214,7 @@ public void WhaleTracker_ShowLivePointsRankCallback(Database db, DBResultSet res
         LogError("[WhaleTracker] Failed to query live points rank: %s", error);
         if (WhaleTracker_IsConnectionLostError(error))
         {
-            WhaleTracker_ScheduleReconnect(2.0);
+            WhaleTracker_ScheduleReconnect(WT_COMMAND_QUICK_RECONNECT_DELAY);
         }
         PrintLiveWhalePointsMessage(client, target, broadcast, showHints, points, 0, false);
         return;
@@ -1169,22 +1171,22 @@ int GetWhalePointsForStats(const WhaleStats stats)
     }
 
     float engagement = float(safeEngagement);
-    float hours = float(safePlaytime) / 3600.0;
-    float combat = (float(safeKills) + (float(safeAssists) * 0.35)) / (float(safeDeaths) + 20.0);
-    float pressure = Logarithm(1.0 + (float(safeDamage) / (150.0 * engagement)), 2.718281828);
+    float hours = float(safePlaytime) / float(WT_SECONDS_PER_HOUR);
+    float combat = (float(safeKills) + (float(safeAssists) * WT_WHALE_POINTS_ASSIST_WEIGHT)) / (float(safeDeaths) + WT_WHALE_POINTS_DEATH_OFFSET);
+    float pressure = Logarithm(1.0 + (float(safeDamage) / (WT_WHALE_POINTS_DAMAGE_SCALE * engagement)), WT_WHALE_POINTS_LOG_BASE_E);
     float support =
-        (0.60 * Logarithm(1.0 + (float(safeHealing) / (100.0 * engagement)), 2.718281828))
-        + (0.90 * Logarithm(1.0 + ((60.0 * float(safeTotalUbers)) / engagement), 2.718281828));
-    float confidence = SquareRoot(engagement / (engagement + 400.0)) * (hours / (hours + 20.0));
+        (WT_WHALE_POINTS_HEALING_WEIGHT * Logarithm(1.0 + (float(safeHealing) / (WT_WHALE_POINTS_HEALING_SCALE * engagement)), WT_WHALE_POINTS_LOG_BASE_E))
+        + (WT_WHALE_POINTS_UBER_WEIGHT * Logarithm(1.0 + ((WT_WHALE_POINTS_UBER_SCALE * float(safeTotalUbers)) / engagement), WT_WHALE_POINTS_LOG_BASE_E));
+    float confidence = SquareRoot(engagement / (engagement + WT_WHALE_POINTS_CONFIDENCE_ENGAGEMENT_OFFSET)) * (hours / (hours + WT_WHALE_POINTS_CONFIDENCE_HOURS_OFFSET));
 
-    float pointsFloat = 1000.0 * confidence * ((5.0 * combat) + pressure + support);
+    float pointsFloat = WT_WHALE_POINTS_SCALE * confidence * ((WT_WHALE_POINTS_COMBAT_WEIGHT * combat) + pressure + support);
     if (pointsFloat < 0.0)
     {
         pointsFloat = 0.0;
     }
-    if (pointsFloat > 2147483000.0)
+    if (pointsFloat > WT_WHALE_POINTS_MAX_FLOAT)
     {
-        pointsFloat = 2147483000.0;
+        pointsFloat = WT_WHALE_POINTS_MAX_FLOAT;
     }
 
     int points = RoundToNearest(pointsFloat);
@@ -1282,12 +1284,12 @@ public any Native_WhaleTracker_HasPlaytimeHours(Handle plugin, int numParams)
         return false;
     }
 
-    if (hours > 596523)
+    if (hours > WT_NATIVE_MAX_PLAYTIME_HOURS)
     {
         return false;
     }
 
-    int requiredSeconds = hours * 3600;
+    int requiredSeconds = hours * WT_SECONDS_PER_HOUR;
     return g_Stats[client].playtime >= requiredSeconds;
 }
 
