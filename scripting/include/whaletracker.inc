@@ -13,6 +13,7 @@ void ResetRuntimeCounters(WhaleStats stats)
 {
     stats.currentKillstreak = 0;
     stats.currentUbersLife = 0;
+    stats.currentAssistsLife = 0;
 }
 
 void ResetStatsStruct(WhaleStats stats, bool resetIdentity)
@@ -1882,6 +1883,7 @@ void ResetLifeCounters(WhaleStats stats)
 {
     stats.currentKillstreak = 0;
     stats.currentUbersLife = 0;
+    stats.currentAssistsLife = 0;
 }
 
 void ApplyKillStats(WhaleStats stats, bool backstab, bool medicDrop)
@@ -1908,6 +1910,7 @@ void ApplyKillStats(WhaleStats stats, bool backstab, bool medicDrop)
 void ApplyAssistStats(WhaleStats stats)
 {
     stats.totalAssists++;
+    stats.currentAssistsLife++;
 
 }
 

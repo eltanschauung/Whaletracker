@@ -53,6 +53,7 @@
 #define WT_WHALE_POINTS_CONFIDENCE_HOURS_OFFSET 20.0
 #define WT_NATIVE_MAX_PLAYTIME_HOURS 596523
 #define TF_CLASS_MEDIC          5
+#define WT_MEDIC_ASSISTS_LIFE_BONUS_INTERVAL 5
 #define MENU_TITLE "Whale Tracker Stats"
 #define WT_TEAM_SPECTATOR 1
 #define WT_BONUS_POINTS_SOUND "xp_gain"
@@ -170,6 +171,7 @@ enum struct WhaleStats
     // runtime counters (not persisted directly)
     int currentKillstreak;
     int currentUbersLife;
+    int currentAssistsLife;
 
     float connectTime;
 

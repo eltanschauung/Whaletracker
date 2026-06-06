@@ -293,6 +293,13 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
         {
             ApplyAssistStats(g_Stats[assister]);
             ApplyAssistStats(g_MapStats[assister]);
+            int assistsLife = g_Stats[assister].currentAssistsLife;
+            if (view_as<int>(TF2_GetPlayerClass(assister)) == TF_CLASS_MEDIC
+                && assistsLife > 0
+                && assistsLife % WT_MEDIC_ASSISTS_LIFE_BONUS_INTERVAL == 0)
+            {
+                ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "medic_assists_life", assistsLife, WT_GetBonusDefaultDelay(), 0);
+            }
             if (deathFlags & TF_DEATHFLAG_ASSISTERDOMINATION)
             {
                 if (HasMultipleDominationsAfterKill(assister, victim))
