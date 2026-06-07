@@ -1,5 +1,5 @@
 <?php
-$pageTitle = $pageTitle ?? 'The Youkai Pound · WhaleTracker';
+$pageTitle = $pageTitle ?? 'Kogasatopia · WhaleTracker';
 $activePage = $activePage ?? 'cumulative';
 $navOnlineCount = $navOnlineCount ?? 'Loading...';
 $tabRevision = $tabRevision ?? null;

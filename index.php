@@ -22,7 +22,7 @@ if ($focusedPlayer !== null && $focusedPlayer !== '') {
     $focused = wt_fetch_player($focusedPlayer);
 }
 
-$pageTitle = 'The Youkai Pound · WhaleTracker';
+$pageTitle = 'Kogasatopia · WhaleTracker';
 $activePage = 'cumulative';
 $cumulativeRevision = wt_cumulative_revision();
 $tabRevision = $cumulativeRevision ? substr(md5((string)$cumulativeRevision), 0, 6) : null;
