@@ -319,6 +319,7 @@ public void OnPluginStart()
     RegConsoleCmd("sm_seen", Command_ShowLastSeen, "Search cached names and show a player's last seen time.");
     RegConsoleCmd("sm_fav", Command_SetFavoriteClass, "Set your favorite class for WhaleTracker.");
     RegConsoleCmd("sm_favorite", Command_SetFavoriteClass, "Set your favorite class for WhaleTracker.");
+    RegConsoleCmd("sm_country", Command_ToggleCountryVisibility, "Toggle country flag visibility on kogasa.tf/stats.");
     RegConsoleCmd("sm_markets", Command_ShowMarketGardens, "Show your market garden total.");
     RegConsoleCmd("sm_mg", Command_ShowMarketGardens, "Show your market garden total.");
     RegConsoleCmd("sm_gardens", Command_ShowMarketGardens, "Show your market garden total.");
@@ -695,6 +696,7 @@ public void OnClientPostAdminCheck(int client)
     WhaleTracker_UpdateClientAdminStatus(client);
     RequestClientJoinLeaderboardQuery(client);
     RequestFavoriteClassLoad(client);
+    RequestShowCountryLoad(client);
 }
 
 void RequestClientJoinLeaderboardQuery(int client)

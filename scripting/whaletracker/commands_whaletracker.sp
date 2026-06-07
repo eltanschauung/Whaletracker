@@ -406,6 +406,23 @@ public Action Command_SetFavoriteClass(int client, int args)
     return Plugin_Handled;
 }
 
+public Action Command_ToggleCountryVisibility(int client, int args)
+{
+    if (client <= 0 || !IsClientInGame(client) || IsFakeClient(client))
+    {
+        return Plugin_Handled;
+    }
+
+    if (!g_bShowCountryLoaded[client])
+    {
+        RequestShowCountryLoad(client, true);
+        return Plugin_Handled;
+    }
+
+    SetShowCountryForClient(client, !g_bShowCountryCache[client]);
+    return Plugin_Handled;
+}
+
 public Action Command_ShowLeaderboard(int client, int args)
 {
     if (client <= 0 || !IsClientInGame(client) || IsFakeClient(client))
@@ -599,6 +616,10 @@ void ResetClientCommandCaches(int client)
     g_bFavoriteClassLoaded[client] = false;
     g_bFavoriteClassPending[client] = false;
     g_iFavoriteClassCache[client] = CLASS_UNKNOWN;
+    g_bShowCountryLoaded[client] = false;
+    g_bShowCountryPending[client] = false;
+    g_bShowCountryCache[client] = false;
+    g_bShowCountryToggleAfterLoad[client] = false;
 }
 
 void GetClientChatDisplayName(int client, char[] buffer, int maxlen)
@@ -992,6 +1013,130 @@ public void WhaleTracker_FavoriteClassLoadCallback(Database db, DBResultSet resu
         char className[16];
         GetFavoriteClassDisplayName(favoriteClass, className, sizeof(className));
         CPrintToChat(client, "{green}[WhaleTracker]{default} Your favorite class: {gold}%s{default}", className);
+    }
+}
+
+void SetShowCountryForClient(int client, bool showCountry)
+{
+    if (!g_bDatabaseReady || g_hDatabase == null)
+    {
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Database is not ready.");
+        return;
+    }
+
+    EnsureClientSteamId(client);
+    if (g_Stats[client].steamId[0] == '\0')
+    {
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Could not determine your SteamID yet.");
+        return;
+    }
+
+    char escapedSteamId[STEAMID64_LEN * 2];
+    EscapeSqlString(g_Stats[client].steamId, escapedSteamId, sizeof(escapedSteamId));
+
+    int firstSeen = g_Stats[client].firstSeenTimestamp;
+    if (firstSeen <= 0)
+    {
+        firstSeen = GetTime();
+    }
+
+    char query[512];
+    Format(query, sizeof(query),
+        "INSERT INTO whaletracker (steamid, first_seen, show_country) "
+        ... "VALUES ('%s', %d, %d) "
+        ... "ON DUPLICATE KEY UPDATE "
+        ... "first_seen = LEAST(first_seen, VALUES(first_seen)), "
+        ... "show_country = VALUES(show_country)",
+        escapedSteamId,
+        firstSeen,
+        showCountry ? 1 : 0);
+    QueueSaveQuery(query, GetClientUserId(client), false);
+
+    g_bShowCountryCache[client] = showCountry;
+    g_bShowCountryLoaded[client] = true;
+    g_bShowCountryPending[client] = false;
+    g_bShowCountryToggleAfterLoad[client] = false;
+
+    if (showCountry)
+    {
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Your country flag will become visible on {gold}kogasa.tf/stats{default} next time it updates. Use {gold}!country{default} again to disable.");
+    }
+    else
+    {
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Your country flag will no longer be visible on {gold}kogasa.tf/stats{default} next time it updates.");
+    }
+}
+
+void RequestShowCountryLoad(int client, bool toggleAfterLoad = false)
+{
+    if (!IsValidClient(client) || IsFakeClient(client) || !g_bDatabaseReady || g_hDatabase == null)
+    {
+        return;
+    }
+
+    if (toggleAfterLoad)
+    {
+        g_bShowCountryToggleAfterLoad[client] = true;
+    }
+
+    if (g_bShowCountryPending[client])
+    {
+        return;
+    }
+
+    EnsureClientSteamId(client);
+    if (g_Stats[client].steamId[0] == '\0')
+    {
+        return;
+    }
+
+    g_bShowCountryPending[client] = true;
+
+    char escapedSteamId[STEAMID64_LEN * 2];
+    EscapeSqlString(g_Stats[client].steamId, escapedSteamId, sizeof(escapedSteamId));
+
+    DataPack pack = new DataPack();
+    pack.WriteCell(GetClientUserId(client));
+
+    char query[192];
+    Format(query, sizeof(query),
+        "SELECT COALESCE(show_country, 0) FROM whaletracker WHERE steamid = '%s' LIMIT 1",
+        escapedSteamId);
+    g_hDatabase.Query(WhaleTracker_ShowCountryLoadCallback, query, pack);
+}
+
+public void WhaleTracker_ShowCountryLoadCallback(Database db, DBResultSet results, const char[] error, any data)
+{
+    DataPack pack = view_as<DataPack>(data);
+    pack.Reset();
+    int client = GetClientOfUserId(pack.ReadCell());
+    delete pack;
+
+    if (!IsValidClient(client) || IsFakeClient(client))
+    {
+        return;
+    }
+
+    g_bShowCountryPending[client] = false;
+
+    if (error[0] != '\0')
+    {
+        LogError("[WhaleTracker] Failed to load show_country for %N: %s", client, error);
+        return;
+    }
+
+    bool showCountry = false;
+    if (results != null && results.FetchRow())
+    {
+        showCountry = results.FetchInt(0) != 0;
+    }
+
+    g_bShowCountryCache[client] = showCountry;
+    g_bShowCountryLoaded[client] = true;
+
+    if (g_bShowCountryToggleAfterLoad[client])
+    {
+        SetShowCountryForClient(client, !showCountry);
     }
 }
 

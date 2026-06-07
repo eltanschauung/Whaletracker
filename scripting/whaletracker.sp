@@ -308,6 +308,10 @@ Handle g_hMultikillForward = null;
 bool g_bFavoriteClassLoaded[MAXPLAYERS + 1];
 bool g_bFavoriteClassPending[MAXPLAYERS + 1];
 int g_iFavoriteClassCache[MAXPLAYERS + 1];
+bool g_bShowCountryLoaded[MAXPLAYERS + 1];
+bool g_bShowCountryPending[MAXPLAYERS + 1];
+bool g_bShowCountryCache[MAXPLAYERS + 1];
+bool g_bShowCountryToggleAfterLoad[MAXPLAYERS + 1];
 float g_fMultikillChainExpiresAt[MAXPLAYERS + 1];
 int g_iMultikillChainKills[MAXPLAYERS + 1];
 

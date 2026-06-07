@@ -935,6 +935,7 @@ void WhaleTracker_EnsureAdminStatusColumns()
 
     WhaleTracker_RunSchemaQuery("ALTER TABLE whaletracker ADD COLUMN IF NOT EXISTS is_admin TINYINT(1) DEFAULT 0", "whaletracker.is_admin");
     WhaleTracker_RunSchemaQuery("ALTER TABLE whaletracker ADD COLUMN IF NOT EXISTS country VARCHAR(64) NOT NULL DEFAULT ''", "whaletracker.country");
+    WhaleTracker_RunSchemaQuery("ALTER TABLE whaletracker ADD COLUMN IF NOT EXISTS show_country TINYINT(1) NOT NULL DEFAULT 0", "whaletracker.show_country");
     WhaleTracker_RunSchemaQuery("ALTER TABLE whaletracker_online ADD COLUMN IF NOT EXISTS is_admin TINYINT(1) DEFAULT 0", "whaletracker_online.is_admin");
     WhaleTracker_RunSchemaQuery("ALTER TABLE whaletracker_log_players ADD COLUMN IF NOT EXISTS is_admin TINYINT DEFAULT 0", "whaletracker_log_players.is_admin");
 }
