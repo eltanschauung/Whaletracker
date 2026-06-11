@@ -34,6 +34,7 @@ void ResetStatsStruct(WhaleStats stats, bool resetIdentity)
     stats.totalUbers = 0;
     stats.totalMedicDrops = 0;
     stats.totalAirshots = 0;
+    stats.totalCrossbowHits = 0;
     stats.totalMarketGardenHits = 0;
     stats.totalHeadshots = 0;
     stats.totalBackstabs = 0;
@@ -383,7 +384,7 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
             continue;
 
         int snapshotData[MATCH_STAT_COUNT];
-        SnapshotFromStats(g_MapStats[client], snapshotData);
+        SnapshotFromStatsAtTime(g_MapStats[client], snapshotData, engineNow);
         char steamId[STEAMID64_LEN];
         if (!GetClientAuthId(client, AuthId_SteamID64, steamId, sizeof(steamId)))
         {
@@ -677,6 +678,62 @@ void SnapshotFromStats(const WhaleStats stats, int data[MATCH_STAT_COUNT])
     data[MatchStat_IsAdmin] = stats.isAdmin ? 1 : 0;
 }
 
+int GetStatsPlaytimeAtTime(const WhaleStats stats, float engineNow)
+{
+    int playtime = stats.playtime;
+    if (stats.connectTime > 0.0)
+    {
+        int delta = RoundToFloor(engineNow - stats.connectTime);
+        if (delta > 0)
+        {
+            playtime += delta;
+        }
+    }
+    return playtime;
+}
+
+void SnapshotFromStatsAtTime(const WhaleStats stats, int data[MATCH_STAT_COUNT], float engineNow)
+{
+    SnapshotFromStats(stats, data);
+    data[MatchStat_Playtime] = GetStatsPlaytimeAtTime(stats, engineNow);
+}
+
+bool IsMatchLogRatePlausible(int amount, int playtime)
+{
+    if (amount < 0 || playtime < 0)
+    {
+        return false;
+    }
+
+    if (amount == 0)
+    {
+        return true;
+    }
+
+    if (playtime <= 0)
+    {
+        return false;
+    }
+
+    float perMinute = float(amount) * float(WT_SECONDS_PER_MINUTE) / float(playtime);
+    return perMinute <= WT_MATCH_LOG_MAX_DAMAGE_PER_MINUTE;
+}
+
+bool IsValidMatchLogSnapshot(const int data[MATCH_STAT_COUNT])
+{
+    if (!IsMatchLogRatePlausible(data[MatchStat_Damage], data[MatchStat_Playtime]))
+    {
+        return false;
+    }
+
+    if (!IsMatchLogRatePlausible(data[MatchStat_DamageTaken], data[MatchStat_Playtime]))
+    {
+        return false;
+    }
+
+    return true;
+}
+
 void MergeSnapshotArrays(int base[MATCH_STAT_COUNT], const int delta[MATCH_STAT_COUNT])
 {
     base[MatchStat_Kills] += delta[MatchStat_Kills];
@@ -770,7 +827,7 @@ int CountValidMatchSnapshots(StringMapSnapshot snap)
         snap.GetKey(i, steamId, sizeof(steamId));
 
         int data[MATCH_STAT_COUNT];
-        if (ExtractSnapshotForSteamId(steamId, data))
+        if (ExtractSnapshotForSteamId(steamId, data) && IsValidMatchLogSnapshot(data))
         {
             count++;
         }
@@ -1024,6 +1081,9 @@ void InsertPlayerLogRecord(const int data[MATCH_STAT_COUNT], const char[] steamI
         return;
 
     if (!g_sCurrentLogId[0] || steamId[0] == '\0')
+        return;
+
+    if (!IsValidMatchLogSnapshot(data))
         return;
 
     char escapedName[256];

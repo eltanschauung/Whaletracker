@@ -442,7 +442,10 @@ bool HasMapActivity(WhaleStats stats)
         || stats.totalHeadshots > 0
         || stats.totalBackstabs > 0
         || stats.totalUberDrops > 0
-        || stats.totalMedicDrops > 0;
+        || stats.totalMedicDrops > 0
+        || stats.totalAirshots > 0
+        || stats.totalCrossbowHits > 0
+        || stats.totalMarketGardenHits > 0;
 }
 
 bool SaveClientMapStats(int client)
