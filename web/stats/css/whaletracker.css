@@ -847,7 +847,7 @@ body {
     gap: 0.8rem;
 }
 
-#stats-table-cumulative .player-cell img {
+#stats-table-cumulative .player-cell .player-avatar {
     width: 48px;
     height: 48px;
 }
