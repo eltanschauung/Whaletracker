@@ -257,7 +257,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (ConsumeMarketGardenKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "market_garden_kill", 0, WT_GetBonusDefaultDelay(), 0); // Temporarily disabled per-map cap; old cap: 5
+                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "market_garden_kill", 0, WT_GetBonusDefaultDelay(), 5);
             }
             if (ConsumeDemoSyncKill(attacker, victim))
             {
@@ -278,12 +278,12 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 if (HasMultipleDominationsAfterKill(attacker, victim))
                 {
-                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_GetBonusDefaultDelay(), 0); // Temporarily disabled per-map cap; old cap: 5
+                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_GetBonusDefaultDelay(), 5);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERREVENGE)
             {
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "player_revenge", victim, WT_GetBonusDefaultDelay(), 0); // Temporarily disabled per-map cap; old cap: 3
+                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "player_revenge", victim, WT_GetBonusDefaultDelay(), 3);
             }
             attackerScoredMedicDrop = medicDrop;
             MarkClientDirty(attacker);
@@ -304,12 +304,12 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 if (HasMultipleDominationsAfterKill(assister, victim))
                 {
-                    ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_GetBonusDefaultDelay(), 0); // Temporarily disabled per-map cap; old cap: 5
+                    ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_GetBonusDefaultDelay(), 5);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERREVENGE)
             {
-                ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "player_revenge", victim, WT_GetBonusDefaultDelay(), 0); // Temporarily disabled per-map cap; old cap: 3
+                ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "player_revenge", victim, WT_GetBonusDefaultDelay(), 3);
             }
             MarkClientDirty(assister);
         }
@@ -498,7 +498,7 @@ public void Event_UberDeployed(Event event, const char[] name, bool dontBroadcas
 
     ApplyUberStats(g_Stats[medic]);
     ApplyUberStats(g_MapStats[medic]);
-    ApplyBonusPoints(medic, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "uber_deployed", 0, WT_GetBonusDefaultDelay(), 0); // Temporarily disabled per-map cap; old cap: 3
+    ApplyBonusPoints(medic, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "uber_deployed", 0, WT_GetBonusDefaultDelay(), 3);
     MarkClientDirty(medic);
 }
 
