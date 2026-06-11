@@ -526,6 +526,29 @@ void CopyLowercase(const char[] source, char[] dest, int maxlen)
     dest[i] = '\0';
 }
 
+bool WhaleTracker_GetClientCountryCode(int client, char[] countryCode, int maxlen)
+{
+    if (maxlen <= 0)
+        return false;
+
+    countryCode[0] = '\0';
+
+    char rawIp[64];
+    if (!GetClientIP(client, rawIp, sizeof(rawIp), false) || !rawIp[0])
+    {
+        return false;
+    }
+
+    char geoCode[3];
+    if (!GeoipCode2(rawIp, geoCode) || !geoCode[0])
+    {
+        return false;
+    }
+
+    CopyLowercase(geoCode, countryCode, maxlen);
+    return countryCode[0] != '\0';
+}
+
 bool WhaleTracker_IsConnectionLostError(const char[] error)
 {
     if (!error[0])

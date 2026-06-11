@@ -1034,6 +1034,11 @@ void SetShowCountryForClient(int client, bool showCountry)
     char escapedSteamId[STEAMID64_LEN * 2];
     EscapeSqlString(g_Stats[client].steamId, escapedSteamId, sizeof(escapedSteamId));
 
+    char countryCode[3];
+    WhaleTracker_GetClientCountryCode(client, countryCode, sizeof(countryCode));
+    char escapedCountryCode[16];
+    EscapeSqlString(countryCode, escapedCountryCode, sizeof(escapedCountryCode));
+
     int firstSeen = g_Stats[client].firstSeenTimestamp;
     if (firstSeen <= 0)
     {
@@ -1042,13 +1047,15 @@ void SetShowCountryForClient(int client, bool showCountry)
 
     char query[512];
     Format(query, sizeof(query),
-        "INSERT INTO whaletracker (steamid, first_seen, show_country) "
-        ... "VALUES ('%s', %d, %d) "
+        "INSERT INTO whaletracker (steamid, first_seen, country, show_country) "
+        ... "VALUES ('%s', %d, '%s', %d) "
         ... "ON DUPLICATE KEY UPDATE "
         ... "first_seen = LEAST(first_seen, VALUES(first_seen)), "
+        ... "country = VALUES(country), "
         ... "show_country = VALUES(show_country)",
         escapedSteamId,
         firstSeen,
+        escapedCountryCode,
         showCountry ? 1 : 0);
     QueueSaveQuery(query, GetClientUserId(client), false);
 
