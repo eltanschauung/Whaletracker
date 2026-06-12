@@ -1,33 +1,13 @@
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/df33e1ec-e877-41cc-ab87-910527647951" />
 
-WhaleTracker is a stats tracking system used by the kogasatopia site to collect and display player statistics from a Team Fortress 2 server. The system has two main parts:
+# WhaleTracker
 
-- Data collection (server-side plugin): a SourceMod plugin (WhaleTracker) that runs on the game server to record in-game events and periodically persist those to a MySQL/MariaDB database.
-- Web UI (PHP + JS + CSS): a set of PHP endpoints and static assets under the webroot (primarily `/stats`) that present leaderboards, online players, player detail pages, and small widgets used in other pages like `playercount_widget` and `leaderboard`.
+[View WhaleTracker's frontend here.](https://kogasa.tf/stats)
 
-This README describes the on-disk layout, the data flow between the plugin and the web UI and important files & functions.
+WhaleTracker is a stats tracking system for the Kogasatopia TF2 server. It has three parts:
 
-Relevant Paths
+- a SourceMod plugin (WhaleTracker) that runs on the server to record in-game events
+- Stat records are deferred from Sourcemod to a Rust app called WhaleTracker-Rust, this allows for SQL writes with multithreading rather than keeping the work on TF2's single thread
+- Frontend found in the Kogasatopia-Frontend-Elixir repo that contains a cumulative stats page, a maps database, match logs inspired by supstats2 and a live chat connection
 
-- /var/www/kogasatopia/stats/ — main web UI for WhaleTracker
-  - index.php — top-level web UI for WhaleTracker; contains the HTML structure, includes, JS that fetches logs/online stats and renders cards
-  - config.php — web configuration constants (DB table names, etc.) used by the PHP UI
-  - functions.php — shared helper functions used by the PHP pages (database helpers, table name getters, sanitizers, etc.)
-  - playerList.php, online.php — small include/partial PHP files that render parts of the UI (player lists, school labels, online players, etc.)
-  - css/whaletracker.css — stylesheet for the WhaleTracker web UI
-  - whaletracker_logo.png, whaletracker_footer.png — logo/footer images used throughout
-
-Database tables (from reading the plugin SQL queries)
-
-The SourceMod script creates/uses the following tables (names as seen in the plugin; the web UI expects env/config table names that default to these):
-
-- whaletracker — persistent player stats (lifetime metrics)
-- whaletracker_online — transient table with online players and their current-match counters and last_update timestamp
-- whaletracker_logs — aggregated match/session logs (per-match meta data)
-- whaletracker_log_players — per-player-per-match snapshot rows (for historical logs)
-- whaletracker_mapstats
-
-These tables contain many columns: kills, deaths, assists, damage, damage_taken, healing, headshots, backstabs, playtime, total_ubers, best_streak, time_connected, last_update, personaname, class, team, alive, is_spectator and many lifetime fields like damage_dealt/taken and best weapon fields.
-The web UI reads from these tables to produce the display. Whaletracker is compatible with Redis and other frameworks compatible with Redis.
-
-This repository contains a backup of our DB and cache files.
+WhaleTracker is meant to be comprehensive, such as ranking clients through an algorithm and tracking things like backstabs and market gardens. This gives players more of a reason to play, reason to improve, and the ability to pay attention to their performance. Inspired by HLstatsX idea.
