@@ -1,4 +1,4 @@
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/df33e1ec-e877-41cc-ab87-910527647951" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/499e7a45-43b7-4946-a97a-f8a5cef16b66" />
 
 # WhaleTracker
 
