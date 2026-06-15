@@ -294,7 +294,7 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
     int now = GetTime();
     float engineNow = GetEngineTime();
     int onlinePlayerCount = WhaleTracker_GetOnlinePlayerCount();
-    int serverPlayerCount = WhaleTracker_GetCurrentPlayerCount();
+    int serverPlayerCount = onlinePlayerCount;
     int visibleMax = WhaleTracker_GetCurrentServerCapacity();
 
     char query[SAVE_QUERY_MAXLEN];
