@@ -87,6 +87,7 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("DGM_IsRoundRunning");
     MarkNativeAsOptional("PointsStore_GetBonusPoints");
     MarkNativeAsOptional("PointsStore_ApplyBonusPoints");
+    MarkNativeAsOptional("PointsStore_ApplyBonusPointsSteamId");
     MarkNativeAsOptional("PointsStore_SpendBonusPoints");
     RegPluginLibrary("whaletracker");
     CreateNative("WhaleTracker_GetCumulativeKills", Native_WhaleTracker_GetCumulativeKills);
@@ -354,7 +355,7 @@ float WT_GetSyncKillConfirmWindow()
 
 int WT_GetTopScoreMinPlayers()
 {
-    return WT_GetConVarInt(g_hTopScoreMinPlayers, 8);
+    return WT_GetConVarInt(g_hTopScoreMinPlayers, 10);
 }
 
 int WT_GetTopScorePerMapLimit()

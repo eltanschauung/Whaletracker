@@ -186,7 +186,7 @@ public void OnPluginStart()
     );
     g_hTopScoreMinPlayers = CreateConVar(
         "sm_whaletracker_top_score_min_players",
-        "8",
+        "10",
         "Minimum real players required for top-scoring player kill awards.",
         FCVAR_NONE,
         true,
@@ -643,6 +643,7 @@ public void OnClientDisconnect(int client)
 
     if (IsClientInGame(client))
     {
+        UpdateRoundTopScoringPlayerCandidate(client);
         SDKUnhook(client, SDKHook_OnTakeDamage, OnTakeDamage);
     }
 

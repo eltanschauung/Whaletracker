@@ -11,15 +11,19 @@ int g_iPendingSoldierSyncAttacker[MAXPLAYERS + 1];
 float g_fPendingSoldierSyncRocketTime[MAXPLAYERS + 1];
 int g_iPendingSoldierSyncKillAttacker[MAXPLAYERS + 1];
 float g_fPendingSoldierSyncKillTime[MAXPLAYERS + 1];
+char g_sRoundTopScoringSteamId[STEAMID64_LEN];
+int g_iRoundTopScoringScore = 0;
 
 public void Event_RoundWin(Event event, const char[] name, bool dontBroadcast)
 {
+    AwardRoundTopScoringPlayerBonus();
     WhaleTracker_RecordRoundStatistics(event);
 }
 
 bool ShouldAwardTopScoringPlayerBonus()
 {
-    return WhaleTracker_GetCurrentPlayerCount() >= WT_GetTopScoreMinPlayers();
+    int realPlayers = WhaleTracker_GetCurrentPlayerCount();
+    return realPlayers >= 10 && realPlayers >= WT_GetTopScoreMinPlayers();
 }
 
 bool IsTopScoringPlayerOnTeam(int client)
@@ -55,6 +59,65 @@ bool IsTopScoringPlayerOnTeam(int client)
     }
 
     return true;
+}
+
+void ResetRoundTopScoringPlayer()
+{
+    g_sRoundTopScoringSteamId[0] = '\0';
+    g_iRoundTopScoringScore = 0;
+}
+
+void UpdateRoundTopScoringPlayerCandidate(int client)
+{
+    if (!IsValidClient(client) || !IsClientInGame(client) || IsFakeClient(client))
+    {
+        return;
+    }
+
+    int team = GetClientTeam(client);
+    if (team != WT_TEAM_RED && team != WT_TEAM_BLUE)
+    {
+        return;
+    }
+
+    int score = GetTrackedClientScore(client);
+    if (score <= g_iRoundTopScoringScore)
+    {
+        return;
+    }
+
+    char steamId[STEAMID64_LEN];
+    if (!GetClientAuthId(client, AuthId_SteamID64, steamId, sizeof(steamId)) || steamId[0] == '\0')
+    {
+        return;
+    }
+
+    strcopy(g_sRoundTopScoringSteamId, sizeof(g_sRoundTopScoringSteamId), steamId);
+    g_iRoundTopScoringScore = score;
+}
+
+void RefreshRoundTopScoringPlayerCandidate()
+{
+    for (int i = 1; i <= MaxClients; i++)
+    {
+        UpdateRoundTopScoringPlayerCandidate(i);
+    }
+}
+
+void AwardRoundTopScoringPlayerBonus()
+{
+    if (!ShouldAwardTopScoringPlayerBonus())
+    {
+        return;
+    }
+
+    RefreshRoundTopScoringPlayerCandidate();
+    if (g_sRoundTopScoringSteamId[0] == '\0' || g_iRoundTopScoringScore <= 0)
+    {
+        return;
+    }
+
+    ApplyBonusPointsSteamId(g_sRoundTopScoringSteamId, 3, true, true, "top_scoring_player", 3);
 }
 
 bool HasMultipleDominationsAfterKill(int client, int victim)
@@ -338,6 +401,8 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
         {
             AnnounceMedicDrop(attacker, victim);
         }
+
+        RefreshRoundTopScoringPlayerCandidate();
     }
 }
 
@@ -678,6 +743,7 @@ void FireProjectileDirectHitForward(int attacker, int victim, int weapon)
 
 public void Event_ResetMultikillAll(Event event, const char[] name, bool dontBroadcast)
 {
+    ResetRoundTopScoringPlayer();
     ResetMultikillAll();
 }
 

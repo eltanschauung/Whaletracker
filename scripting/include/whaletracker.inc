@@ -1942,6 +1942,16 @@ bool ApplyBonusPoints(int client, int points = 1, bool playSound = true, bool ch
     return PointsStore_ApplyBonusPoints(client, points, playSound, chatAlert, randomChance, type, target, delay, perMap);
 }
 
+bool ApplyBonusPointsSteamId(const char[] steamId64, int points = 1, bool playSound = true, bool chatAlert = true, const char[] type = "", int perMap = 0)
+{
+    if (GetFeatureStatus(FeatureType_Native, "PointsStore_ApplyBonusPointsSteamId") != FeatureStatus_Available)
+    {
+        return false;
+    }
+
+    return PointsStore_ApplyBonusPointsSteamId(steamId64, points, playSound, chatAlert, type, perMap);
+}
+
 void BuildWeaponAccuracySegment(const WhaleStats stats, char[] buffer, int maxlen)
 {
     Format(buffer, maxlen,
