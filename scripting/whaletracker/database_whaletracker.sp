@@ -531,7 +531,7 @@ void QueueStatsSave(int client, int userId, bool forceSync)
         ... "damage_taken = GREATEST(damage_taken, VALUES(damage_taken)), "
         ... "last_seen = GREATEST(last_seen, VALUES(last_seen)), "
         ... "is_admin = VALUES(is_admin), "
-        ... "country = VALUES(country), "
+        ... "country = IF(country = '', VALUES(country), country), "
 
         ... "shots_shotguns = GREATEST(shots_shotguns, VALUES(shots_shotguns)), "
         ... "hits_shotguns = GREATEST(hits_shotguns, VALUES(hits_shotguns)), "

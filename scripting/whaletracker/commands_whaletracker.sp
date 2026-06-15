@@ -413,6 +413,15 @@ public Action Command_ToggleCountryVisibility(int client, int args)
         return Plugin_Handled;
     }
 
+    if (args >= 1)
+    {
+        char countryArg[16];
+        GetCmdArg(1, countryArg, sizeof(countryArg));
+        TrimString(countryArg);
+        SetCountryForClient(client, countryArg);
+        return Plugin_Handled;
+    }
+
     if (!g_bShowCountryLoaded[client])
     {
         RequestShowCountryLoad(client, true);
@@ -947,6 +956,77 @@ void SetFavoriteClassForClient(int client, int favoriteClass)
     char className[16];
     GetFavoriteClassDisplayName(favoriteClass, className, sizeof(className));
     CPrintToChat(client, "{green}[WhaleTracker]{default} Your favorite class is now {gold}%s{default}!", className);
+}
+
+bool NormalizeCountryCodeArg(const char[] input, char[] countryCode, int maxlen)
+{
+    if (maxlen < 3 || input[0] == '\0' || input[1] == '\0' || input[2] != '\0')
+    {
+        return false;
+    }
+
+    for (int i = 0; i < 2; i++)
+    {
+        bool isAlpha = (input[i] >= 'A' && input[i] <= 'Z') || (input[i] >= 'a' && input[i] <= 'z');
+        if (!isAlpha)
+        {
+            return false;
+        }
+
+        countryCode[i] = CharToLower(input[i]);
+    }
+
+    countryCode[2] = '\0';
+    return true;
+}
+
+void SetCountryForClient(int client, const char[] countryArg)
+{
+    if (!g_bDatabaseReady || g_hDatabase == null)
+    {
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Database is not ready.");
+        return;
+    }
+
+    char countryCode[3];
+    if (!NormalizeCountryCodeArg(countryArg, countryCode, sizeof(countryCode)))
+    {
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Usage: {gold}!country CA{default}");
+        return;
+    }
+
+    EnsureClientSteamId(client);
+    if (g_Stats[client].steamId[0] == '\0')
+    {
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Could not determine your SteamID yet.");
+        return;
+    }
+
+    char escapedSteamId[STEAMID64_LEN * 2];
+    EscapeSqlString(g_Stats[client].steamId, escapedSteamId, sizeof(escapedSteamId));
+
+    char escapedCountryCode[16];
+    EscapeSqlString(countryCode, escapedCountryCode, sizeof(escapedCountryCode));
+
+    int firstSeen = g_Stats[client].firstSeenTimestamp;
+    if (firstSeen <= 0)
+    {
+        firstSeen = GetTime();
+    }
+
+    char query[512];
+    Format(query, sizeof(query),
+        "INSERT INTO whaletracker (steamid, first_seen, country) "
+        ... "VALUES ('%s', %d, '%s') "
+        ... "ON DUPLICATE KEY UPDATE "
+        ... "first_seen = LEAST(first_seen, VALUES(first_seen)), "
+        ... "country = VALUES(country)",
+        escapedSteamId,
+        firstSeen,
+        escapedCountryCode);
+    QueueSaveQuery(query, GetClientUserId(client), false);
+
+    CPrintToChat(client, "{green}[WhaleTracker]{default} Your country flag has been set to {gold}%s{default}. Use {gold}!country{default} to toggle visibility.", countryCode);
 }
 
 void RequestFavoriteClassLoad(int client, bool echoAfterLoad = false)
