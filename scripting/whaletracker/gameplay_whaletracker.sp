@@ -3,6 +3,9 @@ bool g_bPlayerTakenReflectDirectHit[MAXPLAYERS + 1];
 bool g_bInExplosiveJump[MAXPLAYERS + 1];
 int g_iPendingMarketGardenAttacker[MAXPLAYERS + 1];
 float g_fPendingMarketGardenTime[MAXPLAYERS + 1];
+int g_iPendingReflectAttacker[MAXPLAYERS + 1];
+bool g_bPendingReflectDirectHit[MAXPLAYERS + 1];
+float g_fPendingReflectTime[MAXPLAYERS + 1];
 int g_iPendingDemoSyncAttacker[MAXPLAYERS + 1];
 float g_fPendingDemoSyncStickyTime[MAXPLAYERS + 1];
 int g_iPendingDemoSyncKillAttacker[MAXPLAYERS + 1];
@@ -183,6 +186,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
     g_bPlayerTakenReflectDirectHit[client] = false;
     g_bInExplosiveJump[client] = false;
     ResetMarketGardenKillCandidate(client);
+    ResetReflectKillCandidate(client);
     ResetDemoSyncState(client);
     ResetSoldierSyncState(client);
     ResetLifeCounters(g_Stats[client]);
@@ -320,7 +324,14 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (ConsumeMarketGardenKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "market_garden_kill", 0, WT_GetBonusDefaultDelay(), 5);
+                char marketGardenType[32];
+                GetMarketGardenKillBonusType(attacker, marketGardenType, sizeof(marketGardenType));
+                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, marketGardenType, 0, WT_GetBonusDefaultDelay(), 5);
+            }
+            bool reflectDirectHit = false;
+            if (ConsumeReflectKill(attacker, victim, reflectDirectHit))
+            {
+                AwardReflectBonus(attacker, reflectDirectHit);
             }
             if (ConsumeDemoSyncKill(attacker, victim))
             {
@@ -462,7 +473,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
         {
             if (reflectBonusEligible)
             {
-                AwardReflectBonus(attacker, wasReflectDirectHit);
+                MarkReflectKillCandidate(attacker, victim, wasReflectDirectHit);
             }
 
             if (IsWeaponClass(weapon, "tf_weapon_pipebomblauncher"))
@@ -766,6 +777,7 @@ void ResetMultikillClient(int client)
     g_fMultikillChainExpiresAt[client] = 0.0;
 
     ResetMarketGardenKillCandidate(client);
+    ResetReflectKillCandidate(client);
 }
 
 bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
@@ -913,6 +925,54 @@ void AwardReflectBonus(int attacker, bool wasDirectHit)
     }
 }
 
+void MarkReflectKillCandidate(int attacker, int victim, bool wasDirectHit)
+{
+    if (!IsValidClient(attacker) || !IsValidClient(victim) || attacker == victim)
+    {
+        return;
+    }
+
+    g_iPendingReflectAttacker[victim] = attacker;
+    g_bPendingReflectDirectHit[victim] = wasDirectHit;
+    g_fPendingReflectTime[victim] = GetGameTime();
+}
+
+bool ConsumeReflectKill(int attacker, int victim, bool &wasDirectHit)
+{
+    wasDirectHit = false;
+    if (!IsValidClient(attacker) || !IsValidClient(victim))
+    {
+        return false;
+    }
+
+    if (g_iPendingReflectAttacker[victim] != attacker)
+    {
+        return false;
+    }
+
+    if (GetGameTime() - g_fPendingReflectTime[victim] > WT_GetSyncKillConfirmWindow())
+    {
+        ResetReflectKillCandidate(victim);
+        return false;
+    }
+
+    wasDirectHit = g_bPendingReflectDirectHit[victim];
+    ResetReflectKillCandidate(victim);
+    return true;
+}
+
+void ResetReflectKillCandidate(int client)
+{
+    if (client < 1 || client > MaxClients)
+    {
+        return;
+    }
+
+    g_iPendingReflectAttacker[client] = 0;
+    g_bPendingReflectDirectHit[client] = false;
+    g_fPendingReflectTime[client] = 0.0;
+}
+
 int GetWeaponDefIndexSafe(int weapon)
 {
     if (weapon <= MaxClients || !IsValidEntity(weapon) || !HasEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"))
@@ -927,6 +987,17 @@ bool IsMarketGardenerWeapon(int weapon)
 {
     int def = GetWeaponDefIndexSafe(weapon);
     return def == WT_MARKET_GARDENER_DEF_INDEX || def == WT_HANDSHAKE_DEF_INDEX;
+}
+
+void GetMarketGardenKillBonusType(int client, char[] type, int maxlen)
+{
+    if (IsValidClient(client) && TF2_GetPlayerClass(client) == TFClass_DemoMan)
+    {
+        strcopy(type, maxlen, "market_garden_kill_demoman");
+        return;
+    }
+
+    strcopy(type, maxlen, "market_garden_kill");
 }
 
 bool IsMarketGardenerHit(int attacker, int weapon)
