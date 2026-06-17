@@ -373,7 +373,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
                 && assistsLife % WT_MEDIC_ASSISTS_LIFE_BONUS_INTERVAL == 0)
             {
                 char reason[32];
-                Format(reason, sizeof(reason), "Medic assists (%d)", assistsLife);
+                Format(reason, sizeof(reason), "Assists: %d", assistsLife);
                 ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, reason, 0, WT_GetBonusDefaultDelay(), 0);
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERDOMINATION)
