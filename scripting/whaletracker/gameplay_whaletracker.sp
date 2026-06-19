@@ -29,6 +29,25 @@ bool ShouldAwardTopScoringPlayerBonus()
     return realPlayers >= 10 && realPlayers >= WT_GetTopScoreMinPlayers();
 }
 
+bool IsTopScoringEnemyPlayer(int attacker, int victim)
+{
+    if (!IsValidClient(attacker) || !IsClientInGame(attacker) || IsFakeClient(attacker))
+    {
+        return false;
+    }
+
+    int attackerTeam = GetClientTeam(attacker);
+    int victimTeam = GetClientTeam(victim);
+    if ((attackerTeam != WT_TEAM_RED && attackerTeam != WT_TEAM_BLUE)
+        || (victimTeam != WT_TEAM_RED && victimTeam != WT_TEAM_BLUE)
+        || attackerTeam == victimTeam)
+    {
+        return false;
+    }
+
+    return IsTopScoringPlayerOnTeam(victim);
+}
+
 bool IsTopScoringPlayerOnTeam(int client)
 {
     if (!IsValidClient(client) || !IsClientInGame(client) || IsFakeClient(client))
@@ -160,19 +179,20 @@ bool HasMultipleDominationsAfterKill(int client, int victim)
 
 int GetTrackedClientScore(int client)
 {
-    static int scorePropState = WT_SCORE_PROP_UNKNOWN;
-    if (scorePropState == WT_SCORE_PROP_MISSING || (scorePropState == WT_SCORE_PROP_AVAILABLE && !HasEntProp(client, Prop_Send, "m_iScore")))
+    int resource = GetPlayerResourceEntity();
+    if (resource != -1)
     {
-        return GetClientFrags(client);
+        if (HasEntProp(resource, Prop_Send, "m_iTotalScore"))
+        {
+            return GetEntProp(resource, Prop_Send, "m_iTotalScore", _, client);
+        }
+
+        if (HasEntProp(resource, Prop_Send, "m_iScore"))
+        {
+            return GetEntProp(resource, Prop_Send, "m_iScore", _, client);
+        }
     }
 
-    if (HasEntProp(client, Prop_Send, "m_iScore"))
-    {
-        scorePropState = WT_SCORE_PROP_AVAILABLE;
-        return GetEntProp(client, Prop_Send, "m_iScore");
-    }
-
-    scorePropState = WT_SCORE_PROP_MISSING;
     return GetClientFrags(client);
 }
 
@@ -318,7 +338,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 FireKillstreakForward(attacker, killstreak);
             }
-            if (ShouldAwardTopScoringPlayerBonus() && IsTopScoringPlayerOnTeam(victim))
+            if (ShouldAwardTopScoringPlayerBonus() && IsTopScoringEnemyPlayer(attacker, victim))
             {
                 ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "top_score_kill", victim, WT_GetBonusDefaultDelay(), WT_GetTopScorePerMapLimit());
             }
