@@ -30,6 +30,7 @@ ConVar g_hRustSqlPort = null;
 ConVar g_hRustSqlQueueMax = null;
 ConVar g_hRustSqlBatchMax = null;
 ConVar g_hRustSqlServerId = null;
+ConVar g_hRustSqlAuthToken = null;
 ConVar g_hRustSqlDebug = null;
 
 Socket g_hRustSqlSocket = null;
@@ -259,6 +260,7 @@ public void WhaleTracker_RustInit()
     g_hRustSqlQueueMax = CreateConVar("sm_whaletracker_rust_queue_max", "4096", "Max queued SQL writes for Rust outlet before dropping oldest");
     g_hRustSqlBatchMax = CreateConVar("sm_whaletracker_rust_batch_max", "64", "Max SQL writes per Rust outlet batch");
     g_hRustSqlServerId = CreateConVar("sm_whaletracker_rust_server_id", "", "Optional server identifier for Rust SQL outlet hello");
+    g_hRustSqlAuthToken = CreateConVar("sm_whaletracker_rust_auth_token", "", "Optional shared secret for Rust SQL outlet hello auth", FCVAR_PROTECTED);
     g_hRustSqlDebug = CreateConVar("sm_whaletracker_rust_sql_debug", "0", "Enable verbose Rust SQL outlet debug logging (1=yes, 0=no)");
 
     WhaleTracker_RustEnsureQueues();
@@ -392,10 +394,20 @@ public void WhaleTracker_RustOnSocketConnected(Socket socket, any arg)
     g_iRustSqlRecvBufferLen = 0;
     g_sRustSqlRecvBuffer[0] = '\0';
 
-    char serverId[128], escapedServerId[256], hello[512];
+    char serverId[128], escapedServerId[256], authToken[192], escapedAuthToken[384], authJson[448], hello[1024];
     WhaleTracker_BuildRustServerId(serverId, sizeof(serverId));
     WhaleTracker_RustJsonEscape(serverId, escapedServerId, sizeof(escapedServerId));
-    int len = FormatEx(hello, sizeof(hello), "{\"type\":\"hello\",\"service\":\"whaletracker_sql_outlet\",\"proto\":1,\"server_id\":\"%s\",\"ts\":%d}\n", escapedServerId, GetTime());
+    authJson[0] = '\0';
+    if (g_hRustSqlAuthToken != null)
+    {
+        g_hRustSqlAuthToken.GetString(authToken, sizeof(authToken));
+        if (authToken[0] != '\0')
+        {
+            WhaleTracker_RustJsonEscape(authToken, escapedAuthToken, sizeof(escapedAuthToken));
+            FormatEx(authJson, sizeof(authJson), ",\"auth\":\"%s\"", escapedAuthToken);
+        }
+    }
+    int len = FormatEx(hello, sizeof(hello), "{\"type\":\"hello\",\"service\":\"whaletracker_sql_outlet\",\"proto\":1,\"server_id\":\"%s\",\"ts\":%d%s}\n", escapedServerId, GetTime(), authJson);
     socket.Send(hello, len);
     socket.SetSendqueueEmptyCallback(WhaleTracker_RustOnSocketSendqueueEmpty);
     LogMessage("[WhaleTracker] Rust SQL outlet connected; hello sent (server_id=%s)", serverId);
