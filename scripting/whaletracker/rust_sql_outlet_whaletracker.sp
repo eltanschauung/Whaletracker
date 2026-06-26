@@ -561,9 +561,7 @@ void WhaleTracker_RustHandleBackendLine(const char[] line)
     if (StrContains(line, "\"type\":\"error\"") != -1)
     {
         g_bRustSqlAwaitingAck = false;
-        LogError("[WhaleTracker] Rust SQL outlet backend error: %s", line);
-        WhaleTracker_RustRequeueInflight();
-        if (WhaleTracker_RustSqlDebugEnabled())
-            LogMessage("[WhaleTracker] Rust SQL outlet requeued after backend error; queued=%d", (g_hRustSqlQueue != null) ? g_hRustSqlQueue.Length : 0);
+        WhaleTracker_RustHandleProtocolFault("backend error", line);
+        return;
     }
 }
