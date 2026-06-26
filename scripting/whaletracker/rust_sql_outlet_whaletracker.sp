@@ -37,6 +37,7 @@ bool g_bRustSqlConnecting = false;
 bool g_bRustSqlConnected = false;
 bool g_bRustSqlAwaitingAck = false;
 int g_iRustSqlNextBatchId = 1;
+int g_iRustSqlInflightBatchId = 0;
 ArrayList g_hRustSqlQueue = null;
 ArrayList g_hRustSqlQueueUserIds = null;
 ArrayList g_hRustSqlInflight = null;
@@ -136,6 +137,7 @@ void WhaleTracker_RustClearInflight()
 {
     if (g_hRustSqlInflight != null) g_hRustSqlInflight.Clear();
     if (g_hRustSqlInflightUserIds != null) g_hRustSqlInflightUserIds.Clear();
+    g_iRustSqlInflightBatchId = 0;
 }
 
 void WhaleTracker_RustRequeueInflight()
@@ -368,6 +370,7 @@ public void WhaleTracker_RustFlushSqlBatch()
     if (sentCount <= 0) { WhaleTracker_RustClearInflight(); return; }
     pos += FormatEx(out[pos], sizeof(out) - pos, "]}\n");
 
+    g_iRustSqlInflightBatchId = batchId;
     g_hRustSqlSocket.Send(out, pos);
     g_hRustSqlSocket.SetSendqueueEmptyCallback(WhaleTracker_RustOnSocketSendqueueEmpty);
     g_bRustSqlAwaitingAck = true;
@@ -466,6 +469,49 @@ void WhaleTracker_RustParseIncomingLines()
     }
 }
 
+bool WhaleTracker_RustExtractIntField(const char[] line, const char[] field, int &value)
+{
+    char needle[64];
+    FormatEx(needle, sizeof(needle), "\"%s\":", field);
+
+    int pos = StrContains(line, needle);
+    if (pos == -1) return false;
+
+    pos += strlen(needle);
+    while (line[pos] == ' ' || line[pos] == '\t') pos++;
+
+    char number[16];
+    int numberLen = 0;
+    if (line[pos] == '-')
+    {
+        number[numberLen++] = line[pos++];
+    }
+
+    while (line[pos] >= '0' && line[pos] <= '9' && numberLen < sizeof(number) - 1)
+    {
+        number[numberLen++] = line[pos++];
+    }
+    number[numberLen] = '\0';
+
+    if (numberLen <= 0 || (numberLen == 1 && number[0] == '-')) return false;
+
+    value = StringToInt(number);
+    return true;
+}
+
+void WhaleTracker_RustHandleProtocolFault(const char[] reason, const char[] line)
+{
+    LogError("[WhaleTracker] Rust SQL outlet protocol fault (%s): inflight_batch=%d inflight=%d queued=%d line=%s",
+        reason,
+        g_iRustSqlInflightBatchId,
+        (g_hRustSqlInflight != null) ? g_hRustSqlInflight.Length : 0,
+        (g_hRustSqlQueue != null) ? g_hRustSqlQueue.Length : 0,
+        line);
+    WhaleTracker_RustFlushPendingToLocal();
+    WhaleTracker_RustDisconnectSocket();
+    WhaleTracker_RustScheduleReconnect();
+}
+
 void WhaleTracker_RustHandleBackendLine(const char[] line)
 {
     if (line[0] == '\0') return;
@@ -473,9 +519,27 @@ void WhaleTracker_RustHandleBackendLine(const char[] line)
         LogMessage("[WhaleTracker] Rust SQL outlet recv line: %s", line);
     if (StrContains(line, "\"type\":\"ack\"") != -1)
     {
+        int ackBatchId = 0;
+        if (!WhaleTracker_RustExtractIntField(line, "batch_id", ackBatchId))
+        {
+            WhaleTracker_RustHandleProtocolFault("ack missing batch_id", line);
+            return;
+        }
+        if (!g_bRustSqlAwaitingAck || g_iRustSqlInflightBatchId <= 0)
+        {
+            WhaleTracker_RustHandleProtocolFault("unexpected ack", line);
+            return;
+        }
+        if (ackBatchId != g_iRustSqlInflightBatchId)
+        {
+            WhaleTracker_RustHandleProtocolFault("ack batch_id mismatch", line);
+            return;
+        }
+
         g_bRustSqlAwaitingAck = false;
         if (WhaleTracker_RustSqlDebugEnabled())
-            LogMessage("[WhaleTracker] Rust SQL outlet ACK received; inflight=%d queued=%d",
+            LogMessage("[WhaleTracker] Rust SQL outlet ACK received batch_id=%d; inflight=%d queued=%d",
+                ackBatchId,
                 (g_hRustSqlInflight != null) ? g_hRustSqlInflight.Length : 0,
                 (g_hRustSqlQueue != null) ? g_hRustSqlQueue.Length : 0);
         WhaleTracker_RustClearInflight();
