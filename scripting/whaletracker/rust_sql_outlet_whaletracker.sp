@@ -548,6 +548,13 @@ void WhaleTracker_RustHandleBackendLine(const char[] line)
             return;
         }
 
+        int dbErrors = 0;
+        if (WhaleTracker_RustExtractIntField(line, "db_errors", dbErrors) && dbErrors > 0)
+        {
+            WhaleTracker_RustHandleProtocolFault("ack reports db_errors", line);
+            return;
+        }
+
         g_bRustSqlAwaitingAck = false;
         if (WhaleTracker_RustSqlDebugEnabled())
             LogMessage("[WhaleTracker] Rust SQL outlet ACK received batch_id=%d; inflight=%d queued=%d",
