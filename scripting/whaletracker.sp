@@ -59,6 +59,7 @@
 
 native int Filters_GetChatName(int client, char[] buffer, int maxlen);
 native int Filters_GetSteamIdColorTag(const char[] steamId, char[] buffer, int maxlen);
+native bool Filters_GetLastRecordedSteamName(const char[] steamId64, char[] buffer, int maxlen);
 native bool SaySounds_PlayCommand(int client, const char[] commandName, bool ignoreOptIn = false);
 forward bool WhaleTracker_RustQueueSqlWrite(const char[] query, int userId, bool forceSync);
 forward bool WhaleTracker_RustQueueTypedWrite(const char[] fallbackQuery, const char[] fieldsJson, int userId, bool forceSync);
@@ -73,6 +74,7 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("SteamWorks_GetPublicIP");
     MarkNativeAsOptional("Filters_GetChatName");
     MarkNativeAsOptional("Filters_GetSteamIdColorTag");
+    MarkNativeAsOptional("Filters_GetLastRecordedSteamName");
     MarkNativeAsOptional("SaySounds_PlayCommand");
     MarkNativeAsOptional("DGM_GetGameMode");
     MarkNativeAsOptional("DGM_RealPlayerCount");

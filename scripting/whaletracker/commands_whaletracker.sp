@@ -465,10 +465,13 @@ public Action Command_ShowLeaderboard(int client, int args)
 
     char query[1024];
     Format(query, sizeof(query),
-        "SELECT rank, points, COALESCE(NULLIF(prename,''), NULLIF(name,''), steamid), COALESCE(NULLIF(name_color,''), 'gold') "
-        ... "FROM whaletracker_points_cache "
-        ... "WHERE rank > 0 "
-        ... "ORDER BY rank ASC "
+        "SELECT pc.rank, pc.points, COALESCE(NULLIF(pr.newname,''), NULLIF(fs.last_name,''), NULLIF(w.cached_personaname,''), pc.steamid), COALESCE(NULLIF(pc.name_color,''), 'gold') "
+        ... "FROM whaletracker_points_cache pc "
+        ... "LEFT JOIN prename_rules pr ON pr.pattern COLLATE utf8mb4_uca1400_ai_ci = pc.steamid "
+        ... "LEFT JOIN filters_steam_names fs ON fs.steamid64 = pc.steamid "
+        ... "LEFT JOIN whaletracker w ON w.steamid = pc.steamid "
+        ... "WHERE pc.rank > 0 "
+        ... "ORDER BY pc.rank ASC "
         ... "LIMIT %d OFFSET %d",
         WHALE_LEADERBOARD_PAGE_SIZE,
         offset);
@@ -675,6 +678,29 @@ bool TryGetFiltersSteamIdColorTag(const char[] steamId, char[] colorTag, int max
     return (colorTag[0] != '\0');
 }
 
+bool TryGetFiltersLastRecordedSteamName(const char[] steamId, char[] name, int maxlen)
+{
+    name[0] = '\0';
+
+    if (steamId[0] == '\0')
+    {
+        return false;
+    }
+
+    if (GetFeatureStatus(FeatureType_Native, "Filters_GetLastRecordedSteamName") != FeatureStatus_Available)
+    {
+        return false;
+    }
+
+    if (!Filters_GetLastRecordedSteamName(steamId, name, maxlen))
+    {
+        return false;
+    }
+
+    TrimString(name);
+    return (name[0] != '\0');
+}
+
 int GetSeenNameMatchRank(const char[] loweredSearch, const char[] name)
 {
     if (loweredSearch[0] == '\0' || name[0] == '\0')
@@ -794,22 +820,23 @@ bool FindSeenMatch(const char[] search, char[] steamId, int steamIdLen, char[] m
 
     char query[2048];
     Format(query, sizeof(query),
-        "SELECT w.steamid, COALESCE(NULLIF(pc.prename, ''), NULLIF(pc.name, ''), NULLIF(w.cached_personaname, ''), w.steamid) "
+        "SELECT w.steamid, COALESCE(NULLIF(pr.newname, ''), NULLIF(fs.last_name, ''), NULLIF(w.cached_personaname, ''), w.steamid) "
         ... "FROM whaletracker w "
-        ... "LEFT JOIN whaletracker_points_cache pc ON pc.steamid = w.steamid "
+        ... "LEFT JOIN prename_rules pr ON pr.pattern COLLATE utf8mb4_uca1400_ai_ci = w.steamid "
+        ... "LEFT JOIN filters_steam_names fs ON fs.steamid64 = w.steamid "
         ... "CROSS JOIN (SELECT '%s' AS term) q "
         ... "WHERE INSTR(COALESCE(w.cached_personaname_lower, ''), q.term) > 0 "
-        ... "OR INSTR(LOWER(COALESCE(pc.prename, '')), q.term) > 0 "
-        ... "OR INSTR(LOWER(COALESCE(pc.name, '')), q.term) > 0 "
+        ... "OR INSTR(LOWER(COALESCE(pr.newname, '')), q.term) > 0 "
+        ... "OR INSTR(COALESCE(fs.last_name_lower, ''), q.term) > 0 "
         ... "OR INSTR(w.steamid, q.term) > 0 "
         ... "ORDER BY CASE "
         ... "WHEN w.steamid = q.term THEN 0 "
         ... "WHEN COALESCE(w.cached_personaname_lower, '') = q.term "
-        ... "OR LOWER(COALESCE(pc.prename, '')) = q.term "
-        ... "OR LOWER(COALESCE(pc.name, '')) = q.term THEN 0 "
+        ... "OR LOWER(COALESCE(pr.newname, '')) = q.term "
+        ... "OR COALESCE(fs.last_name_lower, '') = q.term THEN 0 "
         ... "WHEN LEFT(COALESCE(w.cached_personaname_lower, ''), CHAR_LENGTH(q.term)) = q.term "
-        ... "OR LEFT(LOWER(COALESCE(pc.prename, '')), CHAR_LENGTH(q.term)) = q.term "
-        ... "OR LEFT(LOWER(COALESCE(pc.name, '')), CHAR_LENGTH(q.term)) = q.term THEN 1 "
+        ... "OR LEFT(LOWER(COALESCE(pr.newname, '')), CHAR_LENGTH(q.term)) = q.term "
+        ... "OR LEFT(COALESCE(fs.last_name_lower, ''), CHAR_LENGTH(q.term)) = q.term THEN 1 "
         ... "ELSE 2 END, "
         ... "COALESCE(w.playtime, 0) DESC, COALESCE(w.last_seen, 0) DESC, w.steamid ASC "
         ... "LIMIT 1",
@@ -1280,7 +1307,7 @@ void GetNameColorTagForSteamId(const char[] steamId, char[] colorTag, int maxlen
     delete results;
 }
 
-void UpdateWhalePointsCacheMetadata(const char[] steamId, const char[] playerName, const char[] knownColor = "", int userId = 0)
+void UpdateWhalePointsCacheMetadata(const char[] steamId, const char[] knownColor = "", int userId = 0)
 {
     if (!g_bDatabaseReady || g_hDatabase == null)
     {
@@ -1308,34 +1335,16 @@ void UpdateWhalePointsCacheMetadata(const char[] steamId, const char[] playerNam
     char escapedNameColor[64];
     EscapeSqlString(nameColor, escapedNameColor, sizeof(escapedNameColor));
 
-    char fallbackName[MAX_NAME_LENGTH];
-    if (playerName[0] != '\0')
-    {
-        strcopy(fallbackName, sizeof(fallbackName), playerName);
-    }
-    else
-    {
-        strcopy(fallbackName, sizeof(fallbackName), steamId);
-    }
-
-    char escapedName[(MAX_NAME_LENGTH * 2) + 1];
-    EscapeSqlString(fallbackName, escapedName, sizeof(escapedName));
-
     char query[1600];
     Format(query, sizeof(query),
-        "INSERT INTO whaletracker_points_cache (steamid, name, name_color, prename, updated_at) "
-        ... "VALUES ('%s', '%s', '%s', COALESCE((SELECT newname FROM prename_rules WHERE pattern = '%s' LIMIT 1), ''), %d) "
+        "INSERT INTO whaletracker_points_cache (steamid, name_color, updated_at) "
+        ... "VALUES ('%s', '%s', %d) "
         ... "ON DUPLICATE KEY UPDATE "
-        ... "name = VALUES(name), "
         ... "name_color = VALUES(name_color), "
-        ... "prename = COALESCE((SELECT newname FROM prename_rules WHERE pattern = '%s' LIMIT 1), prename), "
         ... "updated_at = VALUES(updated_at)",
         escapedSteamId,
-        escapedName,
         escapedNameColor,
-        escapedSteamId,
-        GetTime(),
-        escapedSteamId);
+        GetTime());
     QueueSaveQuery(query, userId, false);
 }
 
@@ -1352,13 +1361,10 @@ void CacheWhalePointsOnDisconnect(int client)
         return;
     }
 
-    char clientName[MAX_NAME_LENGTH];
-    GetClientName(client, clientName, sizeof(clientName));
-
     char colorTag[32];
     GetNameColorTagForSteamId(g_Stats[client].steamId, colorTag, sizeof(colorTag));
 
-    UpdateWhalePointsCacheMetadata(g_Stats[client].steamId, clientName, colorTag, GetClientUserId(client));
+    UpdateWhalePointsCacheMetadata(g_Stats[client].steamId, colorTag, GetClientUserId(client));
 }
 
 bool IsValidClient(int client)
@@ -1733,16 +1739,25 @@ public any Native_WhaleTracker_GetLastRecordedName(Handle plugin, int numParams)
     char escapedSteamId[STEAMID64_LEN * 2];
     EscapeSqlString(steamId, escapedSteamId, sizeof(escapedSteamId));
 
+    char name[256];
+    name[0] = '\0';
+
+    if (TryGetFiltersLastRecordedSteamName(steamId, name, sizeof(name)))
+    {
+        SetNativeString(2, name, maxlen, true);
+        return true;
+    }
+
     char query[768];
     Format(query, sizeof(query),
         "SELECT COALESCE("
+        ... "NULLIF(fs.last_name, ''), "
         ... "NULLIF(w.cached_personaname, ''), "
-        ... "NULLIF(pc.name, ''), "
         ... "''"
         ... ") "
         ... "FROM (SELECT '%s' AS steamid) s "
+        ... "LEFT JOIN filters_steam_names fs ON fs.steamid64 = s.steamid "
         ... "LEFT JOIN whaletracker w ON w.steamid = s.steamid "
-        ... "LEFT JOIN whaletracker_points_cache pc ON pc.steamid = s.steamid "
         ... "LIMIT 1",
         escapedSteamId);
 
@@ -1756,8 +1771,6 @@ public any Native_WhaleTracker_GetLastRecordedName(Handle plugin, int numParams)
         return false;
     }
 
-    char name[256];
-    name[0] = '\0';
     bool found = false;
 
     if (results.FetchRow())
