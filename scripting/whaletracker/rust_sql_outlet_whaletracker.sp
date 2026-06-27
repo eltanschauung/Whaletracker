@@ -44,9 +44,11 @@ int g_iRustSqlNextEventId = 1;
 ArrayList g_hRustSqlQueue = null;
 ArrayList g_hRustSqlQueueUserIds = null;
 ArrayList g_hRustSqlQueueEventIds = null;
+ArrayList g_hRustSqlQueueTypedFields = null;
 ArrayList g_hRustSqlInflight = null;
 ArrayList g_hRustSqlInflightUserIds = null;
 ArrayList g_hRustSqlInflightEventIds = null;
+ArrayList g_hRustSqlInflightTypedFields = null;
 Handle g_hRustSqlFlushTimer = null;
 Handle g_hRustSqlReconnectTimer = null;
 char g_sRustSqlRecvBuffer[WT_RUST_SQL_MAX_RECV_BUFFER];
@@ -142,9 +144,11 @@ void WhaleTracker_RustEnsureQueues()
     if (g_hRustSqlQueue == null) g_hRustSqlQueue = new ArrayList(ByteCountToCells(SAVE_QUERY_MAXLEN));
     if (g_hRustSqlQueueUserIds == null) g_hRustSqlQueueUserIds = new ArrayList();
     if (g_hRustSqlQueueEventIds == null) g_hRustSqlQueueEventIds = new ArrayList(ByteCountToCells(192));
+    if (g_hRustSqlQueueTypedFields == null) g_hRustSqlQueueTypedFields = new ArrayList(ByteCountToCells(SAVE_QUERY_MAXLEN));
     if (g_hRustSqlInflight == null) g_hRustSqlInflight = new ArrayList(ByteCountToCells(SAVE_QUERY_MAXLEN));
     if (g_hRustSqlInflightUserIds == null) g_hRustSqlInflightUserIds = new ArrayList();
     if (g_hRustSqlInflightEventIds == null) g_hRustSqlInflightEventIds = new ArrayList(ByteCountToCells(192));
+    if (g_hRustSqlInflightTypedFields == null) g_hRustSqlInflightTypedFields = new ArrayList(ByteCountToCells(SAVE_QUERY_MAXLEN));
 }
 
 void WhaleTracker_RustClearInflight()
@@ -152,23 +156,27 @@ void WhaleTracker_RustClearInflight()
     if (g_hRustSqlInflight != null) g_hRustSqlInflight.Clear();
     if (g_hRustSqlInflightUserIds != null) g_hRustSqlInflightUserIds.Clear();
     if (g_hRustSqlInflightEventIds != null) g_hRustSqlInflightEventIds.Clear();
+    if (g_hRustSqlInflightTypedFields != null) g_hRustSqlInflightTypedFields.Clear();
     g_iRustSqlInflightBatchId = 0;
 }
 
 void WhaleTracker_RustRequeueInflight()
 {
-    if (g_hRustSqlInflight == null || g_hRustSqlInflightUserIds == null || g_hRustSqlInflightEventIds == null || g_hRustSqlInflight.Length <= 0) return;
+    if (g_hRustSqlInflight == null || g_hRustSqlInflightUserIds == null || g_hRustSqlInflightEventIds == null || g_hRustSqlInflightTypedFields == null || g_hRustSqlInflight.Length <= 0) return;
     WhaleTracker_RustEnsureQueues();
 
     char sql[SAVE_QUERY_MAXLEN];
     char eventId[192];
+    char typedFields[SAVE_QUERY_MAXLEN];
     for (int i = 0; i < g_hRustSqlInflight.Length; i++)
     {
         g_hRustSqlInflight.GetString(i, sql, sizeof(sql));
         g_hRustSqlInflightEventIds.GetString(i, eventId, sizeof(eventId));
+        g_hRustSqlInflightTypedFields.GetString(i, typedFields, sizeof(typedFields));
         g_hRustSqlQueue.PushString(sql);
         g_hRustSqlQueueUserIds.Push(g_hRustSqlInflightUserIds.Get(i));
         g_hRustSqlQueueEventIds.PushString(eventId);
+        g_hRustSqlQueueTypedFields.PushString(typedFields);
     }
     WhaleTracker_RustClearInflight();
 }
@@ -176,7 +184,7 @@ void WhaleTracker_RustRequeueInflight()
 void WhaleTracker_RustFlushPendingToLocal()
 {
     WhaleTracker_RustRequeueInflight();
-    if (g_hRustSqlQueue == null || g_hRustSqlQueueUserIds == null || g_hRustSqlQueueEventIds == null) return;
+    if (g_hRustSqlQueue == null || g_hRustSqlQueueUserIds == null || g_hRustSqlQueueEventIds == null || g_hRustSqlQueueTypedFields == null) return;
 
     char sql[SAVE_QUERY_MAXLEN];
     while (g_hRustSqlQueue.Length > 0)
@@ -186,6 +194,7 @@ void WhaleTracker_RustFlushPendingToLocal()
         g_hRustSqlQueue.Erase(0);
         g_hRustSqlQueueUserIds.Erase(0);
         g_hRustSqlQueueEventIds.Erase(0);
+        g_hRustSqlQueueTypedFields.Erase(0);
         if (!g_bDatabaseReady || g_hDatabase == null)
         {
             continue;
@@ -329,6 +338,7 @@ public bool WhaleTracker_RustQueueSqlWrite(const char[] query, int userId, bool 
         g_hRustSqlQueue.Erase(0);
         g_hRustSqlQueueUserIds.Erase(0);
         g_hRustSqlQueueEventIds.Erase(0);
+        g_hRustSqlQueueTypedFields.Erase(0);
         g_iRustSqlDroppedWrites++;
     }
 
@@ -348,6 +358,7 @@ public bool WhaleTracker_RustQueueSqlWrite(const char[] query, int userId, bool 
     g_hRustSqlQueue.PushString(query);
     g_hRustSqlQueueUserIds.Push(userId);
     g_hRustSqlQueueEventIds.PushString(eventId);
+    g_hRustSqlQueueTypedFields.PushString("");
     if (WhaleTracker_RustSqlIsOnlineQuery(query))
     {
         if (WhaleTracker_RustSqlDebugEnabled())
@@ -362,10 +373,58 @@ public bool WhaleTracker_RustQueueSqlWrite(const char[] query, int userId, bool 
     return true;
 }
 
+public bool WhaleTracker_RustQueueTypedWrite(const char[] fallbackQuery, const char[] fieldsJson, int userId, bool forceSync)
+{
+    if (!WhaleTracker_UseRustSqlOutlet() || fieldsJson[0] == '\0') return false;
+    if (forceSync || g_bShuttingDown) return false;
+    if (!g_bRustSqlConnected || g_hRustSqlSocket == null) return false;
+
+    WhaleTracker_RustEnsureQueues();
+    int queueMax = GetConVarInt(g_hRustSqlQueueMax);
+    if (queueMax < 1) queueMax = 1;
+    while (g_hRustSqlQueue.Length >= queueMax && g_hRustSqlQueue.Length > 0)
+    {
+        g_hRustSqlQueue.Erase(0);
+        g_hRustSqlQueueUserIds.Erase(0);
+        g_hRustSqlQueueEventIds.Erase(0);
+        g_hRustSqlQueueTypedFields.Erase(0);
+        g_iRustSqlDroppedWrites++;
+    }
+
+    if (g_iRustSqlDroppedWrites > 0)
+    {
+        int now = GetTime();
+        if (now >= g_iRustSqlDropWarnCooldownUntil)
+        {
+            g_iRustSqlDropWarnCooldownUntil = now + WT_RUST_SQL_DROP_WARN_COOLDOWN;
+            LogError("[WhaleTracker] Dropped %d Rust SQL outlet writes due to queue pressure", g_iRustSqlDroppedWrites);
+            g_iRustSqlDroppedWrites = 0;
+        }
+    }
+
+    char eventId[192];
+    WhaleTracker_BuildRustEventId(eventId, sizeof(eventId));
+    g_hRustSqlQueue.PushString(fallbackQuery);
+    g_hRustSqlQueueUserIds.Push(userId);
+    g_hRustSqlQueueEventIds.PushString(eventId);
+    g_hRustSqlQueueTypedFields.PushString(fieldsJson);
+
+    if (WhaleTracker_RustSqlDebugEnabled())
+        LogMessage("[WhaleTracker] Rust SQL queued typed write (queue=%d user=%d connected=%d awaiting_ack=%d): %s",
+            g_hRustSqlQueue.Length,
+            userId,
+            g_bRustSqlConnected ? 1 : 0,
+            g_bRustSqlAwaitingAck ? 1 : 0,
+            fieldsJson);
+
+    WhaleTracker_RustFlushSqlBatch();
+    return true;
+}
+
 public void WhaleTracker_RustFlushSqlBatch()
 {
     if (!WhaleTracker_UseRustSqlOutlet() || !g_bRustSqlConnected || g_hRustSqlSocket == null || g_bRustSqlAwaitingAck) return;
-    if (g_hRustSqlQueue == null || g_hRustSqlQueueUserIds == null || g_hRustSqlQueueEventIds == null || g_hRustSqlQueue.Length <= 0) return;
+    if (g_hRustSqlQueue == null || g_hRustSqlQueueUserIds == null || g_hRustSqlQueueEventIds == null || g_hRustSqlQueueTypedFields == null || g_hRustSqlQueue.Length <= 0) return;
 
     char out[WT_RUST_SQL_MAX_BATCH_JSON];
     int pos = 0;
@@ -380,21 +439,31 @@ public void WhaleTracker_RustFlushSqlBatch()
     char escaped[(SAVE_QUERY_MAXLEN * 2) + 1];
     char eventId[192];
     char escapedEventId[385];
+    char typedFields[SAVE_QUERY_MAXLEN];
     int sentCount = 0;
     for (int i = 0; i < g_hRustSqlQueue.Length && sentCount < batchMax; i++)
     {
         g_hRustSqlQueue.GetString(i, sql, sizeof(sql));
         g_hRustSqlQueueEventIds.GetString(i, eventId, sizeof(eventId));
+        g_hRustSqlQueueTypedFields.GetString(i, typedFields, sizeof(typedFields));
         WhaleTracker_RustJsonEscape(sql, escaped, sizeof(escaped));
         WhaleTracker_RustJsonEscape(eventId, escapedEventId, sizeof(escapedEventId));
         int userId = g_hRustSqlQueueUserIds.Get(i);
-        int estimated = strlen(escaped) + strlen(escapedEventId) + WT_RUST_SQL_WRITE_JSON_OVERHEAD + (sentCount > 0 ? 1 : 0);
+        int estimated = ((typedFields[0] != '\0') ? strlen(typedFields) : strlen(escaped)) + strlen(escapedEventId) + WT_RUST_SQL_WRITE_JSON_OVERHEAD + (sentCount > 0 ? 1 : 0);
         if (pos + estimated + WT_RUST_SQL_BATCH_TRAILER_BYTES >= sizeof(out)) break;
         if (sentCount > 0) { out[pos++] = ','; out[pos] = '\0'; }
-        pos += FormatEx(out[pos], sizeof(out) - pos, "{\"sql\":\"%s\",\"user_id\":%d,\"event_id\":\"%s\"}", escaped, userId, escapedEventId);
+        if (typedFields[0] != '\0')
+        {
+            pos += FormatEx(out[pos], sizeof(out) - pos, "{\"event_id\":\"%s\",\"user_id\":%d,%s}", escapedEventId, userId, typedFields);
+        }
+        else
+        {
+            pos += FormatEx(out[pos], sizeof(out) - pos, "{\"sql\":\"%s\",\"user_id\":%d,\"event_id\":\"%s\"}", escaped, userId, escapedEventId);
+        }
         g_hRustSqlInflight.PushString(sql);
         g_hRustSqlInflightUserIds.Push(userId);
         g_hRustSqlInflightEventIds.PushString(eventId);
+        g_hRustSqlInflightTypedFields.PushString(typedFields);
         sentCount++;
     }
     if (sentCount <= 0) { WhaleTracker_RustClearInflight(); return; }
@@ -412,6 +481,7 @@ public void WhaleTracker_RustFlushSqlBatch()
         g_hRustSqlQueue.Erase(0);
         g_hRustSqlQueueUserIds.Erase(0);
         g_hRustSqlQueueEventIds.Erase(0);
+        g_hRustSqlQueueTypedFields.Erase(0);
     }
 }
 

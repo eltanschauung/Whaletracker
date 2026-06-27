@@ -61,6 +61,7 @@ native int Filters_GetChatName(int client, char[] buffer, int maxlen);
 native int Filters_GetSteamIdColorTag(const char[] steamId, char[] buffer, int maxlen);
 native bool SaySounds_PlayCommand(int client, const char[] commandName, bool ignoreOptIn = false);
 forward bool WhaleTracker_RustQueueSqlWrite(const char[] query, int userId, bool forceSync);
+forward bool WhaleTracker_RustQueueTypedWrite(const char[] fallbackQuery, const char[] fieldsJson, int userId, bool forceSync);
 forward void WhaleTracker_RustInit();
 forward void WhaleTracker_RustFlushSqlBatch();
 forward void WhaleTracker_RustShutdown();

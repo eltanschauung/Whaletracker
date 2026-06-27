@@ -183,11 +183,21 @@ void ClearOnlineStats()
 {
     char deleteOnline[128];
     Format(deleteOnline, sizeof(deleteOnline), "DELETE FROM whaletracker_online WHERE host_port = %d", g_iHostPort);
-    QueueSaveQuery(deleteOnline, 0, false);
+    char clearOnlineFields[96];
+    Format(clearOnlineFields, sizeof(clearOnlineFields), "\"kind\":\"online_clear_host\",\"host_port\":%d", g_iHostPort);
+    if (!WhaleTracker_RustQueueTypedWrite(deleteOnline, clearOnlineFields, 0, false))
+    {
+        QueueSaveQuery(deleteOnline, 0, false);
+    }
 
     char deleteServer[128];
     Format(deleteServer, sizeof(deleteServer), "DELETE FROM whaletracker_servers WHERE port = %d", g_iHostPort);
-    QueueSaveQuery(deleteServer, 0, false);
+    char clearServerFields[96];
+    Format(clearServerFields, sizeof(clearServerFields), "\"kind\":\"server_clear_port\",\"host_port\":%d", g_iHostPort);
+    if (!WhaleTracker_RustQueueTypedWrite(deleteServer, clearServerFields, 0, false))
+    {
+        QueueSaveQuery(deleteServer, 0, false);
+    }
 }
 
 void RemoveOnlineStats(int client)
@@ -198,7 +208,12 @@ void RemoveOnlineStats(int client)
 
     char query[192];
     Format(query, sizeof(query), "DELETE FROM whaletracker_online WHERE steamid = '%s' AND host_port = %d", steamId, g_iHostPort);
-    QueueSaveQuery(query, 0, false);
+    char fields[192];
+    Format(fields, sizeof(fields), "\"kind\":\"online_remove\",\"steamid\":\"%s\",\"host_port\":%d", steamId, g_iHostPort);
+    if (!WhaleTracker_RustQueueTypedWrite(query, fields, 0, false))
+    {
+        QueueSaveQuery(query, 0, false);
+    }
 }
 
 bool QueueClientOnlineSnapshot(int client, int now, float engineNow, int playerCount, int visibleMax, const char[] escapedMapName, const char[] escapedHostIp, bool forceSync)
