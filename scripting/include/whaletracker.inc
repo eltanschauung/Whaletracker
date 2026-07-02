@@ -407,7 +407,7 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
         }
 
         char name[MAX_NAME_LENGTH];
-        GetClientName(client, name, sizeof(name));
+        ResolveMatchPlayerName(client, steamId, name, sizeof(name));
         InsertPlayerLogRecord(snapshotData, steamId, name, now, false);
     }
 
@@ -677,6 +677,113 @@ bool GetStoredMatchPlayerName(const char[] steamId, char[] buffer, int maxlen)
 
     EnsureMatchStorage();
     return g_MatchNames.GetString(steamId, buffer, maxlen);
+}
+
+bool GetFiltersRecordedMatchName(const char[] steamId, char[] buffer, int maxlen)
+{
+    if (!steamId[0] || maxlen <= 0)
+    {
+        return false;
+    }
+
+    if (GetFeatureStatus(FeatureType_Native, "Filters_GetLastRecordedSteamName") != FeatureStatus_Available)
+    {
+        return false;
+    }
+
+    if (!Filters_GetLastRecordedSteamName(steamId, buffer, maxlen))
+    {
+        return false;
+    }
+
+    TrimString(buffer);
+    return buffer[0] != '\0';
+}
+
+bool MatchPlayerNameNeedsUtfFallback(const char[] name)
+{
+    return name[0] == '\0' || StrContains(name, "??", false) != -1;
+}
+
+bool GetPrenameMatchName(const char[] steamId, char[] buffer, int maxlen)
+{
+    buffer[0] = '\0';
+
+    if (!steamId[0] || maxlen <= 0 || g_hSyncDatabase == null)
+    {
+        return false;
+    }
+
+    char escapedSteam[64];
+    SQL_EscapeString(g_hSyncDatabase, steamId, escapedSteam, sizeof(escapedSteam));
+
+    char query[256];
+    Format(query, sizeof(query),
+        "SELECT newname FROM prename_rules WHERE pattern COLLATE utf8mb4_uca1400_ai_ci = '%s' LIMIT 1",
+        escapedSteam);
+
+    DBResultSet results = SQL_Query(g_hSyncDatabase, query);
+    if (results == null)
+    {
+        return false;
+    }
+
+    bool found = false;
+    if (results.FetchRow())
+    {
+        results.FetchString(0, buffer, maxlen);
+        TrimString(buffer);
+        found = buffer[0] != '\0';
+    }
+
+    delete results;
+    return found;
+}
+
+bool TryResolveUtfMatchPlayerName(const char[] steamId, char[] buffer, int maxlen)
+{
+    if (GetPrenameMatchName(steamId, buffer, maxlen))
+    {
+        return true;
+    }
+
+    return GetFiltersRecordedMatchName(steamId, buffer, maxlen);
+}
+
+void ResolveMatchPlayerName(int client, const char[] steamId, char[] buffer, int maxlen)
+{
+    if (maxlen <= 0)
+    {
+        return;
+    }
+
+    buffer[0] = '\0';
+
+    if (client > 0 && client <= MaxClients && IsClientInGame(client))
+    {
+        GetClientName(client, buffer, maxlen);
+        TrimString(buffer);
+        if (!MatchPlayerNameNeedsUtfFallback(buffer) || TryResolveUtfMatchPlayerName(steamId, buffer, maxlen))
+        {
+            return;
+        }
+    }
+
+    if (GetStoredMatchPlayerName(steamId, buffer, maxlen))
+    {
+        TrimString(buffer);
+        if (!MatchPlayerNameNeedsUtfFallback(buffer) || TryResolveUtfMatchPlayerName(steamId, buffer, maxlen))
+        {
+            return;
+        }
+    }
+
+    if (TryResolveUtfMatchPlayerName(steamId, buffer, maxlen))
+    {
+        return;
+    }
+
+    strcopy(buffer, maxlen, steamId);
 }
 
 void SnapshotFromStats(const WhaleStats stats, int data[MATCH_STAT_COUNT])
@@ -1573,14 +1680,7 @@ void FinalizeCurrentMatch(bool shuttingDown)
         AppendSnapshotToStorage(g_MapStats[i].steamId, data);
 
         char name[MAX_NAME_LENGTH];
-        if (IsClientInGame(i))
-        {
-            GetClientName(i, name, sizeof(name));
-        }
-        else if (!GetStoredMatchPlayerName(g_MapStats[i].steamId, name, sizeof(name)))
-        {
-            strcopy(name, sizeof(name), g_MapStats[i].steamId);
-        }
+        ResolveMatchPlayerName(i, g_MapStats[i].steamId, name, sizeof(name));
         RememberMatchPlayerName(g_MapStats[i].steamId, name);
     }
 
@@ -1635,10 +1735,7 @@ void FinalizeCurrentMatch(bool shuttingDown)
             continue;
 
         char name[MAX_NAME_LENGTH];
-        if (!GetStoredMatchPlayerName(steamId, name, sizeof(name)))
-        {
-            strcopy(name, sizeof(name), steamId);
-        }
+        ResolveMatchPlayerName(0, steamId, name, sizeof(name));
 
         InsertPlayerLogRecord(data, steamId, name, endTime, shuttingDown);
     }

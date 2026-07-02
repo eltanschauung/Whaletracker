@@ -605,7 +605,7 @@ public void OnClientPutInServer(int client)
         }
 
         char name[MAX_NAME_LENGTH];
-        GetClientName(client, name, sizeof(name));
+        ResolveMatchPlayerName(client, steamId, name, sizeof(name));
         RememberMatchPlayerName(steamId, name);
     }
 

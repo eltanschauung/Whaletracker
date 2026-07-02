@@ -472,19 +472,7 @@ bool SaveClientMapStats(int client)
     EnsureMatchStorage();
 
     char name[MAX_NAME_LENGTH];
-    if (IsClientInGame(client))
-    {
-        GetClientName(client, name, sizeof(name));
-    }
-    else if (!GetStoredMatchPlayerName(g_MapStats[client].steamId, name, sizeof(name)))
-    {
-        name[0] = '\0';
-    }
-
-    if (!name[0])
-    {
-        strcopy(name, sizeof(name), g_MapStats[client].steamId);
-    }
+    ResolveMatchPlayerName(client, g_MapStats[client].steamId, name, sizeof(name));
 
     RememberMatchPlayerName(g_MapStats[client].steamId, name);
 
