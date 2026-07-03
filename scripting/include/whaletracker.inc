@@ -818,7 +818,7 @@ void SnapshotFromStats(const WhaleStats stats, int data[MATCH_STAT_COUNT])
     data[MatchStat_HitsSnipers] = stats.weaponHits[WeaponCategory_Snipers];
     data[MatchStat_ShotsRevolvers] = stats.weaponShots[WeaponCategory_Revolvers];
     data[MatchStat_HitsRevolvers] = stats.weaponHits[WeaponCategory_Revolvers];
-    data[MatchStat_BestStreak] = stats.bestKillstreak;
+    data[MatchStat_BestStreak] = WT_ShouldLogMatchKillstreaks() ? stats.bestKillstreak : 0;
     data[MatchStat_BestUbersLife] = stats.bestUbersLife;
     data[MatchStat_IsAdmin] = stats.isAdmin ? 1 : 0;
 }
@@ -2121,46 +2121,9 @@ void ApplyAssistStats(WhaleStats stats)
 
 }
 
-bool ShouldSuppressDeaths()
-{
-    if (GetFeatureStatus(FeatureType_Native, "DGM_IsSmallFormatGamemode") == FeatureStatus_Available)
-    {
-        if (DGM_IsSmallFormatGamemode())
-        {
-            return true;
-        }
-    }
-    else
-    {
-        char gamemode[64];
-
-        if (WhaleTracker_GetDgmGameMode(gamemode, sizeof(gamemode)) && gamemode[0])
-        {
-            if (StrEqual(gamemode, "mge", false) || StrEqual(gamemode, "ultiduo", false))
-            {
-                return true;
-            }
-        }
-    }
-
-    int capacity = WhaleTracker_GetCurrentServerCapacity();
-    if (capacity <= 0)
-    {
-        return false;
-    }
-
-    int lowPopulationThreshold = RoundToFloor(float(capacity) * 0.35);
-    if (lowPopulationThreshold <= 0)
-    {
-        return false;
-    }
-
-    return WhaleTracker_GetCurrentPlayerCount() <= lowPopulationThreshold;
-}
-
 void ApplyCumulativeDeathStats(WhaleStats stats, bool countDeath = true)
 {
-    if (countDeath && !ShouldSuppressDeaths())
+    if (countDeath)
     {
         stats.deaths++;
     }

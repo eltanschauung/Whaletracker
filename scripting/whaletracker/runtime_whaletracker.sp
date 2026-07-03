@@ -224,6 +224,16 @@ public void OnPluginStart()
         true,
         0.0
     );
+    g_hLogMatchKillstreaks = CreateConVar(
+        "sm_whaletracker_log_match_killstreaks",
+        "1",
+        "Record match-log best killstreak values for frontend weekly killstreak stats.",
+        FCVAR_NONE,
+        true,
+        0.0,
+        true,
+        1.0
+    );
     g_hAirshotMinHeight = CreateConVar(
         "sm_whaletracker_airshot_min_height",
         "100.0",

@@ -283,6 +283,7 @@ ConVar g_hTopScorePerMapLimit = null;
 ConVar g_hDamageTrackingGate = null;
 ConVar g_hDamageSanityMax = null;
 ConVar g_hMinMatchRateMinutes = null;
+ConVar g_hLogMatchKillstreaks = null;
 ConVar g_hAirshotMinHeight = null;
 ConVar g_hDemoSyncWindow = null;
 ConVar g_hSoldierSyncWindow = null;
@@ -381,6 +382,11 @@ float WT_GetMultikillWindow()
 float WT_GetMinMatchRateMinutes()
 {
     return WT_GetConVarFloat(g_hMinMatchRateMinutes, 1.0);
+}
+
+bool WT_ShouldLogMatchKillstreaks()
+{
+    return g_hLogMatchKillstreaks == null || g_hLogMatchKillstreaks.BoolValue;
 }
 
 float WT_GetAirshotMinHeight()
