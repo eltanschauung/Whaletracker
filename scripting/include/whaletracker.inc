@@ -1142,6 +1142,16 @@ void WhaleTracker_EnsureAdminStatusColumns()
     WhaleTracker_RunSchemaQuery("ALTER TABLE whaletracker_log_players ADD COLUMN IF NOT EXISTS is_admin TINYINT DEFAULT 0", "whaletracker_log_players.is_admin");
 }
 
+void WhaleTracker_EnsurePointsCacheIndexes()
+{
+    if (!g_bDatabaseReady || g_hSyncDatabase == null)
+    {
+        return;
+    }
+
+    WhaleTracker_RunSchemaQuery("CREATE INDEX IF NOT EXISTS idx_whaletracker_points_cache_rank ON whaletracker_points_cache (rank)", "whaletracker_points_cache.rank index");
+}
+
 void RefreshPublicHostIp()
 {
     g_sPublicHostIp[0] = '\0';

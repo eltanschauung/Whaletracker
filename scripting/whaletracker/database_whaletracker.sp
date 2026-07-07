@@ -22,6 +22,7 @@ void WhaleTracker_MaybeMarkDatabaseReady()
         GetClientCount(false),
         WhaleTracker_IsRoundRunning() ? 1 : 0);
     WhaleTracker_EnsureAdminStatusColumns();
+    WhaleTracker_EnsurePointsCacheIndexes();
     WhaleTracker_EnsureRoundStatisticsTable();
     PumpSaveQueue();
 }
