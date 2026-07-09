@@ -56,6 +56,33 @@ public Action Command_SaveAllStats(int client, int args)
     return Plugin_Handled;
 }
 
+public Action Command_RecordHistoricalSnapshot(int client, int args)
+{
+    if (!g_bDatabaseReady)
+    {
+        if (client > 0 && IsClientInGame(client))
+        {
+            CPrintToChat(client, "{green}[WhaleTracker]{default} Database is not ready.");
+        }
+        else
+        {
+            PrintToServer("[WhaleTracker] Historical snapshot skipped: database is not ready.");
+        }
+        return Plugin_Handled;
+    }
+
+    WhaleTracker_RecordHistoricalSnapshot();
+    if (client > 0 && IsClientInGame(client))
+    {
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Historical ranked-client snapshot queued.");
+    }
+    else
+    {
+        PrintToServer("[WhaleTracker] Historical ranked-client snapshot queued.");
+    }
+    return Plugin_Handled;
+}
+
 void PrintUnrankedWhalePointsMessage(int client, int target)
 {
     char displayName[128];

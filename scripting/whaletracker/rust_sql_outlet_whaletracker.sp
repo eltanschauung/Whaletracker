@@ -181,7 +181,7 @@ void WhaleTracker_RustRequeueInflight()
     WhaleTracker_RustClearInflight();
 }
 
-void WhaleTracker_RustFlushPendingToLocal()
+void WhaleTracker_RustFlushPendingToLocal(bool forceSync = false)
 {
     WhaleTracker_RustRequeueInflight();
     if (g_hRustSqlQueue == null || g_hRustSqlQueueUserIds == null || g_hRustSqlQueueEventIds == null || g_hRustSqlQueueTypedFields == null) return;
@@ -195,20 +195,7 @@ void WhaleTracker_RustFlushPendingToLocal()
         g_hRustSqlQueueUserIds.Erase(0);
         g_hRustSqlQueueEventIds.Erase(0);
         g_hRustSqlQueueTypedFields.Erase(0);
-        if (!g_bDatabaseReady || g_hDatabase == null)
-        {
-            continue;
-        }
-
-        DBResultSet results = SQLQuerySync(sql);
-        if (results == null)
-        {
-            char error[256];
-            GetSyncDatabaseError(error, sizeof(error));
-            LogError("[WhaleTracker] Rust SQL outlet local fallback failed (user %d): %s | Query: %s", userId, error, sql);
-            continue;
-        }
-        delete results;
+        QueueLocalSaveQuery(sql, userId, forceSync);
     }
 }
 
@@ -307,7 +294,7 @@ public void WhaleTracker_RustInit()
 public void WhaleTracker_RustShutdown()
 {
     WhaleTracker_RustFlushSqlBatch();
-    WhaleTracker_RustFlushPendingToLocal();
+    WhaleTracker_RustFlushPendingToLocal(true);
     WhaleTracker_RustDisconnectSocket();
     if (g_hRustSqlFlushTimer != null) { CloseHandle(g_hRustSqlFlushTimer); g_hRustSqlFlushTimer = null; }
     if (g_hRustSqlReconnectTimer != null) { CloseHandle(g_hRustSqlReconnectTimer); g_hRustSqlReconnectTimer = null; }

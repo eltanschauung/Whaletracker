@@ -2321,13 +2321,8 @@ void FlushSaveQueueSync()
     }
 }
 
-void QueueSaveQuery(const char[] query, int userId, bool forceSync)
+void QueueLocalSaveQuery(const char[] query, int userId, bool forceSync = false)
 {
-    if (WhaleTracker_RustQueueSqlWrite(query, userId, forceSync))
-    {
-        return;
-    }
-
     if (forceSync || g_bShuttingDown)
     {
         RunSaveQuerySync(query, userId);
@@ -2345,4 +2340,14 @@ void QueueSaveQuery(const char[] query, int userId, bool forceSync)
     g_SaveQueue.Push(pack);
 
     RequestPumpSaveQueue();
+}
+
+void QueueSaveQuery(const char[] query, int userId, bool forceSync)
+{
+    if (WhaleTracker_RustQueueSqlWrite(query, userId, forceSync))
+    {
+        return;
+    }
+
+    QueueLocalSaveQuery(query, userId, forceSync);
 }

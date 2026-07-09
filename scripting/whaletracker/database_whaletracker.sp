@@ -24,7 +24,68 @@ void WhaleTracker_MaybeMarkDatabaseReady()
     WhaleTracker_EnsureAdminStatusColumns();
     WhaleTracker_EnsurePointsCacheIndexes();
     WhaleTracker_EnsureRoundStatisticsTable();
+    WhaleTracker_EnsureHistoricalTable();
     PumpSaveQueue();
+}
+
+void WhaleTracker_EnsureHistoricalTable()
+{
+    char query[1024];
+    FormatEx(query, sizeof(query),
+        "CREATE TABLE IF NOT EXISTS whaletracker_historical ("
+        ... "`timestamp` INT NOT NULL, "
+        ... "all_time_clients INT NOT NULL DEFAULT 0, "
+        ... "month_clients INT NOT NULL DEFAULT 0, "
+        ... "week_clients INT NOT NULL DEFAULT 0, "
+        ... "PRIMARY KEY (`timestamp`)"
+        ... ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    QueueSaveQuery(query, 0, false);
+}
+
+void WhaleTracker_RecordHistoricalSnapshot()
+{
+    int snapshotTimestamp = GetTime();
+    int rankMinKdSum = WT_GetRankMinKdSum();
+    int rankMinPlaytime = WT_GetRankMinPlaytimeSeconds();
+
+    char query[SAVE_QUERY_MAXLEN];
+    FormatEx(query, sizeof(query),
+        "INSERT INTO whaletracker_historical (`timestamp`, all_time_clients, month_clients, week_clients) "
+        ... "SELECT %d, "
+        ... "(SELECT COUNT(*) FROM whaletracker w "
+        ... "WHERE (GREATEST(COALESCE(w.kills, 0), 0) + GREATEST(COALESCE(w.deaths, 0), 0)) >= %d "
+        ... "AND GREATEST(COALESCE(w.playtime, 0), 0) >= %d), "
+        ... "(SELECT COUNT(DISTINCT lp.steamid) "
+        ... "FROM whaletracker_log_players lp "
+        ... "INNER JOIN whaletracker_logs l ON l.log_id = lp.log_id "
+        ... "INNER JOIN whaletracker w ON w.steamid = lp.steamid "
+        ... "WHERE l.started_at >= UNIX_TIMESTAMP(DATE_FORMAT(FROM_UNIXTIME(%d), '%%Y-%%m-01 00:00:00')) "
+        ... "AND l.started_at < %d "
+        ... "AND (GREATEST(COALESCE(w.kills, 0), 0) + GREATEST(COALESCE(w.deaths, 0), 0)) >= %d "
+        ... "AND GREATEST(COALESCE(w.playtime, 0), 0) >= %d), "
+        ... "(SELECT COUNT(DISTINCT lp.steamid) "
+        ... "FROM whaletracker_log_players lp "
+        ... "INNER JOIN whaletracker_logs l ON l.log_id = lp.log_id "
+        ... "INNER JOIN whaletracker w ON w.steamid = lp.steamid "
+        ... "WHERE l.started_at >= %d AND l.started_at < %d "
+        ... "AND (GREATEST(COALESCE(w.kills, 0), 0) + GREATEST(COALESCE(w.deaths, 0), 0)) >= %d "
+        ... "AND GREATEST(COALESCE(w.playtime, 0), 0) >= %d) "
+        ... "ON DUPLICATE KEY UPDATE "
+        ... "all_time_clients = VALUES(all_time_clients), "
+        ... "month_clients = VALUES(month_clients), "
+        ... "week_clients = VALUES(week_clients)",
+        snapshotTimestamp,
+        rankMinKdSum,
+        rankMinPlaytime,
+        snapshotTimestamp,
+        snapshotTimestamp,
+        rankMinKdSum,
+        rankMinPlaytime,
+        snapshotTimestamp - (7 * 24 * 60 * 60),
+        snapshotTimestamp,
+        rankMinKdSum,
+        rankMinPlaytime);
+    QueueSaveQuery(query, 0, false);
 }
 
 void WhaleTracker_ScheduleSchemaReadyCheck(float delay)
