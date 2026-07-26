@@ -344,6 +344,8 @@ public void OnPluginStart()
     RegConsoleCmd("sm_gardens", Command_ShowMarketGardens, "Show your market garden total.");
     RegConsoleCmd("sm_as", Command_ShowMarketGardens, "Show your market garden total.");
     RegConsoleCmd("sm_airshots", Command_ShowMarketGardens, "Show your market garden total.");
+    RegConsoleCmd("sm_ms", Command_ShowMarketGardens, "Show your airshot and meatshot totals.");
+    RegConsoleCmd("sm_meatshots", Command_ShowMarketGardens, "Show your airshot and meatshot totals.");
     RegConsoleCmd("sm_ranks", Command_ShowLeaderboard, "Show WhaleTracker leaderboard page.");
     RegAdminCmd("sm_savestats", Command_SaveAllStats, ADMFLAG_GENERIC, "Manually save all WhaleTracker stats");
     RegAdminCmd("sm_whaletracker_historical", Command_RecordHistoricalSnapshot, ADMFLAG_GENERIC, "Record a ranked-client historical snapshot.");
