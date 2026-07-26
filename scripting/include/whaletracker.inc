@@ -1524,15 +1524,31 @@ bool WhaleTracker_NormalizeSteamId64(const char[] input, char[] steamId64, int m
     }
 
     int universe = StringToInt(parts[1]);
-    int account = StringToInt(parts[2]);
-    if (universe < 0 || universe > 1 || account < 0)
+    if (universe < 0 || universe > 1 || !parts[2][0])
     {
         return false;
     }
 
-    char delta[32];
-    FormatEx(delta, sizeof(delta), "%d", account * 2 + universe);
-    WhaleTracker_AddDecimalStrings("76561197960265728", delta, steamId64, maxlen);
+    for (int i = 0; parts[2][i]; i++)
+    {
+        if (!IsCharNumeric(parts[2][i]))
+        {
+            return false;
+        }
+    }
+
+    char withAccount[STEAMID64_LEN];
+    char withDoubleAccount[STEAMID64_LEN];
+    WhaleTracker_AddDecimalStrings("76561197960265728", parts[2], withAccount, sizeof(withAccount));
+    WhaleTracker_AddDecimalStrings(withAccount, parts[2], withDoubleAccount, sizeof(withDoubleAccount));
+    if (universe == 1)
+    {
+        WhaleTracker_AddDecimalStrings(withDoubleAccount, "1", steamId64, maxlen);
+    }
+    else
+    {
+        strcopy(steamId64, maxlen, withDoubleAccount);
+    }
     return steamId64[0] != '\0';
 }
 

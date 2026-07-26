@@ -395,6 +395,7 @@ public void OnPluginStart()
 
 public void OnMapStart()
 {
+    WhaleTracker_ResetJoinLeaderboardCache();
     if (!WhaleTracker_IsDatabaseHealthy())
     {
         WhaleTracker_ScheduleReconnect(WT_INITIAL_RECONNECT_DELAY);
