@@ -318,9 +318,14 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
     bool attackerIsHuman = IsValidClient(attacker) && !IsFakeClient(attacker) && attacker != victim;
     bool attackerScoredMedicDrop = false;
     bool victimMedicDrop = false;
+    int victimUberPercent = -1;
 
     if (!(deathFlags & TF_DEATHFLAG_DEADRINGER))
     {
+        if (victimIsHuman && victimClass == TF_CLASS_MEDIC)
+        {
+            victimUberPercent = GetMedicUberPercent(victim);
+        }
         victimMedicDrop = victimIsHuman && IsMedicDrop(victim);
 
         if (victimIsHuman && attackerIsHuman && WhaleTracker_IsTrackingEnabled(attacker))
@@ -371,6 +376,12 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
                 if (medicDrop)
                 {
                     ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "medic_uber_drop_kill");
+                }
+                if (victimUberPercent >= 90)
+                {
+                    char reason[64];
+                    FormatEx(reason, sizeof(reason), "Medic high Übercharge kill (%d%%)", victimUberPercent);
+                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, reason, victim, WT_GetBonusDefaultDelay(), 0);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERDOMINATION)
@@ -436,6 +447,10 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
         if (victimMedicDrop)
         {
             AnnounceMedicDrop(attacker, victim);
+        }
+        if (victimUberPercent >= 90)
+        {
+            AnnounceHighUberDeath(victim, victimUberPercent);
         }
 
         RefreshRoundTopScoringPlayerCandidate();
@@ -636,6 +651,30 @@ bool IsMedicDrop(int victim)
         return false;
 
     return (GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") >= 1.0);
+}
+
+int GetMedicUberPercent(int medic)
+{
+    if (!IsValidClient(medic) || IsFakeClient(medic) || TF2_GetPlayerClass(medic) != TFClass_Medic)
+    {
+        return -1;
+    }
+
+    int medigun = GetPlayerWeaponSlot(medic, 1);
+    if (medigun <= MaxClients || !IsValidEntity(medigun) || !HasEntProp(medigun, Prop_Send, "m_flChargeLevel"))
+    {
+        return -1;
+    }
+
+    int percent = RoundToFloor(GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") * 100.0);
+    return percent > 100 ? 100 : percent;
+}
+
+void AnnounceHighUberDeath(int medic, int percent)
+{
+    char medicName[256];
+    BuildMedicDropDisplayName(medic, medicName, sizeof(medicName));
+    CPrintToChatAll("%s died with %d%% Über!", medicName, percent);
 }
 
 void AnnounceMedicDrop(int attacker, int medic)
