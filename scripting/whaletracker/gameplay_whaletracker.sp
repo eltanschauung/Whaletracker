@@ -543,7 +543,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
             RecordCrossbowHit(attacker);
         }
 
-        if (IsSupstatsAirshot(attacker, victim, weapon, wasDirectHit))
+        if (IsSupstatsAirshot(attacker, victim, weapon, wasDirectHit, reflectBonusEligible && wasReflectDirectHit))
         {
             RecordSupstatsAirshot(attacker, victim);
         }
@@ -858,10 +858,16 @@ void ResetMultikillClient(int client)
     ResetReflectKillCandidate(client);
 }
 
-bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit)
+bool IsSupstatsAirshot(int attacker, int victim, int weapon, bool wasDirectHit, bool wasReflectedDirectHit = false)
 {
     if (!IsValidClient(attacker) || IsFakeClient(attacker) || !IsValidClient(victim) || IsFakeClient(victim))
         return false;
+
+    if (wasReflectedDirectHit && TF2_GetPlayerClass(attacker) == TFClass_Pyro
+        && GetClientTeam(victim) != GetClientTeam(attacker))
+    {
+        return IsVictimAirshotEligible(victim);
+    }
 
     int primary = GetPlayerWeaponSlot(attacker, 0);
     if (primary <= MaxClients || primary != weapon)
@@ -970,7 +976,9 @@ bool IsReflectBonusInflictor(int inflictor)
 
     char classname[64];
     GetEntityClassname(inflictor, classname, sizeof(classname));
-    return IsReflectBonusProjectileClassname(classname);
+    return IsReflectBonusProjectileClassname(classname)
+        && HasEntProp(inflictor, Prop_Send, "m_iDeflected")
+        && GetEntProp(inflictor, Prop_Send, "m_iDeflected") > 0;
 }
 
 bool IsReflectBonusDamage(int attacker, int victim, int inflictor)
