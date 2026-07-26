@@ -329,7 +329,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             bool backstab = (custom == TF_CUSTOM_BACKSTAB);
             bool medicDrop = victimMedicDrop;
 
-            if (backstab && DistanceAboveGroundBox(attacker) >= 100.0)
+            if (backstab && DistanceAboveGroundBox(attacker) >= WT_GetAirborneBackstabMinHeight())
             {
                 ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "Airborne backstab", victim, WT_GetBonusDefaultDelay(), 0);
             }

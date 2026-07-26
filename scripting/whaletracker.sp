@@ -289,6 +289,7 @@ ConVar g_hDamageSanityMax = null;
 ConVar g_hMinMatchRateMinutes = null;
 ConVar g_hLogMatchKillstreaks = null;
 ConVar g_hAirshotMinHeight = null;
+ConVar g_hAirborneBackstabMinHeight = null;
 ConVar g_hDemoSyncWindow = null;
 ConVar g_hSoldierSyncWindow = null;
 ConVar g_hDemoSyncPerMap = null;
@@ -396,6 +397,11 @@ bool WT_ShouldLogMatchKillstreaks()
 float WT_GetAirshotMinHeight()
 {
     return WT_GetConVarFloat(g_hAirshotMinHeight, 100.0);
+}
+
+float WT_GetAirborneBackstabMinHeight()
+{
+    return WT_GetConVarFloat(g_hAirborneBackstabMinHeight, 100.0);
 }
 
 float WT_GetDemoSyncWindow()

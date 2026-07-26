@@ -243,6 +243,14 @@ public void OnPluginStart()
         true,
         0.0
     );
+    g_hAirborneBackstabMinHeight = CreateConVar(
+        "sm_whaletracker_airborne_backstab_min_height",
+        "100.0",
+        "Minimum attacker height above ground required for an airborne backstab gem.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
     g_hDemoSyncWindow = CreateConVar(
         "sm_whaletracker_demo_sync_window",
         "0.5",
