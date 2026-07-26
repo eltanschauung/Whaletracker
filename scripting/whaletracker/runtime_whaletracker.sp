@@ -99,6 +99,7 @@ public void OnPluginStart()
     g_bShuttingDown = false;
     g_hReconnectTimer = null;
     g_hSavePumpTimer = null;
+    WhaleTracker_ResetJoinLeaderboardCache();
 
     g_CvarDatabase = CreateConVar("sm_whaletracker_database", DB_CONFIG_DEFAULT, "Databases.cfg entry to use for WhaleTracker");
     g_CvarDatabase.GetString(g_sDatabaseConfig, sizeof(g_sDatabaseConfig));
@@ -706,9 +707,157 @@ public void OnClientPostAdminCheck(int client)
     }
 
     WhaleTracker_UpdateClientAdminStatus(client);
-    RequestClientJoinLeaderboardQuery(client);
+    if (!WhaleTracker_ConsumePrefetchedJoinLeaderboard(client))
+    {
+        RequestClientJoinLeaderboardQuery(client);
+    }
     RequestFavoriteClassLoad(client);
     RequestShowCountryLoad(client);
+}
+
+public bool OnClientPreConnectEx(const char[] name, char password[255], const char[] ip, const char[] steamID, char rejectReason[255])
+{
+    if (!g_bDatabaseReady || g_hDatabase == null)
+    {
+        return true;
+    }
+
+    char steamId64[STEAMID64_LEN];
+    if (!WhaleTracker_NormalizeSteamId64(steamID, steamId64, sizeof(steamId64)))
+    {
+        return true;
+    }
+
+    int unused;
+    if (g_JoinLeaderboardPending.GetValue(steamId64, unused)
+        || g_JoinLeaderboardRanks.GetValue(steamId64, unused))
+    {
+        return true;
+    }
+
+    g_JoinLeaderboardPending.SetValue(steamId64, 1);
+
+    DataPack pack = new DataPack();
+    pack.WriteString(steamId64);
+
+    char query[512];
+    FormatEx(query, sizeof(query),
+        "SELECT points, rank FROM whaletracker_points_cache WHERE steamid = '%s' LIMIT 1",
+        steamId64);
+    g_hDatabase.Query(WhaleTracker_PreConnectLeaderboardQueryCallback, query, pack);
+    return true;
+}
+
+public void WhaleTracker_PreConnectLeaderboardQueryCallback(Database db, DBResultSet results, const char[] error, any data)
+{
+    DataPack pack = view_as<DataPack>(data);
+    pack.Reset();
+
+    char steamId64[STEAMID64_LEN];
+    pack.ReadString(steamId64, sizeof(steamId64));
+    delete pack;
+
+    g_JoinLeaderboardPending.Remove(steamId64);
+
+    if (error[0] != '\0')
+    {
+        LogError("[WhaleTracker] Failed to prefetch points cache for join message: %s", error);
+        if (WhaleTracker_IsConnectionLostError(error))
+        {
+            WhaleTracker_ScheduleReconnect(WT_RUNTIME_QUICK_RECONNECT_DELAY);
+        }
+        return;
+    }
+
+    if (results == null || !results.FetchRow())
+    {
+        return;
+    }
+
+    int points = results.FetchInt(0);
+    int rank = results.FetchInt(1);
+    g_JoinLeaderboardPoints.SetValue(steamId64, points > 0 ? points : 0);
+    g_JoinLeaderboardRanks.SetValue(steamId64, rank > 0 ? rank : 0);
+
+    int client = WhaleTracker_FindClientBySteamId64(steamId64);
+    if (client > 0)
+    {
+        WhaleTracker_ConsumePrefetchedJoinLeaderboard(client);
+        return;
+    }
+
+    DataPack expiryPack = new DataPack();
+    expiryPack.WriteString(steamId64);
+    CreateTimer(30.0, Timer_ExpireJoinLeaderboardPrefetch, expiryPack, TIMER_DATA_HNDL_CLOSE | TIMER_FLAG_NO_MAPCHANGE);
+}
+
+public Action Timer_ExpireJoinLeaderboardPrefetch(Handle timer, DataPack pack)
+{
+    pack.Reset();
+    char steamId64[STEAMID64_LEN];
+    pack.ReadString(steamId64, sizeof(steamId64));
+    g_JoinLeaderboardPoints.Remove(steamId64);
+    g_JoinLeaderboardRanks.Remove(steamId64);
+    return Plugin_Stop;
+}
+
+void WhaleTracker_ResetJoinLeaderboardCache()
+{
+    delete g_JoinLeaderboardPending;
+    delete g_JoinLeaderboardPoints;
+    delete g_JoinLeaderboardRanks;
+    g_JoinLeaderboardPending = new StringMap();
+    g_JoinLeaderboardPoints = new StringMap();
+    g_JoinLeaderboardRanks = new StringMap();
+}
+
+bool WhaleTracker_ConsumePrefetchedJoinLeaderboard(int client)
+{
+    if (!IsValidClient(client) || !IsClientInGame(client) || IsFakeClient(client))
+    {
+        return false;
+    }
+
+    EnsureClientSteamId(client);
+    char steamId64[STEAMID64_LEN];
+    strcopy(steamId64, sizeof(steamId64), g_Stats[client].steamId);
+    if (!steamId64[0])
+    {
+        return false;
+    }
+
+    int points;
+    int rank;
+    if (g_JoinLeaderboardPoints.GetValue(steamId64, points)
+        && g_JoinLeaderboardRanks.GetValue(steamId64, rank))
+    {
+        g_JoinLeaderboardPoints.Remove(steamId64);
+        g_JoinLeaderboardRanks.Remove(steamId64);
+        WhaleTracker_PrintJoinLeaderboardMessage(client, points, rank);
+        return true;
+    }
+
+    int unused;
+    return g_JoinLeaderboardPending.GetValue(steamId64, unused);
+}
+
+int WhaleTracker_FindClientBySteamId64(const char[] steamId64)
+{
+    char currentSteamId[STEAMID64_LEN];
+    for (int client = 1; client <= MaxClients; client++)
+    {
+        if (!IsClientInGame(client) || IsFakeClient(client)
+            || !GetClientAuthId(client, AuthId_SteamID64, currentSteamId, sizeof(currentSteamId)))
+        {
+            continue;
+        }
+
+        if (StrEqual(currentSteamId, steamId64))
+        {
+            return client;
+        }
+    }
+    return 0;
 }
 
 void RequestClientJoinLeaderboardQuery(int client)
@@ -783,6 +932,11 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
         rank = 0;
     }
 
+    WhaleTracker_PrintJoinLeaderboardMessage(client, points, rank);
+}
+
+void WhaleTracker_PrintJoinLeaderboardMessage(int client, int points, int rank)
+{
     char displayName[128];
     if (GetFeatureStatus(FeatureType_Native, "Filters_GetChatName") == FeatureStatus_Available
         && Filters_GetChatName(client, displayName, sizeof(displayName)) && displayName[0] != '\0')

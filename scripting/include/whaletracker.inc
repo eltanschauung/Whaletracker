@@ -1491,6 +1491,74 @@ bool WhaleTracker_GetClientSteamId64(int client, char[] buffer, int maxlen)
     return GetClientAuthId(client, AuthId_SteamID64, buffer, maxlen);
 }
 
+bool WhaleTracker_NormalizeSteamId64(const char[] input, char[] steamId64, int maxlen)
+{
+    steamId64[0] = '\0';
+
+    if (StrContains(input, "STEAM_", false) != 0)
+    {
+        int length = strlen(input);
+        if (length < 16 || length >= maxlen)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < length; i++)
+        {
+            if (!IsCharNumeric(input[i]))
+            {
+                return false;
+            }
+        }
+
+        strcopy(steamId64, maxlen, input);
+        return true;
+    }
+
+    char parts[3][32];
+    if (ExplodeString(input, ":", parts, sizeof(parts), sizeof(parts[])) != 3)
+    {
+        return false;
+    }
+
+    int universe = StringToInt(parts[1]);
+    int account = StringToInt(parts[2]);
+    if (universe < 0 || universe > 1 || account < 0)
+    {
+        return false;
+    }
+
+    char delta[32];
+    FormatEx(delta, sizeof(delta), "%d", account * 2 + universe);
+    WhaleTracker_AddDecimalStrings("76561197960265728", delta, steamId64, maxlen);
+    return steamId64[0] != '\0';
+}
+
+void WhaleTracker_AddDecimalStrings(const char[] base, const char[] delta, char[] output, int maxlen)
+{
+    char reversed[64];
+    int position;
+    int carry;
+    int baseIndex = strlen(base) - 1;
+    int deltaIndex = strlen(delta) - 1;
+
+    while ((baseIndex >= 0 || deltaIndex >= 0 || carry > 0) && position < sizeof(reversed) - 1)
+    {
+        int baseDigit = baseIndex >= 0 ? view_as<int>(base[baseIndex--]) - view_as<int>('0') : 0;
+        int deltaDigit = deltaIndex >= 0 ? view_as<int>(delta[deltaIndex--]) - view_as<int>('0') : 0;
+        int sum = baseDigit + deltaDigit + carry;
+        reversed[position++] = view_as<char>('0' + sum % 10);
+        carry = sum / 10;
+    }
+
+    int outputLength = position < maxlen - 1 ? position : maxlen - 1;
+    for (int i = 0; i < outputLength; i++)
+    {
+        output[i] = reversed[position - i - 1];
+    }
+    output[outputLength] = '\0';
+}
+
 void WhaleTracker_BuildTeamSteamIdList(int team, char[] buffer, int maxlen, int &count)
 {
     buffer[0] = '\0';

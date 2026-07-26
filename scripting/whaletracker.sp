@@ -9,6 +9,7 @@
 #include <morecolors>
 #undef REQUIRE_EXTENSIONS
 #include <SteamWorks>
+#include <connect>
 #define REQUIRE_EXTENSIONS
 #include <geoip>
 #include <adt_array>
@@ -254,6 +255,9 @@ enum
 
 StringMap g_DisconnectedStats = null;
 StringMap g_MatchNames = null;
+StringMap g_JoinLeaderboardPending = null;
+StringMap g_JoinLeaderboardPoints = null;
+StringMap g_JoinLeaderboardRanks = null;
 
 char g_sCurrentMap[64];
 char g_sCurrentLogId[64];
