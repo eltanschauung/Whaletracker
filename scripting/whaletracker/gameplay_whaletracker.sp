@@ -578,6 +578,20 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] weaponname
     return Plugin_Continue;
 }
 
+public void TF2Shotgun_OnPelletShot(int attacker, int victim, int pellets, int total, bool kill)
+{
+    if (pellets != 10 || total != 10
+        || !IsValidClient(attacker) || IsFakeClient(attacker)
+        || !IsValidClient(victim) || IsFakeClient(victim)
+        || attacker == victim || !WhaleTracker_IsTrackingEnabled(attacker))
+    {
+        return;
+    }
+
+    g_Stats[attacker].totalMeatshots++;
+    MarkClientDirty(attacker);
+}
+
 public void Event_PlayerHealed(Event event, const char[] name, bool dontBroadcast)
 {
     int healer = GetClientOfUserId(event.GetInt("healer"));

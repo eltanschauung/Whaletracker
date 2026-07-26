@@ -10,6 +10,7 @@
 #undef REQUIRE_EXTENSIONS
 #include <SteamWorks>
 #include <connect>
+#include <scattergun_pellets>
 #define REQUIRE_EXTENSIONS
 #include <geoip>
 #include <adt_array>
@@ -154,6 +155,7 @@ enum struct WhaleStats
     int totalUbers;
     int totalMedicDrops;
     int totalAirshots;
+    int totalMeatshots;
     int totalCrossbowHits;
     int totalMarketGardenHits;
     int totalHeadshots;

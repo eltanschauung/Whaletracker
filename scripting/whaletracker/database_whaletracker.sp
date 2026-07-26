@@ -285,7 +285,7 @@ void LoadClientStats(int client)
 
     char query[1024];
     Format(query, sizeof(query),
-        "SELECT first_seen, kills, deaths, healing, total_ubers, best_ubers_life, medic_drops, uber_drops, airshots, totalCrossbowHits, marketGardenHits, headshots, backstabs, best_killstreak, assists, playtime, damage_dealt, damage_taken, last_seen "
+        "SELECT first_seen, kills, deaths, healing, total_ubers, best_ubers_life, medic_drops, uber_drops, airshots, meatshots, totalCrossbowHits, marketGardenHits, headshots, backstabs, best_killstreak, assists, playtime, damage_dealt, damage_taken, last_seen "
         ... ", shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers "
         ... "FROM whaletracker WHERE steamid = '%s'", g_Stats[client].steamId);
 
@@ -383,32 +383,33 @@ public void WhaleTracker_LoadCallback(Database db, DBResultSet results, const ch
         g_Stats[index].totalMedicDrops = results.FetchInt(6);
         g_Stats[index].totalUberDrops = results.FetchInt(7);
         g_Stats[index].totalAirshots = results.FetchInt(8);
-        g_Stats[index].totalCrossbowHits = results.FetchInt(9);
-        g_Stats[index].totalMarketGardenHits = results.FetchInt(10);
-        g_Stats[index].totalHeadshots = results.FetchInt(11);
-        g_Stats[index].totalBackstabs = results.FetchInt(12);
-        g_Stats[index].bestKillstreak = results.FetchInt(13);
-        g_Stats[index].totalAssists = results.FetchInt(14);
-        g_Stats[index].playtime = results.FetchInt(15);
-        g_Stats[index].totalDamage = results.FetchInt(16);
-        g_Stats[index].totalDamageTaken = results.FetchInt(17);
-        g_Stats[index].lastSeen = results.FetchInt(18);
-        g_Stats[index].weaponShots[WeaponCategory_Shotguns] = results.FetchInt(19);
-        g_Stats[index].weaponHits[WeaponCategory_Shotguns] = results.FetchInt(20);
-        g_Stats[index].weaponShots[WeaponCategory_Scatterguns] = results.FetchInt(21);
-        g_Stats[index].weaponHits[WeaponCategory_Scatterguns] = results.FetchInt(22);
-        g_Stats[index].weaponShots[WeaponCategory_Pistols] = results.FetchInt(23);
-        g_Stats[index].weaponHits[WeaponCategory_Pistols] = results.FetchInt(24);
-        g_Stats[index].weaponShots[WeaponCategory_RocketLaunchers] = results.FetchInt(25);
-        g_Stats[index].weaponHits[WeaponCategory_RocketLaunchers] = results.FetchInt(26);
-        g_Stats[index].weaponShots[WeaponCategory_GrenadeLaunchers] = results.FetchInt(27);
-        g_Stats[index].weaponHits[WeaponCategory_GrenadeLaunchers] = results.FetchInt(28);
-        g_Stats[index].weaponShots[WeaponCategory_StickyLaunchers] = results.FetchInt(29);
-        g_Stats[index].weaponHits[WeaponCategory_StickyLaunchers] = results.FetchInt(30);
-        g_Stats[index].weaponShots[WeaponCategory_Snipers] = results.FetchInt(31);
-        g_Stats[index].weaponHits[WeaponCategory_Snipers] = results.FetchInt(32);
-        g_Stats[index].weaponShots[WeaponCategory_Revolvers] = results.FetchInt(33);
-        g_Stats[index].weaponHits[WeaponCategory_Revolvers] = results.FetchInt(34);
+        g_Stats[index].totalMeatshots = results.FetchInt(9);
+        g_Stats[index].totalCrossbowHits = results.FetchInt(10);
+        g_Stats[index].totalMarketGardenHits = results.FetchInt(11);
+        g_Stats[index].totalHeadshots = results.FetchInt(12);
+        g_Stats[index].totalBackstabs = results.FetchInt(13);
+        g_Stats[index].bestKillstreak = results.FetchInt(14);
+        g_Stats[index].totalAssists = results.FetchInt(15);
+        g_Stats[index].playtime = results.FetchInt(16);
+        g_Stats[index].totalDamage = results.FetchInt(17);
+        g_Stats[index].totalDamageTaken = results.FetchInt(18);
+        g_Stats[index].lastSeen = results.FetchInt(19);
+        g_Stats[index].weaponShots[WeaponCategory_Shotguns] = results.FetchInt(20);
+        g_Stats[index].weaponHits[WeaponCategory_Shotguns] = results.FetchInt(21);
+        g_Stats[index].weaponShots[WeaponCategory_Scatterguns] = results.FetchInt(22);
+        g_Stats[index].weaponHits[WeaponCategory_Scatterguns] = results.FetchInt(23);
+        g_Stats[index].weaponShots[WeaponCategory_Pistols] = results.FetchInt(24);
+        g_Stats[index].weaponHits[WeaponCategory_Pistols] = results.FetchInt(25);
+        g_Stats[index].weaponShots[WeaponCategory_RocketLaunchers] = results.FetchInt(26);
+        g_Stats[index].weaponHits[WeaponCategory_RocketLaunchers] = results.FetchInt(27);
+        g_Stats[index].weaponShots[WeaponCategory_GrenadeLaunchers] = results.FetchInt(28);
+        g_Stats[index].weaponHits[WeaponCategory_GrenadeLaunchers] = results.FetchInt(29);
+        g_Stats[index].weaponShots[WeaponCategory_StickyLaunchers] = results.FetchInt(30);
+        g_Stats[index].weaponHits[WeaponCategory_StickyLaunchers] = results.FetchInt(31);
+        g_Stats[index].weaponShots[WeaponCategory_Snipers] = results.FetchInt(32);
+        g_Stats[index].weaponHits[WeaponCategory_Snipers] = results.FetchInt(33);
+        g_Stats[index].weaponShots[WeaponCategory_Revolvers] = results.FetchInt(34);
+        g_Stats[index].weaponHits[WeaponCategory_Revolvers] = results.FetchInt(35);
         g_Stats[index].loaded = true;
     }
     else
@@ -554,10 +555,10 @@ void QueueStatsSave(int client, int userId, bool forceSync)
 
     Format(query, sizeof(query),
         "INSERT INTO whaletracker "
-        ... "(steamid, first_seen, kills, deaths, healing, total_ubers, best_ubers_life, medic_drops, uber_drops, airshots, totalCrossbowHits, marketGardenHits, headshots, backstabs, "
+        ... "(steamid, first_seen, kills, deaths, healing, total_ubers, best_ubers_life, medic_drops, uber_drops, airshots, meatshots, totalCrossbowHits, marketGardenHits, headshots, backstabs, "
         ... "best_killstreak, assists, playtime, damage_dealt, damage_taken, last_seen, "
         ... "is_admin, country, shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers) "
-        ... "VALUES ('%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, "
+        ... "VALUES ('%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, "
         ... "%d, %d, %d, %d, %d, %d, %d, "
         ... "%d, '%s', %s) "
         ... "ON DUPLICATE KEY UPDATE "
@@ -570,6 +571,7 @@ void QueueStatsSave(int client, int userId, bool forceSync)
         ... "medic_drops = GREATEST(medic_drops, VALUES(medic_drops)), "
         ... "uber_drops = GREATEST(uber_drops, VALUES(uber_drops)), "
         ... "airshots = GREATEST(airshots, VALUES(airshots)), "
+        ... "meatshots = GREATEST(meatshots, VALUES(meatshots)), "
         ... "totalCrossbowHits = GREATEST(totalCrossbowHits, VALUES(totalCrossbowHits)), "
         ... "marketGardenHits = GREATEST(marketGardenHits, VALUES(marketGardenHits)), "
         ... "headshots = GREATEST(headshots, VALUES(headshots)), "
@@ -609,6 +611,7 @@ void QueueStatsSave(int client, int userId, bool forceSync)
         g_Stats[client].totalMedicDrops,
         g_Stats[client].totalUberDrops,
         g_Stats[client].totalAirshots,
+        g_Stats[client].totalMeatshots,
         g_Stats[client].totalCrossbowHits,
         g_Stats[client].totalMarketGardenHits,
         g_Stats[client].totalHeadshots,
