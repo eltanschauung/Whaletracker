@@ -193,14 +193,6 @@ public void OnPluginStart()
         true,
         0.0
     );
-    g_hTopScorePerMapLimit = CreateConVar(
-        "sm_whaletracker_top_score_per_map_limit",
-        "15",
-        "Per-map award cap for top-scoring player kills; 0 disables the cap.",
-        FCVAR_NONE,
-        true,
-        0.0
-    );
     g_hDamageTrackingGate = CreateConVar(
         "sm_whaletracker_damage_tracking_gate",
         "200",
@@ -263,22 +255,6 @@ public void OnPluginStart()
         "sm_whaletracker_soldier_sync_window",
         "1.0",
         "Seconds between rocket damage and rocket kill for soldier sync awards.",
-        FCVAR_NONE,
-        true,
-        0.0
-    );
-    g_hDemoSyncPerMap = CreateConVar(
-        "sm_whaletracker_demo_sync_per_map",
-        "0",
-        "Per-map award cap for demo sync kills; 0 disables the cap.",
-        FCVAR_NONE,
-        true,
-        0.0
-    );
-    g_hSoldierSyncPerMap = CreateConVar(
-        "sm_whaletracker_soldier_sync_per_map",
-        "0",
-        "Per-map award cap for soldier sync kills; 0 disables the cap.",
         FCVAR_NONE,
         true,
         0.0

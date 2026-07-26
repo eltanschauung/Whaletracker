@@ -285,7 +285,6 @@ ConVar g_hRankMinPlaytimeSeconds = null;
 ConVar g_hKillstreakBonusInterval = null;
 ConVar g_hSyncKillConfirmWindow = null;
 ConVar g_hTopScoreMinPlayers = null;
-ConVar g_hTopScorePerMapLimit = null;
 ConVar g_hDamageTrackingGate = null;
 ConVar g_hDamageSanityMax = null;
 ConVar g_hMinMatchRateMinutes = null;
@@ -294,8 +293,6 @@ ConVar g_hAirshotMinHeight = null;
 ConVar g_hAirborneBackstabMinHeight = null;
 ConVar g_hDemoSyncWindow = null;
 ConVar g_hSoldierSyncWindow = null;
-ConVar g_hDemoSyncPerMap = null;
-ConVar g_hSoldierSyncPerMap = null;
 ConVar g_hHitscanAccuracyHitDebounce = null;
 ConVar g_hMarketGardenKillWindow = null;
 ConVar g_hPeriodicSaveInterval = null;
@@ -366,11 +363,6 @@ int WT_GetTopScoreMinPlayers()
     return WT_GetConVarInt(g_hTopScoreMinPlayers, 10);
 }
 
-int WT_GetTopScorePerMapLimit()
-{
-    return WT_GetConVarInt(g_hTopScorePerMapLimit, 15);
-}
-
 int WT_GetDamageTrackingGate()
 {
     return WT_GetConVarInt(g_hDamageTrackingGate, 200);
@@ -414,16 +406,6 @@ float WT_GetDemoSyncWindow()
 float WT_GetSoldierSyncWindow()
 {
     return WT_GetConVarFloat(g_hSoldierSyncWindow, 1.0);
-}
-
-int WT_GetDemoSyncPerMap()
-{
-    return WT_GetConVarInt(g_hDemoSyncPerMap, 0);
-}
-
-int WT_GetSoldierSyncPerMap()
-{
-    return WT_GetConVarInt(g_hSoldierSyncPerMap, 0);
 }
 
 float WT_GetHitscanAccuracyHitDebounce()

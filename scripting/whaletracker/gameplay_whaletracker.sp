@@ -139,7 +139,7 @@ void AwardRoundTopScoringPlayerBonus()
         return;
     }
 
-    ApplyBonusPointsSteamId(g_sRoundTopScoringSteamId, 3, true, true, "top_scoring_player", 3);
+    ApplyBonusPointsSteamId(g_sRoundTopScoringSteamId, 3, true, true, "top_scoring_player", 2);
 }
 
 bool HasMultipleDominationsAfterKill(int client, int victim)
@@ -336,7 +336,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
             if (backstab && DistanceAboveGroundBox(attacker) >= WT_GetAirborneBackstabMinHeight())
             {
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "Airborne backstab", victim, WT_GetBonusDefaultDelay(), 0);
+                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "Airborne backstab", victim, WT_GetBonusDefaultDelay(), 3);
             }
 
             ApplyKillStats(g_Stats[attacker], backstab, medicDrop);
@@ -350,7 +350,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (ShouldAwardTopScoringPlayerBonus() && IsTopScoringEnemyPlayer(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "top_score_kill", victim, WT_GetBonusDefaultDelay(), WT_GetTopScorePerMapLimit());
+                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "top_score_kill", victim, WT_GetBonusDefaultDelay(), 10);
             }
             if (ConsumeMarketGardenKill(attacker, victim))
             {
@@ -365,30 +365,30 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (ConsumeDemoSyncKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "demo_sync_kill", 0, WT_GetBonusDefaultDelay(), WT_GetDemoSyncPerMap());
+                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "demo_sync_kill", 0, WT_GetBonusDefaultDelay(), 3);
             }
             if (ConsumeSoldierSyncKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "soldier_sync_kill", 0, WT_GetBonusDefaultDelay(), WT_GetSoldierSyncPerMap());
+                ApplyBonusPoints(attacker, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "soldier_sync_kill", 0, WT_GetBonusDefaultDelay(), 3);
             }
             if (victimClass == TF_CLASS_MEDIC)
             {
                 if (medicDrop)
                 {
-                    ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "medic_uber_drop_kill");
+                    ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "medic_uber_drop_kill", 0, WT_GetBonusDefaultDelay(), 2);
                 }
                 if (victimUberPercent >= 90)
                 {
                     char reason[64];
                     FormatEx(reason, sizeof(reason), "Medic high Übercharge kill (%d%%)", victimUberPercent);
-                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, reason, victim, WT_GetBonusDefaultDelay(), 0);
+                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, reason, victim, WT_GetBonusDefaultDelay(), 2);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERDOMINATION)
             {
                 if (HasMultipleDominationsAfterKill(attacker, victim))
                 {
-                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_GetBonusDefaultDelay(), 5);
+                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_GetBonusDefaultDelay(), 3);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERREVENGE)
@@ -410,13 +410,13 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             {
                 char reason[32];
                 Format(reason, sizeof(reason), "Assists: %d", assistsLife);
-                ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, reason, 0, WT_GetBonusDefaultDelay(), 0);
+                ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, reason, 0, WT_GetBonusDefaultDelay(), 4);
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERDOMINATION)
             {
                 if (HasMultipleDominationsAfterKill(assister, victim))
                 {
-                    ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_GetBonusDefaultDelay(), 5);
+                    ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_GetBonusDefaultDelay(), 3);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERREVENGE)
@@ -630,7 +630,7 @@ public void Event_UberDeployed(Event event, const char[] name, bool dontBroadcas
 
     ApplyUberStats(g_Stats[medic]);
     ApplyUberStats(g_MapStats[medic]);
-    ApplyBonusPoints(medic, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "uber_deployed", 0, WT_GetBonusDefaultDelay(), 3);
+    ApplyBonusPoints(medic, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "uber_deployed", 0, WT_GetBonusDefaultDelay(), 4);
     MarkClientDirty(medic);
 }
 
@@ -1007,7 +1007,7 @@ void AwardReflectBonus(int attacker, bool wasDirectHit)
 
     if (wasDirectHit)
     {
-        ApplyBonusPoints(attacker, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "reflect_direct_hit", 0, WT_GetBonusDefaultDelay(), 0);
+        ApplyBonusPoints(attacker, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "reflect_direct_hit", 0, WT_GetBonusDefaultDelay(), 3);
     }
 }
 
