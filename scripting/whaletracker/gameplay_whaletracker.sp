@@ -448,7 +448,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
         {
             AnnounceMedicDrop(attacker, victim);
         }
-        if (victimUberPercent >= 90)
+        if (victimUberPercent >= 90 && victimUberPercent <= 99)
         {
             AnnounceHighUberDeath(victim, victimUberPercent);
         }
