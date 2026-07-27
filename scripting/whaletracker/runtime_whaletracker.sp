@@ -259,6 +259,14 @@ public void OnPluginStart()
         true,
         0.0
     );
+    g_hJuggleWindow = CreateConVar(
+        "sm_whaletracker_juggle_window",
+        "1.5",
+        "Seconds allowed between two airborne projectile direct hits for a Juggle award.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
     g_hHitscanAccuracyHitDebounce = CreateConVar(
         "sm_whaletracker_hitscan_accuracy_hit_debounce",
         "0.05",

@@ -14,6 +14,8 @@ int g_iPendingSoldierSyncAttacker[MAXPLAYERS + 1];
 float g_fPendingSoldierSyncRocketTime[MAXPLAYERS + 1];
 int g_iPendingSoldierSyncKillAttacker[MAXPLAYERS + 1];
 float g_fPendingSoldierSyncKillTime[MAXPLAYERS + 1];
+int g_iPendingJuggleAttackerUserId[MAXPLAYERS + 1];
+float g_fPendingJuggleDirectHitTime[MAXPLAYERS + 1];
 char g_sRoundTopScoringSteamId[STEAMID64_LEN];
 int g_iRoundTopScoringScore = 0;
 
@@ -209,6 +211,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
     ResetReflectKillCandidate(client);
     ResetDemoSyncState(client);
     ResetSoldierSyncState(client);
+    ResetJuggleState(client);
     ResetLifeCounters(g_Stats[client]);
     ResetLifeCounters(g_MapStats[client]);
 }
@@ -525,6 +528,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
             if (IsValidProjectileDirectHit(attacker, victim, weapon, wasDirectHit))
             {
                 FireProjectileDirectHitForward(attacker, victim, weapon);
+                RegisterJuggleDirectHit(attacker, victim);
                 if (IsWeaponClass(weapon, "tf_weapon_grenadelauncher"))
                 {
                     MarkDemoSyncKillCandidate(attacker, victim);
@@ -1186,6 +1190,42 @@ bool IsValidProjectileDirectHit(int attacker, int victim, int weapon, bool wasDi
 
     int primary = GetPlayerWeaponSlot(attacker, 0);
     return primary > MaxClients && primary == weapon;
+}
+
+void RegisterJuggleDirectHit(int attacker, int victim)
+{
+    if (!IsVictimAirshotEligible(victim))
+    {
+        ResetJuggleState(victim);
+        return;
+    }
+
+    int attackerUserId = GetClientUserId(attacker);
+    float now = GetGameTime();
+    bool completedJuggle = g_iPendingJuggleAttackerUserId[victim] == attackerUserId
+        && g_fPendingJuggleDirectHitTime[victim] > 0.0
+        && now - g_fPendingJuggleDirectHitTime[victim] <= WT_GetJuggleWindow();
+
+    if (completedJuggle)
+    {
+        ResetJuggleState(victim);
+        ApplyBonusPoints(attacker, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "Juggle", 0, WT_GetBonusDefaultDelay(), 3);
+        return;
+    }
+
+    g_iPendingJuggleAttackerUserId[victim] = attackerUserId;
+    g_fPendingJuggleDirectHitTime[victim] = now;
+}
+
+void ResetJuggleState(int client)
+{
+    if (client < 1 || client > MaxClients)
+    {
+        return;
+    }
+
+    g_iPendingJuggleAttackerUserId[client] = 0;
+    g_fPendingJuggleDirectHitTime[client] = 0.0;
 }
 
 void MarkDemoSyncStickyDamage(int attacker, int victim)

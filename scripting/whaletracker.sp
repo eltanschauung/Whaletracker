@@ -293,6 +293,7 @@ ConVar g_hAirshotMinHeight = null;
 ConVar g_hAirborneBackstabMinHeight = null;
 ConVar g_hDemoSyncWindow = null;
 ConVar g_hSoldierSyncWindow = null;
+ConVar g_hJuggleWindow = null;
 ConVar g_hHitscanAccuracyHitDebounce = null;
 ConVar g_hMarketGardenKillWindow = null;
 ConVar g_hPeriodicSaveInterval = null;
@@ -406,6 +407,11 @@ float WT_GetDemoSyncWindow()
 float WT_GetSoldierSyncWindow()
 {
     return WT_GetConVarFloat(g_hSoldierSyncWindow, 1.0);
+}
+
+float WT_GetJuggleWindow()
+{
+    return WT_GetConVarFloat(g_hJuggleWindow, 1.5);
 }
 
 float WT_GetHitscanAccuracyHitDebounce()
