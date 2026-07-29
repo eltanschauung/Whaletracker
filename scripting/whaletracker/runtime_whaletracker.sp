@@ -291,6 +291,7 @@ public void OnPluginStart()
         true,
         1.0
     );
+    WhaleTracker_CreatePlaytimeMilestoneConVars();
 
     AutoExecConfig(true, "whaletracker");
 
@@ -579,6 +580,8 @@ public void OnPluginEnd()
 
 public void OnClientPutInServer(int client)
 {
+    WhaleTracker_ResetPlaytimeMilestoneClient(client);
+
     if (IsFakeClient(client))
     {
         SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
@@ -657,6 +660,7 @@ public void OnClientDisconnect(int client)
     }
 
     SaveClientStats(client, true, true);
+    WhaleTracker_ResetPlaytimeMilestoneClient(client);
     CacheWhalePointsOnDisconnect(client);
     RemoveOnlineStats(client);
     ResetAllStats(client);

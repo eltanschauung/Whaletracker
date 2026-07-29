@@ -25,6 +25,7 @@ void WhaleTracker_MaybeMarkDatabaseReady()
     WhaleTracker_EnsurePointsCacheIndexes();
     WhaleTracker_EnsureRoundStatisticsTable();
     WhaleTracker_EnsureHistoricalTable();
+    WhaleTracker_EnsurePlaytimeMilestoneTable();
     PumpSaveQueue();
 }
 
@@ -137,6 +138,8 @@ void WhaleTracker_RequestSchemaReadyCheck()
 
 public void WhaleTracker_SQLConnect()
 {
+    WhaleTracker_ResetPlaytimeMilestoneDatabaseState();
+
     if (g_hReconnectTimer != null)
     {
         CloseHandle(g_hReconnectTimer);
@@ -421,6 +424,7 @@ public void WhaleTracker_LoadCallback(Database db, DBResultSet results, const ch
 
     TouchClientLastSeen(index);
     WhaleTracker_RefreshClientTrackingState(index);
+    WhaleTracker_CheckPlaytimeMilestones(index);
 }
 
 public void WhaleTracker_LoadOnlineSnapshotCallback(Database db, DBResultSet results, const char[] error, any data)
@@ -646,6 +650,7 @@ bool SaveClientStats(int client, bool includeMapStats, bool forceSave, bool forc
     }
 
     bool playtimeChanged = AccumulatePlaytime(client);
+    WhaleTracker_CheckPlaytimeMilestones(client);
 
     g_KillSaveCounter[client] = 0;
 

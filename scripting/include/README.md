@@ -27,6 +27,15 @@ Only plugin-facing natives and forwards are listed here; third-party includes ar
 - `PointsStore_HasPurchase` - Returns whether a client owns a shop item.
 - `PointsStore_GetPurchasePrice` - Returns the price paid for a shop item.
 
+## server_mail.inc
+- `ServerMail_Send` - Sends ordinary mail between connected clients.
+- `ServerMail_SendCustom` - Sends custom-titled mail between connected clients.
+- `ServerMail_SendCurrency` - Sends currency mail between connected clients.
+- `ServerMail_SendSteamId` - Sends ordinary mail to an offline-capable SteamID64.
+- `ServerMail_SendCustomSteamId` - Sends custom-titled mail to an offline-capable SteamID64.
+- `ServerMail_SendCurrencySteamId` - Sends idempotent currency mail to an offline-capable SteamID64.
+- `ServerMail_OnMailSendResult` - Reports the confirmed result of an API mail insert.
+
 ## whaletracker_api.inc
 - `WhaleTracker_GetCumulativeKills` - Returns a client's cumulative tracked kills.
 - `WhaleTracker_AreStatsLoaded` - Returns whether a client's WhaleTracker stats are loaded.

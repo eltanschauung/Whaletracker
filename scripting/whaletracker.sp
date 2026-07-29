@@ -91,6 +91,7 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("PointsStore_ApplyBonusPoints");
     MarkNativeAsOptional("PointsStore_ApplyBonusPointsSteamId");
     MarkNativeAsOptional("PointsStore_SpendBonusPoints");
+    MarkNativeAsOptional("ServerMail_SendCurrencySteamId");
     RegPluginLibrary("whaletracker");
     CreateNative("WhaleTracker_GetCumulativeKills", Native_WhaleTracker_GetCumulativeKills);
     CreateNative("WhaleTracker_AreStatsLoaded", Native_WhaleTracker_AreStatsLoaded);
@@ -439,6 +440,9 @@ bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 #undef REQUIRE_PLUGIN
 #include "include/points_store_api.inc"
 #define REQUIRE_PLUGIN
+#undef REQUIRE_PLUGIN
+#include "include/server_mail.inc"
+#define REQUIRE_PLUGIN
 #include "include/whaletracker.inc"
 #include "whaletracker/motd_whaletracker.sp"
 #undef REQUIRE_EXTENSIONS
@@ -448,3 +452,4 @@ bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 #include "whaletracker/database_whaletracker.sp"
 #include "whaletracker/gameplay_whaletracker.sp"
 #include "whaletracker/commands_whaletracker.sp"
+#include "whaletracker/milestones_whaletracker.sp"
