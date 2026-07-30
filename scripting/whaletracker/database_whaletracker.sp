@@ -495,6 +495,7 @@ public void WhaleTracker_LoadOnlineSnapshotCallback(Database db, DBResultSet res
     g_MapStats[client].connectTime = GetEngineTime();
     TouchClientLastSeen(client);
     WhaleTracker_RefreshClientTrackingState(client);
+    WhaleTracker_CheckPlaytimeMilestones(client);
 }
 
 bool HasMapActivity(WhaleStats stats)

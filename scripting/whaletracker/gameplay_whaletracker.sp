@@ -344,6 +344,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
             ApplyKillStats(g_Stats[attacker], backstab, medicDrop);
             ApplyKillStats(g_MapStats[attacker], backstab, medicDrop);
+            WhaleTracker_CheckPlaytimeMilestones(attacker);
             RegisterMultikill(attacker);
             int killstreak = g_Stats[attacker].currentKillstreak;
             int killstreakBonusInterval = WT_GetKillstreakBonusInterval();

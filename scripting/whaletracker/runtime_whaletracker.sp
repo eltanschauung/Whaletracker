@@ -357,7 +357,7 @@ public void OnPluginStart()
     {
         CloseHandle(g_hPeriodicSaveTimer);
     }
-    g_hPeriodicSaveTimer = CreateTimer(WT_GetPeriodicSaveInterval(), Timer_GlobalSave, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+    g_hPeriodicSaveTimer = CreateTimer(WT_GetPeriodicSaveInterval(), Timer_GlobalSave, _, TIMER_REPEAT);
 
     g_hAirshotForward = CreateGlobalForward("WhaleTracker_OnAirshot", ET_Ignore, Param_Cell, Param_Cell);
     g_hProjectileDirectHitForward = CreateGlobalForward("WhaleTracker_OnProjectileDirectHit", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
