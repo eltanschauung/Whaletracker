@@ -163,6 +163,7 @@ void WhaleTracker_CheckPlaytimeMilestones(int client)
         || IsFakeClient(client)
         || !g_Stats[client].loaded
         || g_Stats[client].steamId[0] == '\0'
+        || g_MapStats[client].kills <= 0
         || g_hDatabase == null)
     {
         return;
