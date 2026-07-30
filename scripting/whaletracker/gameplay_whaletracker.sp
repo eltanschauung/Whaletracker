@@ -321,6 +321,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
     bool attackerIsHuman = IsValidClient(attacker) && !IsFakeClient(attacker) && attacker != victim;
     bool attackerScoredMedicDrop = false;
     bool victimMedicDrop = false;
+    bool victimUberBonusEligible = true;
     int victimUberPercent = -1;
 
     if (!(deathFlags & TF_DEATHFLAG_DEADRINGER))
@@ -328,6 +329,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
         if (victimIsHuman && victimClass == TF_CLASS_MEDIC)
         {
             victimUberPercent = GetMedicUberPercent(victim);
+            victimUberBonusEligible = IsMedicUberBonusEligible(victim);
         }
         victimMedicDrop = victimIsHuman && IsMedicDrop(victim);
 
@@ -377,11 +379,11 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             if (victimClass == TF_CLASS_MEDIC)
             {
-                if (medicDrop)
+                if (medicDrop && victimUberBonusEligible)
                 {
                     ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "medic_uber_drop_kill", 0, WT_GetBonusDefaultDelay(), 2);
                 }
-                if (victimUberPercent >= 90)
+                if (victimUberBonusEligible && victimUberPercent >= 90)
                 {
                     char reason[64];
                     FormatEx(reason, sizeof(reason), "Medic high Übercharge kill (%d%%)", victimUberPercent);
@@ -635,8 +637,23 @@ public void Event_UberDeployed(Event event, const char[] name, bool dontBroadcas
 
     ApplyUberStats(g_Stats[medic]);
     ApplyUberStats(g_MapStats[medic]);
-    ApplyBonusPoints(medic, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "uber_deployed", 0, WT_GetBonusDefaultDelay(), 4);
+    if (IsMedicUberBonusEligible(medic))
+    {
+        ApplyBonusPoints(medic, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "uber_deployed", 0, WT_GetBonusDefaultDelay(), 4);
+    }
     MarkClientDirty(medic);
+}
+
+bool IsMedicUberBonusEligible(int medic)
+{
+    if (!IsValidClient(medic) || IsFakeClient(medic) || TF2_GetPlayerClass(medic) != TFClass_Medic)
+    {
+        return false;
+    }
+
+    int medigun = GetPlayerWeaponSlot(medic, 1);
+    int defIndex = GetWeaponDefIndexSafe(medigun);
+    return defIndex != WT_QUICK_FIX_DEF_INDEX && defIndex != WT_VACCINATOR_DEF_INDEX;
 }
 
 bool IsMedicDrop(int victim)
