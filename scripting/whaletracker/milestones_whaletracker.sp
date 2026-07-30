@@ -433,7 +433,7 @@ void WhaleTracker_AnnounceStimulus(int client)
     char currencyColor[40];
     WhaleTracker_GetCurrencyColor(currencyColor, sizeof(currencyColor));
     CPrintToChat(client,
-        "{gold}[WhaleTracker]{default} You now have 10 hours of playtime on this server, use !mail to collect a %sStimulus Check{default}!",
+        "{gold}[WhaleTracker]{default} Use {gold}!mail{default} to collect your %sStimulus Check{default}.",
         currencyColor);
 
     char coloredName[256];
