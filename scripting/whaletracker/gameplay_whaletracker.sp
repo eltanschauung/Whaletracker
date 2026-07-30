@@ -637,7 +637,7 @@ public void Event_UberDeployed(Event event, const char[] name, bool dontBroadcas
 
     ApplyUberStats(g_Stats[medic]);
     ApplyUberStats(g_MapStats[medic]);
-    if (IsMedicUberBonusEligible(medic))
+    if (WhaleTracker_IsRoundRunning() && IsMedicUberBonusEligible(medic))
     {
         ApplyBonusPoints(medic, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "uber_deployed", 0, WT_GetBonusDefaultDelay(), 4);
     }
