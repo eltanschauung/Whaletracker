@@ -34,6 +34,7 @@ Only plugin-facing natives and forwards are listed here; third-party includes ar
 - `ServerMail_SendSteamId` - Sends ordinary mail to an offline-capable SteamID64.
 - `ServerMail_SendCustomSteamId` - Sends custom-titled mail to an offline-capable SteamID64.
 - `ServerMail_SendCurrencySteamId` - Sends idempotent currency mail to an offline-capable SteamID64.
+- `ServerMail_CheckPendingStimulus` - Checks a participating client for pending deployed Stimulus Checks.
 - `ServerMail_OnMailSendResult` - Reports the confirmed result of an API mail insert.
 
 ## whaletracker_api.inc

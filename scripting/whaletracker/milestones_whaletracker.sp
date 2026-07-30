@@ -156,8 +156,24 @@ bool WhaleTracker_IsSameMilestoneClient(int client, const char[] steamId64)
         && StrEqual(g_Stats[client].steamId, steamId64);
 }
 
+void WhaleTracker_CheckPendingStimulusMail(int client)
+{
+    if (!IsValidClient(client)
+        || IsFakeClient(client)
+        || !g_MapStats[client].loaded
+        || g_MapStats[client].kills <= 0
+        || GetFeatureStatus(FeatureType_Native, "ServerMail_CheckPendingStimulus") != FeatureStatus_Available)
+    {
+        return;
+    }
+
+    ServerMail_CheckPendingStimulus(client);
+}
+
 void WhaleTracker_CheckPlaytimeMilestones(int client)
 {
+    WhaleTracker_CheckPendingStimulusMail(client);
+
     if (!g_bPlaytimeMilestoneSchemaReady
         || !IsValidClient(client)
         || IsFakeClient(client)
