@@ -1704,7 +1704,7 @@ bool WhaleTracker_IsRankedTotals(int kills, int deaths, int playtime)
         && safePlaytime >= WT_GetRankMinPlaytimeSeconds();
 }
 
-int WhaleTracker_GetRankedPlaytimeHoursForClient(int client)
+int WhaleTracker_GetRankedPlaytimeSecondsForClient(int client)
 {
     if (!WhaleTracker_AreClientStatsReady(client))
     {
@@ -1717,10 +1717,10 @@ int WhaleTracker_GetRankedPlaytimeHoursForClient(int client)
         return 0;
     }
 
-    return playtime / WT_SECONDS_PER_HOUR;
+    return playtime;
 }
 
-int WhaleTracker_GetRankedPlaytimeHoursForSteamId(const char[] identity)
+int WhaleTracker_GetRankedPlaytimeSecondsForSteamId(const char[] identity)
 {
     char steamId64[STEAMID64_LEN];
     if (!WhaleTracker_NormalizeSteamId64(identity, steamId64, sizeof(steamId64)))
@@ -1731,7 +1731,7 @@ int WhaleTracker_GetRankedPlaytimeHoursForSteamId(const char[] identity)
     int client = WhaleTracker_FindClientBySteamId64(steamId64);
     if (client > 0 && WhaleTracker_AreClientStatsReady(client))
     {
-        return WhaleTracker_GetRankedPlaytimeHoursForClient(client);
+        return WhaleTracker_GetRankedPlaytimeSecondsForClient(client);
     }
 
     if (!g_bDatabaseReady || g_hDatabase == null)
@@ -1753,11 +1753,11 @@ int WhaleTracker_GetRankedPlaytimeHoursForSteamId(const char[] identity)
     {
         char error[256];
         GetSyncDatabaseError(error, sizeof(error));
-        LogError("[WhaleTracker] RankedPlaytimeHours query failed: %s", error);
+        LogError("[WhaleTracker] RankedPlaytimeSeconds query failed: %s", error);
         return 0;
     }
 
-    int hours;
+    int rankedPlaytime;
     if (results.FetchRow())
     {
         int kills = results.FetchInt(0);
@@ -1766,12 +1766,22 @@ int WhaleTracker_GetRankedPlaytimeHoursForSteamId(const char[] identity)
 
         if (WhaleTracker_IsRankedTotals(kills, deaths, playtime))
         {
-            hours = playtime / WT_SECONDS_PER_HOUR;
+            rankedPlaytime = playtime;
         }
     }
 
     delete results;
-    return hours;
+    return rankedPlaytime;
+}
+
+int WhaleTracker_GetRankedPlaytimeHoursForClient(int client)
+{
+    return WhaleTracker_GetRankedPlaytimeSecondsForClient(client) / WT_SECONDS_PER_HOUR;
+}
+
+int WhaleTracker_GetRankedPlaytimeHoursForSteamId(const char[] identity)
+{
+    return WhaleTracker_GetRankedPlaytimeSecondsForSteamId(identity) / WT_SECONDS_PER_HOUR;
 }
 
 public any Native_WhaleTracker_GetRankedPlaytimeHours(Handle plugin, int numParams)
@@ -1795,6 +1805,29 @@ public any Native_WhaleTracker_GetRankedPlaytimeHours(Handle plugin, int numPara
     char identity[STEAMID64_LEN];
     GetNativeString(2, identity, sizeof(identity));
     return WhaleTracker_GetRankedPlaytimeHoursForSteamId(identity);
+}
+
+public any Native_WhaleTracker_GetRankedPlaytimeSeconds(Handle plugin, int numParams)
+{
+    int client = GetNativeCell(1);
+    if (client > 0)
+    {
+        if (client > MaxClients)
+        {
+            return 0;
+        }
+
+        return WhaleTracker_GetRankedPlaytimeSecondsForClient(client);
+    }
+
+    if (numParams < 2)
+    {
+        return 0;
+    }
+
+    char identity[STEAMID64_LEN];
+    GetNativeString(2, identity, sizeof(identity));
+    return WhaleTracker_GetRankedPlaytimeSecondsForSteamId(identity);
 }
 
 public any Native_WhaleTracker_GetWhalePoints(Handle plugin, int numParams)

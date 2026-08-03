@@ -99,6 +99,7 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     CreateNative("WhaleTracker_AreStatsLoaded", Native_WhaleTracker_AreStatsLoaded);
     CreateNative("WhaleTracker_HasPlaytimeHours", Native_WhaleTracker_HasPlaytimeHours);
     CreateNative("WhaleTracker_GetRankedPlaytimeHours", Native_WhaleTracker_GetRankedPlaytimeHours);
+    CreateNative("WhaleTracker_GetRankedPlaytimeSeconds", Native_WhaleTracker_GetRankedPlaytimeSeconds);
     CreateNative("WhaleTracker_GetWhalePoints", Native_WhaleTracker_GetWhalePoints);
     CreateNative("WhaleTracker_ComputeWhalePoints", Native_WhaleTracker_ComputeWhalePoints);
     CreateNative("WhaleTracker_GetLastRecordedName", Native_WhaleTracker_GetLastRecordedName);
