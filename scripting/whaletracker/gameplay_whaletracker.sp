@@ -653,7 +653,7 @@ bool IsMedicUberBonusEligible(int medic)
 
     int medigun = GetPlayerWeaponSlot(medic, 1);
     int defIndex = GetWeaponDefIndexSafe(medigun);
-    return defIndex != WT_QUICK_FIX_DEF_INDEX && defIndex != WT_VACCINATOR_DEF_INDEX;
+    return defIndex != WT_VACCINATOR_DEF_INDEX;
 }
 
 bool IsMedicDrop(int victim)
