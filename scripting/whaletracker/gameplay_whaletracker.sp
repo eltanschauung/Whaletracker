@@ -454,7 +454,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
         {
             AnnounceMedicDrop(attacker, victim);
         }
-        if (victimUberPercent >= 90 && victimUberPercent <= 99)
+        if (victimUberPercent >= 95 && victimUberPercent <= 99)
         {
             AnnounceHighUberDeath(victim, victimUberPercent);
         }
@@ -640,6 +640,10 @@ public void Event_UberDeployed(Event event, const char[] name, bool dontBroadcas
     if (WhaleTracker_IsRoundRunning() && IsMedicUberBonusEligible(medic))
     {
         ApplyBonusPoints(medic, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "uber_deployed", 0, WT_GetBonusDefaultDelay(), 4);
+        if (g_Stats[medic].currentUbersLife == WT_UBERS_LIFE_BONUS_INTERVAL)
+        {
+            ApplyBonusPoints(medic, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "3 Übercharges this life", 0, WT_GetBonusDefaultDelay(), 3);
+        }
     }
     MarkClientDirty(medic);
 }
