@@ -650,7 +650,7 @@ public void TF2Shotgun_OnPelletShot(int attacker, int victim, int pellets, int t
     g_MapStats[attacker].currentMeatshotKillsLife++;
     if (g_Stats[attacker].currentMeatshotKillsLife % WT_MEATSHOT_KILLS_LIFE_BONUS_INTERVAL == 0)
     {
-        ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "meatshot_kills_2", 0, WT_GetBonusDefaultDelay(), 10);
+        ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "meatshot_kills_2", 0, WT_GetBonusDefaultDelay(), 5);
     }
 }
 
