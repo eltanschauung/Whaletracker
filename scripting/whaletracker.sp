@@ -56,6 +56,11 @@
 #define TF_CLASS_MEDIC          5
 #define WT_MEDIC_ASSISTS_LIFE_BONUS_INTERVAL 4
 #define WT_UBERS_LIFE_BONUS_INTERVAL 3
+#define WT_MEATSHOT_KILLS_LIFE_BONUS_INTERVAL 2
+#define WT_BACKSTABS_LIFE_BONUS_INTERVAL 4
+#define WT_BACKSTABS_LIFE_HIGH_BONUS 10
+#define WT_HEADSHOT_KILLS_LIFE_BONUS_INTERVAL 4
+#define WT_HEADSHOT_KILLS_LIFE_HIGH_BONUS 10
 #define MENU_TITLE "Whale Tracker Stats"
 #define WT_TEAM_SPECTATOR 1
 #define WT_BONUS_POINTS_SOUND "xp_gain"
@@ -182,6 +187,9 @@ enum struct WhaleStats
     int currentKillstreak;
     int currentUbersLife;
     int currentAssistsLife;
+    int currentMeatshotKillsLife;
+    int currentBackstabsLife;
+    int currentHeadshotKillsLife;
 
     float connectTime;
 

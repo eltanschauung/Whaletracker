@@ -14,6 +14,9 @@ void ResetRuntimeCounters(WhaleStats stats)
     stats.currentKillstreak = 0;
     stats.currentUbersLife = 0;
     stats.currentAssistsLife = 0;
+    stats.currentMeatshotKillsLife = 0;
+    stats.currentBackstabsLife = 0;
+    stats.currentHeadshotKillsLife = 0;
 }
 
 void ResetStatsStruct(WhaleStats stats, bool resetIdentity)
@@ -2187,9 +2190,12 @@ void ResetLifeCounters(WhaleStats stats)
     stats.currentKillstreak = 0;
     stats.currentUbersLife = 0;
     stats.currentAssistsLife = 0;
+    stats.currentMeatshotKillsLife = 0;
+    stats.currentBackstabsLife = 0;
+    stats.currentHeadshotKillsLife = 0;
 }
 
-void ApplyKillStats(WhaleStats stats, bool backstab, bool medicDrop)
+void ApplyKillStats(WhaleStats stats, bool backstab, bool headshotKill, bool medicDrop)
 {
     stats.kills++;
 
@@ -2203,6 +2209,11 @@ void ApplyKillStats(WhaleStats stats, bool backstab, bool medicDrop)
     if (backstab)
     {
         stats.totalBackstabs++;
+        stats.currentBackstabsLife++;
+    }
+    if (headshotKill)
+    {
+        stats.currentHeadshotKillsLife++;
     }
     if (medicDrop)
     {

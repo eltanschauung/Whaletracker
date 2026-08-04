@@ -337,6 +337,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
         {
             int custom = event.GetInt("customkill");
             bool backstab = (custom == TF_CUSTOM_BACKSTAB);
+            bool headshotKill = (custom == TF_CUSTOM_HEADSHOT || custom == TF_CUSTOM_HEADSHOT_DECAPITATION);
             bool medicDrop = victimMedicDrop;
 
             if (backstab && DistanceAboveGroundBox(attacker) >= WT_GetAirborneBackstabMinHeight())
@@ -344,8 +345,32 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
                 ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "Airborne backstab", victim, WT_GetBonusDefaultDelay(), 3);
             }
 
-            ApplyKillStats(g_Stats[attacker], backstab, medicDrop);
-            ApplyKillStats(g_MapStats[attacker], backstab, medicDrop);
+            ApplyKillStats(g_Stats[attacker], backstab, headshotKill, medicDrop);
+            ApplyKillStats(g_MapStats[attacker], backstab, headshotKill, medicDrop);
+            if (backstab)
+            {
+                int backstabsLife = g_Stats[attacker].currentBackstabsLife;
+                if (backstabsLife % WT_BACKSTABS_LIFE_BONUS_INTERVAL == 0)
+                {
+                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "backstabs_life_4", 0, WT_GetBonusDefaultDelay(), 3);
+                }
+                if (backstabsLife == WT_BACKSTABS_LIFE_HIGH_BONUS)
+                {
+                    ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "backstabs_life_10", 0, WT_GetBonusDefaultDelay(), 1);
+                }
+            }
+            if (headshotKill)
+            {
+                int headshotsLife = g_Stats[attacker].currentHeadshotKillsLife;
+                if (headshotsLife % WT_HEADSHOT_KILLS_LIFE_BONUS_INTERVAL == 0)
+                {
+                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "headshot_kills_life_4", 0, WT_GetBonusDefaultDelay(), 4);
+                }
+                if (headshotsLife == WT_HEADSHOT_KILLS_LIFE_HIGH_BONUS)
+                {
+                    ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "headshot_kills_life_10", 0, WT_GetBonusDefaultDelay(), 1);
+                }
+            }
             WhaleTracker_CheckPlaytimeMilestones(attacker);
             RegisterMultikill(attacker);
             int killstreak = g_Stats[attacker].currentKillstreak;
@@ -602,7 +627,7 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] weaponname
 
 public void TF2Shotgun_OnPelletShot(int attacker, int victim, int pellets, int total, bool kill)
 {
-    if (pellets != 10 || total != 10
+    if (total < 1 || pellets != total
         || !IsValidClient(attacker) || IsFakeClient(attacker)
         || !IsValidClient(victim) || IsFakeClient(victim)
         || attacker == victim || !WhaleTracker_IsTrackingEnabled(attacker))
@@ -610,8 +635,23 @@ public void TF2Shotgun_OnPelletShot(int attacker, int victim, int pellets, int t
         return;
     }
 
-    g_Stats[attacker].totalMeatshots++;
-    MarkClientDirty(attacker);
+    if (pellets == 10 && total == 10)
+    {
+        g_Stats[attacker].totalMeatshots++;
+        MarkClientDirty(attacker);
+    }
+
+    if (!kill)
+    {
+        return;
+    }
+
+    g_Stats[attacker].currentMeatshotKillsLife++;
+    g_MapStats[attacker].currentMeatshotKillsLife++;
+    if (g_Stats[attacker].currentMeatshotKillsLife % WT_MEATSHOT_KILLS_LIFE_BONUS_INTERVAL == 0)
+    {
+        ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "meatshot_kills_2", 0, WT_GetBonusDefaultDelay(), 10);
+    }
 }
 
 public void Event_PlayerHealed(Event event, const char[] name, bool dontBroadcast)
