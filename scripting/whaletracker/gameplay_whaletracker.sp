@@ -16,6 +16,7 @@ int g_iPendingSoldierSyncKillAttacker[MAXPLAYERS + 1];
 float g_fPendingSoldierSyncKillTime[MAXPLAYERS + 1];
 int g_iPendingJuggleAttackerUserId[MAXPLAYERS + 1];
 float g_fPendingJuggleDirectHitTime[MAXPLAYERS + 1];
+int g_iPendingAirShotAttackerUserId[MAXPLAYERS + 1];
 char g_sRoundTopScoringSteamId[STEAMID64_LEN];
 int g_iRoundTopScoringScore = 0;
 
@@ -141,7 +142,7 @@ void AwardRoundTopScoringPlayerBonus()
         return;
     }
 
-    ApplyBonusPointsSteamId(g_sRoundTopScoringSteamId, 3, true, true, "top_scoring_player", 2);
+    FireTopScoringPlayerRoundEnd(g_sRoundTopScoringSteamId);
 }
 
 bool HasMultipleDominationsAfterKill(int client, int victim)
@@ -326,6 +327,11 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
     if (!(deathFlags & TF_DEATHFLAG_DEADRINGER))
     {
+        if (victimIsHuman && attackerIsHuman)
+        {
+            TryHandleDropShot(event, attacker, victim);
+        }
+
         if (victimIsHuman && victimClass == TF_CLASS_MEDIC)
         {
             victimUberPercent = GetMedicUberPercent(victim);
@@ -344,7 +350,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
             if (backstab && DistanceAboveGroundBox(attacker) >= WT_GetAirborneBackstabMinHeight())
             {
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "Airborne backstab", victim, WT_GetBonusDefaultDelay(), 3);
+                FireAirborneBackstab(attacker, victim);
             }
 
             ApplyKillStats(g_Stats[attacker], backstab, headshotKill, medicDrop);
@@ -352,26 +358,12 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             if (spyBackstab)
             {
                 int backstabsLife = g_Stats[attacker].currentBackstabsLife;
-                if (backstabsLife % WT_BACKSTABS_LIFE_BONUS_INTERVAL == 0)
-                {
-                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "backstabs_life_3", 0, WT_GetBonusDefaultDelay(), 3);
-                }
-                if (backstabsLife == WT_BACKSTABS_LIFE_HIGH_BONUS)
-                {
-                    ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "backstabs_life_6", 0, WT_GetBonusDefaultDelay(), 1);
-                }
+                FireBackstabMilestone(attacker, backstabsLife);
             }
             if (sniperHeadshotKill)
             {
                 int headshotsLife = g_Stats[attacker].currentHeadshotKillsLife;
-                if (headshotsLife % WT_HEADSHOT_KILLS_LIFE_BONUS_INTERVAL == 0)
-                {
-                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "headshot_kills_life_4", 0, WT_GetBonusDefaultDelay(), 4);
-                }
-                if (headshotsLife == WT_HEADSHOT_KILLS_LIFE_HIGH_BONUS)
-                {
-                    ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "headshot_kills_life_10", 0, WT_GetBonusDefaultDelay(), 1);
-                }
+                FireHeadshotMilestone(attacker, headshotsLife);
             }
             WhaleTracker_CheckPlaytimeMilestones(attacker);
             RegisterMultikill(attacker);
@@ -379,54 +371,50 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             int killstreakBonusInterval = WT_GetKillstreakBonusInterval();
             if (killstreak > 0 && killstreak % killstreakBonusInterval == 0)
             {
-                FireKillstreakForward(attacker, killstreak);
+                FireKillstreak(attacker, killstreak);
             }
             if (ShouldAwardTopScoringPlayerBonus() && IsTopScoringEnemyPlayer(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "top_score_kill", victim, WT_GetBonusDefaultDelay(), 10);
+                FireTopScorerKill(attacker, victim);
             }
             if (ConsumeMarketGardenKill(attacker, victim))
             {
-                char marketGardenType[32];
-                GetMarketGardenKillBonusType(attacker, marketGardenType, sizeof(marketGardenType));
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, marketGardenType, 0, WT_GetBonusDefaultDelay(), 5);
+                FireMarketGardenKill(attacker, victim, view_as<int>(TF2_GetPlayerClass(attacker)));
             }
             bool reflectDirectHit = false;
             if (ConsumeReflectKill(attacker, victim, reflectDirectHit))
             {
-                AwardReflectBonus(attacker, reflectDirectHit);
+                FireReflectKill(attacker, victim, reflectDirectHit);
             }
             if (ConsumeDemoSyncKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "demo_sync_kill", 0, WT_GetBonusDefaultDelay(), 3);
+                FireDemoSyncKill(attacker, victim);
             }
             if (ConsumeSoldierSyncKill(attacker, victim))
             {
-                ApplyBonusPoints(attacker, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "soldier_sync_kill", 0, WT_GetBonusDefaultDelay(), 3);
+                FireSoldierSyncKill(attacker, victim);
             }
             if (victimClass == TF_CLASS_MEDIC)
             {
                 if (medicDrop && victimUberBonusEligible)
                 {
-                    ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "medic_uber_drop_kill", 0, WT_GetBonusDefaultDelay(), 2);
+                    FireMedicUberDropKill(attacker, victim);
                 }
                 if (victimUberBonusEligible && victimUberPercent >= 90)
                 {
-                    char reason[64];
-                    FormatEx(reason, sizeof(reason), "Medic high Übercharge kill (%d%%)", victimUberPercent);
-                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, reason, victim, WT_GetBonusDefaultDelay(), 2);
+                    FireMedicHighUberKill(attacker, victim, victimUberPercent);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERDOMINATION)
             {
                 if (HasMultipleDominationsAfterKill(attacker, victim))
                 {
-                    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_GetBonusDefaultDelay(), 3);
+                    FireMultipleDominations(attacker);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_KILLERREVENGE)
             {
-                ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "player_revenge", victim, WT_GetBonusDefaultDelay(), 3);
+                FireRevenge(attacker, victim);
             }
             attackerScoredMedicDrop = medicDrop;
             MarkClientDirty(attacker);
@@ -441,20 +429,18 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
                 && assistsLife > 0
                 && assistsLife % WT_MEDIC_ASSISTS_LIFE_BONUS_INTERVAL == 0)
             {
-                char reason[32];
-                Format(reason, sizeof(reason), "Assists: %d", assistsLife);
-                ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, reason, 0, WT_GetBonusDefaultDelay(), 4);
+                FireMedicAssistMilestone(assister, assistsLife);
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERDOMINATION)
             {
                 if (HasMultipleDominationsAfterKill(assister, victim))
                 {
-                    ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "multiple_dominations", 0, WT_GetBonusDefaultDelay(), 3);
+                    FireMultipleDominations(assister);
                 }
             }
             if (deathFlags & TF_DEATHFLAG_ASSISTERREVENGE)
             {
-                ApplyBonusPoints(assister, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "player_revenge", victim, WT_GetBonusDefaultDelay(), 3);
+                FireRevenge(assister, victim);
             }
             MarkClientDirty(assister);
         }
@@ -464,7 +450,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             int victimKillstreak = g_Stats[victim].currentKillstreak;
             if (attackerIsHuman && victimKillstreak >= WT_GetKillstreakBonusInterval())
             {
-                FireKillstreakEndForward(attacker, victim, victimKillstreak);
+                FireKillstreakEnd(attacker, victim, victimKillstreak);
             }
 
             if (attackerScoredMedicDrop)
@@ -557,7 +543,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
             bool isRocketLauncherDamage = IsSoldierSyncRocketLauncherDamage(attacker, weapon);
             if (IsValidProjectileDirectHit(attacker, victim, weapon, wasDirectHit))
             {
-                FireProjectileDirectHitForward(attacker, victim, weapon);
+                FireProjectileDirectHit(attacker, victim, weapon);
                 RegisterJuggleDirectHit(attacker, victim);
                 if (IsWeaponClass(weapon, "tf_weapon_grenadelauncher"))
                 {
@@ -650,10 +636,7 @@ public void TF2Shotgun_OnPelletShot(int attacker, int victim, int pellets, int t
 
     g_Stats[attacker].currentMeatshotKillsLife++;
     g_MapStats[attacker].currentMeatshotKillsLife++;
-    if (g_Stats[attacker].currentMeatshotKillsLife == WT_MEATSHOT_KILLS_LIFE_HIGH_BONUS)
-    {
-        ApplyBonusPoints(attacker, 3, true, true, WT_BONUS_CHANCE_ALWAYS, "meatshot_kills_life_8", 0, WT_GetBonusDefaultDelay(), 1);
-    }
+    FireMeatshotMilestone(attacker, g_Stats[attacker].currentMeatshotKillsLife);
 }
 
 public void Event_PlayerHealed(Event event, const char[] name, bool dontBroadcast)
@@ -681,11 +664,7 @@ public void Event_UberDeployed(Event event, const char[] name, bool dontBroadcas
     ApplyUberStats(g_MapStats[medic]);
     if (WhaleTracker_IsRoundRunning() && IsMedicUberBonusEligible(medic))
     {
-        ApplyBonusPoints(medic, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "uber_deployed", 0, WT_GetBonusDefaultDelay(), 4);
-        if (g_Stats[medic].currentUbersLife == WT_UBERS_LIFE_BONUS_INTERVAL)
-        {
-            ApplyBonusPoints(medic, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "3 Übercharges this life", 0, WT_GetBonusDefaultDelay(), 3);
-        }
+        FireUberDeployed(medic, g_Stats[medic].currentUbersLife);
     }
     MarkClientDirty(medic);
 }
@@ -756,7 +735,7 @@ void AnnounceMedicDrop(int attacker, int medic)
     if (!IsValidClient(attacker) || IsFakeClient(attacker) || attacker == medic)
     {
         CPrintToChatAll("%s dropped!", medicName);
-        FireMedicDropForward(attacker, medic);
+        FireMedicDrop(attacker, medic);
         return;
     }
 
@@ -764,7 +743,7 @@ void AnnounceMedicDrop(int attacker, int medic)
     BuildMedicDropDisplayName(attacker, attackerName, sizeof(attackerName));
 
     CPrintToChatAll("%s dropped %s!", attackerName, medicName);
-    FireMedicDropForward(attacker, medic);
+    FireMedicDrop(attacker, medic);
 }
 
 void BuildMedicDropDisplayName(int client, char[] buffer, int maxlen)
@@ -803,49 +782,6 @@ void BuildMedicDropTeamColorTag(int client, char[] colorTag, int maxlen)
     }
 }
 
-void FireMedicDropForward(int attacker, int medic)
-{
-    if (g_hMedicDropForward == null)
-    {
-        return;
-    }
-
-    Call_StartForward(g_hMedicDropForward);
-    Call_PushCell(attacker);
-    Call_PushCell(medic);
-    int _ret;
-    Call_Finish(_ret);
-}
-
-void FireKillstreakForward(int client, int killstreak)
-{
-    if (g_hKillstreakForward == null)
-    {
-        return;
-    }
-
-    Call_StartForward(g_hKillstreakForward);
-    Call_PushCell(client);
-    Call_PushCell(killstreak);
-    int _ret;
-    Call_Finish(_ret);
-}
-
-void FireKillstreakEndForward(int attacker, int victim, int killstreak)
-{
-    if (g_hKillstreakEndForward == null)
-    {
-        return;
-    }
-
-    Call_StartForward(g_hKillstreakEndForward);
-    Call_PushCell(attacker);
-    Call_PushCell(victim);
-    Call_PushCell(killstreak);
-    int _ret;
-    Call_Finish(_ret);
-}
-
 void RegisterMultikill(int client)
 {
     float now = GetGameTime();
@@ -865,37 +801,8 @@ void RegisterMultikill(int client)
     int kills = g_iMultikillChainKills[client];
     if (kills >= 2 && kills <= 5)
     {
-        FireMultikillForward(client, kills);
+        FireMultikill(client, kills);
     }
-}
-
-void FireMultikillForward(int client, int kills)
-{
-    if (g_hMultikillForward == null)
-    {
-        return;
-    }
-
-    Call_StartForward(g_hMultikillForward);
-    Call_PushCell(client);
-    Call_PushCell(kills);
-    int _ret;
-    Call_Finish(_ret);
-}
-
-void FireProjectileDirectHitForward(int attacker, int victim, int weapon)
-{
-    if (g_hProjectileDirectHitForward == null)
-    {
-        return;
-    }
-
-    Call_StartForward(g_hProjectileDirectHitForward);
-    Call_PushCell(attacker);
-    Call_PushCell(victim);
-    Call_PushCell(weapon);
-    int _ret;
-    Call_Finish(_ret);
 }
 
 public void Event_ResetMultikillAll(Event event, const char[] name, bool dontBroadcast)
@@ -996,13 +903,125 @@ void RecordSupstatsAirshot(int attacker, int victim)
 {
     g_Stats[attacker].totalAirshots += 1;
     g_MapStats[attacker].totalAirshots += 1;
-    if (g_hAirshotForward != null)
+    FireLegacyAirShot(attacker, victim);
+    QueueAirShotBroadcast(attacker, victim);
+}
+
+void QueueAirShotBroadcast(int attacker, int victim)
+{
+    if (!IsValidClient(attacker) || !IsValidClient(victim) || attacker == victim)
     {
-        Call_StartForward(g_hAirshotForward);
-        Call_PushCell(attacker);
-        Call_PushCell(victim);
-        int _ret;
-        Call_Finish(_ret);
+        return;
+    }
+
+    int attackerUserId = GetClientUserId(attacker);
+    if (g_iPendingAirShotAttackerUserId[victim] == attackerUserId)
+    {
+        return;
+    }
+
+    g_iPendingAirShotAttackerUserId[victim] = attackerUserId;
+    CreateTimer(0.0, Timer_BroadcastAirShot, GetClientUserId(victim));
+}
+
+public Action Timer_BroadcastAirShot(Handle timer, any victimUserId)
+{
+    int victim = GetClientOfUserId(victimUserId);
+    if (!IsValidClient(victim))
+    {
+        return Plugin_Stop;
+    }
+
+    int attacker = GetClientOfUserId(g_iPendingAirShotAttackerUserId[victim]);
+    if (!IsValidClient(attacker) || IsFakeClient(attacker) || attacker == victim)
+    {
+        ResetAirShotBroadcastState(victim);
+        return Plugin_Stop;
+    }
+
+    bool killed = !IsPlayerAlive(victim);
+    char attackerName[256];
+    char victimName[256];
+    BuildGameplayDisplayName(attacker, attackerName, sizeof(attackerName));
+    BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
+    CPrintToChatAll("%s airshot %s!", attackerName, victimName);
+    FireAirShot(attacker, victim, killed);
+
+    if (killed)
+    {
+        PlayAirShotSound(attacker, victim);
+    }
+
+    ResetAirShotBroadcastState(victim);
+    return Plugin_Stop;
+}
+
+void TryHandleDropShot(Event event, int attacker, int victim)
+{
+    int customKill = event.GetInt("customkill");
+    bool headshot = customKill == TF_CUSTOM_HEADSHOT
+        || customKill == TF_CUSTOM_HEADSHOT_DECAPITATION
+        || customKill == TF_CUSTOM_PENETRATE_HEADSHOT;
+    if (!headshot || (GetEntityFlags(attacker) & FL_ONGROUND) != 0
+        || DistanceAboveGroundBox(attacker) < WT_DROPSHOT_MIN_HEIGHT)
+    {
+        return;
+    }
+
+    ResetAirShotBroadcastState(victim);
+    char attackerName[256];
+    char victimName[256];
+    BuildGameplayDisplayName(attacker, attackerName, sizeof(attackerName));
+    BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
+    CPrintToChatAll("%s dropshot %s!", attackerName, victimName);
+    FireDropShot(attacker, victim);
+    PlayAirShotSound(attacker, victim);
+}
+
+void BuildGameplayDisplayName(int client, char[] buffer, int maxlen)
+{
+    buffer[0] = '\0';
+    if (GetFeatureStatus(FeatureType_Native, "Filters_GetChatName") == FeatureStatus_Available
+        && Filters_GetChatName(client, buffer, maxlen) && buffer[0] != '\0')
+    {
+        char teamColor[16];
+        BuildGameplayTeamColor(client, teamColor, sizeof(teamColor));
+        ReplaceString(buffer, maxlen, "{teamcolor}", teamColor, false);
+        return;
+    }
+
+    char teamColor[16];
+    BuildGameplayTeamColor(client, teamColor, sizeof(teamColor));
+    FormatEx(buffer, maxlen, "%s%N{default}", teamColor, client);
+}
+
+void BuildGameplayTeamColor(int client, char[] buffer, int maxlen)
+{
+    switch (GetClientTeam(client))
+    {
+        case WT_TEAM_RED: strcopy(buffer, maxlen, "{red}");
+        case WT_TEAM_BLUE: strcopy(buffer, maxlen, "{blue}");
+        default: strcopy(buffer, maxlen, "{default}");
+    }
+}
+
+void PlayAirShotSound(int attacker, int victim)
+{
+    if (GetFeatureStatus(FeatureType_Native, "SaySounds_PlayCommand") == FeatureStatus_Available
+        && SaySounds_PlayCommand(0, WT_AIRSHOT_SAYSOUND))
+    {
+        return;
+    }
+
+    EmitSoundToClient(attacker, WT_AIRSHOT_SOUND);
+    EmitSoundToClient(victim, WT_AIRSHOT_SOUND);
+}
+
+void ResetAirShotBroadcastState(int client)
+{
+    if (client >= 1 && client <= MaxClients)
+    {
+        g_iPendingAirShotAttackerUserId[client] = 0;
     }
 }
 
@@ -1069,16 +1088,6 @@ bool IsReflectBonusDamage(int attacker, int victim, int inflictor)
     return IsReflectBonusInflictor(inflictor);
 }
 
-void AwardReflectBonus(int attacker, bool wasDirectHit)
-{
-    ApplyBonusPoints(attacker, 1, true, true, WT_BONUS_CHANCE_ALWAYS, "reflect", 0, WT_GetBonusDefaultDelay(), 0);
-
-    if (wasDirectHit)
-    {
-        ApplyBonusPoints(attacker, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "reflect_direct_hit", 0, WT_GetBonusDefaultDelay(), 3);
-    }
-}
-
 void MarkReflectKillCandidate(int attacker, int victim, bool wasDirectHit)
 {
     if (!IsValidClient(attacker) || !IsValidClient(victim) || attacker == victim)
@@ -1141,17 +1150,6 @@ bool IsMarketGardenerWeapon(int weapon)
 {
     int def = GetWeaponDefIndexSafe(weapon);
     return def == WT_MARKET_GARDENER_DEF_INDEX || def == WT_HANDSHAKE_DEF_INDEX;
-}
-
-void GetMarketGardenKillBonusType(int client, char[] type, int maxlen)
-{
-    if (IsValidClient(client) && TF2_GetPlayerClass(client) == TFClass_DemoMan)
-    {
-        strcopy(type, maxlen, "market_garden_kill_demoman");
-        return;
-    }
-
-    strcopy(type, maxlen, "market_garden_kill");
 }
 
 bool IsMarketGardenerHit(int attacker, int weapon)
@@ -1273,7 +1271,7 @@ void RegisterJuggleDirectHit(int attacker, int victim)
     if (completedJuggle)
     {
         ResetJuggleState(victim);
-        ApplyBonusPoints(attacker, 2, true, true, WT_BONUS_CHANCE_ALWAYS, "Juggle", 0, WT_GetBonusDefaultDelay(), 3);
+        FireJuggle(attacker, victim);
         return;
     }
 

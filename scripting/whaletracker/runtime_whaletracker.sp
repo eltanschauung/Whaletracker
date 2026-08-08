@@ -145,14 +145,6 @@ public void OnPluginStart()
         true,
         0.1
     );
-    g_hBonusDefaultDelay = CreateConVar(
-        "sm_whaletracker_bonus_default_delay",
-        "3.0",
-        "Seconds to delay gameplay currency awards by default.",
-        FCVAR_NONE,
-        true,
-        0.0
-    );
     g_hRankMinKdSum = CreateConVar(
         "sm_whaletracker_rank_min_kd_sum",
         "200",
@@ -359,12 +351,7 @@ public void OnPluginStart()
     }
     g_hPeriodicSaveTimer = CreateTimer(WT_GetPeriodicSaveInterval(), Timer_GlobalSave, _, TIMER_REPEAT);
 
-    g_hAirshotForward = CreateGlobalForward("WhaleTracker_OnAirshot", ET_Ignore, Param_Cell, Param_Cell);
-    g_hProjectileDirectHitForward = CreateGlobalForward("WhaleTracker_OnProjectileDirectHit", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
-    g_hMedicDropForward = CreateGlobalForward("WhaleTracker_OnMedicDrop", ET_Ignore, Param_Cell, Param_Cell);
-    g_hKillstreakForward = CreateGlobalForward("WhaleTracker_OnKillstreak", ET_Ignore, Param_Cell, Param_Cell);
-    g_hKillstreakEndForward = CreateGlobalForward("WhaleTracker_OnKillstreakEnd", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
-    g_hMultikillForward = CreateGlobalForward("WhaleTracker_OnMultikill", ET_Ignore, Param_Cell, Param_Cell);
+    GameplayEvents_Init();
 
     for (int i = 1; i <= MaxClients; i++)
     {
@@ -382,6 +369,8 @@ public void OnPluginStart()
 
 public void OnMapStart()
 {
+    PrecacheSound(WT_AIRSHOT_SOUND, true);
+    AddFileToDownloadsTable(WT_AIRSHOT_SOUND_DOWNLOAD);
     WhaleTracker_ResetJoinLeaderboardCache();
     if (!WhaleTracker_IsDatabaseHealthy())
     {
@@ -399,6 +388,7 @@ public void OnMapStart()
     ResetMultikillAll();
     for (int i = 1; i <= MaxClients; i++)
     {
+        ResetAirShotBroadcastState(i);
         ResetMapStats(i);
         if (IsClientInGame(i))
         {
@@ -507,41 +497,7 @@ public void OnPluginEnd()
     g_hSchemaRetryTimer = null;
     g_hSavePumpTimer = null;
 
-    if (g_hAirshotForward != null)
-    {
-        delete g_hAirshotForward;
-        g_hAirshotForward = null;
-    }
-
-    if (g_hProjectileDirectHitForward != null)
-    {
-        delete g_hProjectileDirectHitForward;
-        g_hProjectileDirectHitForward = null;
-    }
-
-    if (g_hMedicDropForward != null)
-    {
-        delete g_hMedicDropForward;
-        g_hMedicDropForward = null;
-    }
-
-    if (g_hKillstreakForward != null)
-    {
-        delete g_hKillstreakForward;
-        g_hKillstreakForward = null;
-    }
-
-    if (g_hKillstreakEndForward != null)
-    {
-        delete g_hKillstreakEndForward;
-        g_hKillstreakEndForward = null;
-    }
-
-    if (g_hMultikillForward != null)
-    {
-        delete g_hMultikillForward;
-        g_hMultikillForward = null;
-    }
+    GameplayEvents_Shutdown();
 
     if (g_SaveQueue != null)
     {
@@ -580,6 +536,7 @@ public void OnPluginEnd()
 
 public void OnClientPutInServer(int client)
 {
+    ResetAirShotBroadcastState(client);
     WhaleTracker_ResetPlaytimeMilestoneClient(client);
 
     if (IsFakeClient(client))
@@ -643,6 +600,7 @@ public void OnClientCookiesCached(int client)
 
 public void OnClientDisconnect(int client)
 {
+    ResetAirShotBroadcastState(client);
     ResetMultikillClient(client);
 
     if (IsFakeClient(client))

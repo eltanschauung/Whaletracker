@@ -21,7 +21,6 @@
 // Sorted by reference count
 #define STEAMID64_LEN 32
 #define SAVE_QUERY_MAXLEN 4096
-#define WT_BONUS_CHANCE_ALWAYS 1.0
 #define MAX_CONCURRENT_SAVE_QUERIES 4
 #define WT_SECONDS_PER_HOUR 3600
 #define WT_TRACE_HULL_HALF_WIDTH 24.0
@@ -55,12 +54,10 @@
 #define WT_NATIVE_MAX_PLAYTIME_HOURS 596523
 #define TF_CLASS_MEDIC          5
 #define WT_MEDIC_ASSISTS_LIFE_BONUS_INTERVAL 4
-#define WT_UBERS_LIFE_BONUS_INTERVAL 3
-#define WT_MEATSHOT_KILLS_LIFE_HIGH_BONUS 8
-#define WT_BACKSTABS_LIFE_BONUS_INTERVAL 3
-#define WT_BACKSTABS_LIFE_HIGH_BONUS 6
-#define WT_HEADSHOT_KILLS_LIFE_BONUS_INTERVAL 4
-#define WT_HEADSHOT_KILLS_LIFE_HIGH_BONUS 10
+#define WT_DROPSHOT_MIN_HEIGHT 50.0
+#define WT_AIRSHOT_SOUND "misc/taps_02.wav"
+#define WT_AIRSHOT_SOUND_DOWNLOAD "sound/misc/taps_02.wav"
+#define WT_AIRSHOT_SAYSOUND "airshot"
 #define MENU_TITLE "Whale Tracker Stats"
 #define WT_TEAM_SPECTATOR 1
 #define WT_BONUS_POINTS_SOUND "xp_gain"
@@ -94,10 +91,6 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("DGM_GetServerCapacity");
     MarkNativeAsOptional("DGM_ServerCapacitycheck");
     MarkNativeAsOptional("DGM_IsRoundRunning");
-    MarkNativeAsOptional("PointsStore_GetBonusPoints");
-    MarkNativeAsOptional("PointsStore_ApplyBonusPoints");
-    MarkNativeAsOptional("PointsStore_ApplyBonusPointsSteamId");
-    MarkNativeAsOptional("PointsStore_SpendBonusPoints");
     MarkNativeAsOptional("ServerMail_SendCurrencySteamId");
     RegPluginLibrary("whaletracker");
     CreateNative("WhaleTracker_GetCumulativeKills", Native_WhaleTracker_GetCumulativeKills);
@@ -292,7 +285,6 @@ ConVar g_hHostIpCvar = null;
 ConVar g_hHostPortCvar = null;
 ConVar g_hServerFlags = null;
 ConVar g_hMultikillWindow = null;
-ConVar g_hBonusDefaultDelay = null;
 ConVar g_hRankMinKdSum = null;
 ConVar g_hRankMinPlaytimeSeconds = null;
 ConVar g_hKillstreakBonusInterval = null;
@@ -319,12 +311,6 @@ Handle g_hOnlineTimer = null;
 Handle g_hReconnectTimer = null;
 Handle g_hSchemaRetryTimer = null;
 Handle g_hSavePumpTimer = null;
-Handle g_hAirshotForward = null;
-Handle g_hProjectileDirectHitForward = null;
-Handle g_hMedicDropForward = null;
-Handle g_hKillstreakForward = null;
-Handle g_hKillstreakEndForward = null;
-Handle g_hMultikillForward = null;
 
 bool g_bFavoriteClassLoaded[MAXPLAYERS + 1];
 bool g_bFavoriteClassPending[MAXPLAYERS + 1];
@@ -344,11 +330,6 @@ float WT_GetConVarFloat(ConVar convar, float fallback)
 int WT_GetConVarInt(ConVar convar, int fallback)
 {
     return convar != null ? convar.IntValue : fallback;
-}
-
-float WT_GetBonusDefaultDelay()
-{
-    return WT_GetConVarFloat(g_hBonusDefaultDelay, 3.0);
 }
 
 int WT_GetRankMinKdSum()
@@ -449,9 +430,6 @@ bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 
 #include "include/dgm_api.inc"
 #undef REQUIRE_PLUGIN
-#include "include/points_store_api.inc"
-#define REQUIRE_PLUGIN
-#undef REQUIRE_PLUGIN
 #include "include/server_mail.inc"
 #define REQUIRE_PLUGIN
 #include "include/whaletracker.inc"
@@ -459,6 +437,7 @@ bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 #undef REQUIRE_EXTENSIONS
 #include "whaletracker/rust_sql_outlet_whaletracker.sp"
 #define REQUIRE_EXTENSIONS
+#include "whaletracker/gameplay_events_whaletracker.sp"
 #include "whaletracker/runtime_whaletracker.sp"
 #include "whaletracker/database_whaletracker.sp"
 #include "whaletracker/gameplay_whaletracker.sp"
