@@ -400,7 +400,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
                 {
                     FireMedicUberDropKill(attacker, victim);
                 }
-                if (victimUberBonusEligible && victimUberPercent >= 90)
+                if (victimUberBonusEligible && victimUberPercent >= 95 && victimUberPercent < 100)
                 {
                     FireMedicHighUberKill(attacker, victim, victimUberPercent);
                 }
