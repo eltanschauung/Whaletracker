@@ -623,11 +623,8 @@ public void TF2Shotgun_OnPelletShot(int attacker, int victim, int pellets, int t
         return;
     }
 
-    if (pellets == 10 && total == 10)
-    {
-        g_Stats[attacker].totalMeatshots++;
-        MarkClientDirty(attacker);
-    }
+    g_Stats[attacker].totalMeatshots++;
+    MarkClientDirty(attacker);
 
     if (!kill)
     {
