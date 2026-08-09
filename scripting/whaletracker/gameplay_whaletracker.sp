@@ -745,38 +745,7 @@ void AnnounceMedicDrop(int attacker, int medic)
 
 void BuildMedicDropDisplayName(int client, char[] buffer, int maxlen)
 {
-    buffer[0] = '\0';
-
-    char colorTag[32];
-    GetClientFiltersNameColorTag(client, colorTag, sizeof(colorTag));
-    TrimString(colorTag);
-
-    if (colorTag[0] == '\0')
-    {
-        strcopy(colorTag, sizeof(colorTag), "gold");
-    }
-    else if (StrEqual(colorTag, "teamcolor", false) || StrEqual(colorTag, "{teamcolor}", false))
-    {
-        BuildMedicDropTeamColorTag(client, colorTag, sizeof(colorTag));
-    }
-
-    if (colorTag[0] == '{')
-    {
-        Format(buffer, maxlen, "%s%N{default}", colorTag, client);
-        return;
-    }
-
-    Format(buffer, maxlen, "{%s}%N{default}", colorTag, client);
-}
-
-void BuildMedicDropTeamColorTag(int client, char[] colorTag, int maxlen)
-{
-    switch (GetClientTeam(client))
-    {
-        case WT_TEAM_RED: strcopy(colorTag, maxlen, "{red}");
-        case WT_TEAM_BLUE: strcopy(colorTag, maxlen, "{blue}");
-        default: strcopy(colorTag, maxlen, "{default}");
-    }
+    BuildGameplayDisplayName(client, buffer, maxlen);
 }
 
 void RegisterMultikill(int client)
