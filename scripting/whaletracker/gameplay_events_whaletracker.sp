@@ -23,6 +23,7 @@ GlobalForward g_OnUberDeployed = null;
 GlobalForward g_OnReflectKill = null;
 GlobalForward g_OnJuggle = null;
 GlobalForward g_OnDropShot = null;
+GlobalForward g_OnTelefrag = null;
 
 void GameplayEvents_Init()
 {
@@ -52,6 +53,7 @@ void GameplayEvents_Init()
     g_OnReflectKill = new GlobalForward("OnReflectKill", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
     g_OnJuggle = new GlobalForward("OnJuggle", ET_Ignore, Param_Cell, Param_Cell);
     g_OnDropShot = new GlobalForward("OnDropShot", ET_Ignore, Param_Cell, Param_Cell);
+    g_OnTelefrag = new GlobalForward("OnTelefrag", ET_Ignore, Param_Cell, Param_Cell);
 }
 
 void GameplayEvents_Shutdown()
@@ -81,6 +83,7 @@ void GameplayEvents_Shutdown()
     delete g_OnReflectKill;
     delete g_OnJuggle;
     delete g_OnDropShot;
+    delete g_OnTelefrag;
 }
 
 void GameplayEvent_FireTwoCells(GlobalForward event, int first, int second)
@@ -134,6 +137,7 @@ void FireUberDeployed(int medic, int count) { GameplayEvent_FireTwoCells(g_OnUbe
 void FireReflectKill(int attacker, int victim, bool directHit) { GameplayEvent_FireThreeCells(g_OnReflectKill, attacker, victim, directHit); }
 void FireJuggle(int attacker, int victim) { GameplayEvent_FireTwoCells(g_OnJuggle, attacker, victim); }
 void FireDropShot(int attacker, int victim) { GameplayEvent_FireTwoCells(g_OnDropShot, attacker, victim); }
+void FireTelefrag(int attacker, int victim) { GameplayEvent_FireTwoCells(g_OnTelefrag, attacker, victim); }
 
 void FireTopScoringPlayerRoundEnd(const char[] steamId64)
 {

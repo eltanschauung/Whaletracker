@@ -33,7 +33,7 @@
 #define WT_TEAM_FIRST_PLAYING WT_TEAM_RED
 #define WHALE_LEADERBOARD_PAGE_SIZE 10
 #define WT_WHALE_POINTS_MAX_FLOAT 2147483000.0
-#define WHALETRACKER_SCHEMA_VERSION 2
+#define WHALETRACKER_SCHEMA_VERSION 4
 #define DB_CONFIG_DEFAULT "default"
 #define WT_TRACE_DOWN_DISTANCE -16384.0
 #define WT_MARKET_GARDENER_DEF_INDEX 416
@@ -158,6 +158,7 @@ enum struct WhaleStats
     int totalUbers;
     int totalMedicDrops;
     int totalAirshots;
+    int totalTelefrags;
     int totalMeatshots;
     int totalCrossbowHits;
     int totalMarketGardenHits;

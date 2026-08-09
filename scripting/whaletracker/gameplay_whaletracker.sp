@@ -344,6 +344,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             int custom = event.GetInt("customkill");
             bool backstab = (custom == TF_CUSTOM_BACKSTAB);
             bool headshotKill = (custom == TF_CUSTOM_HEADSHOT || custom == TF_CUSTOM_HEADSHOT_DECAPITATION);
+            bool telefrag = (custom == TF_CUSTOM_TELEFRAG);
             bool spyBackstab = backstab && TF2_GetPlayerClass(attacker) == TFClass_Spy;
             bool sniperHeadshotKill = headshotKill && TF2_GetPlayerClass(attacker) == TFClass_Sniper;
             bool medicDrop = victimMedicDrop;
@@ -355,6 +356,11 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
             ApplyKillStats(g_Stats[attacker], backstab, headshotKill, medicDrop);
             ApplyKillStats(g_MapStats[attacker], backstab, headshotKill, medicDrop);
+            if (telefrag)
+            {
+                g_Stats[attacker].totalTelefrags++;
+                FireTelefrag(attacker, victim);
+            }
             if (spyBackstab)
             {
                 int backstabsLife = g_Stats[attacker].currentBackstabsLife;

@@ -37,6 +37,7 @@ void ResetStatsStruct(WhaleStats stats, bool resetIdentity)
     stats.totalUbers = 0;
     stats.totalMedicDrops = 0;
     stats.totalAirshots = 0;
+    stats.totalTelefrags = 0;
     stats.totalMeatshots = 0;
     stats.totalCrossbowHits = 0;
     stats.totalMarketGardenHits = 0;

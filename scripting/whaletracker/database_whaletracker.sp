@@ -289,7 +289,7 @@ void LoadClientStats(int client)
     char query[1024];
     Format(query, sizeof(query),
         "SELECT first_seen, kills, deaths, healing, total_ubers, best_ubers_life, medic_drops, uber_drops, airshots, meatshots, totalCrossbowHits, marketGardenHits, headshots, backstabs, best_killstreak, assists, playtime, damage_dealt, damage_taken, last_seen "
-        ... ", shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers "
+        ... ", shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers, telefrags "
         ... "FROM whaletracker WHERE steamid = '%s'", g_Stats[client].steamId);
 
     g_hDatabase.Query(WhaleTracker_LoadCallback, query, GetClientUserId(client));
@@ -413,6 +413,7 @@ public void WhaleTracker_LoadCallback(Database db, DBResultSet results, const ch
         g_Stats[index].weaponHits[WeaponCategory_Snipers] = results.FetchInt(33);
         g_Stats[index].weaponShots[WeaponCategory_Revolvers] = results.FetchInt(34);
         g_Stats[index].weaponHits[WeaponCategory_Revolvers] = results.FetchInt(35);
+        g_Stats[index].totalTelefrags = results.FetchInt(36);
         g_Stats[index].loaded = true;
     }
     else
@@ -562,10 +563,10 @@ void QueueStatsSave(int client, int userId, bool forceSync)
         "INSERT INTO whaletracker "
         ... "(steamid, first_seen, kills, deaths, healing, total_ubers, best_ubers_life, medic_drops, uber_drops, airshots, meatshots, totalCrossbowHits, marketGardenHits, headshots, backstabs, "
         ... "best_killstreak, assists, playtime, damage_dealt, damage_taken, last_seen, "
-        ... "is_admin, country, shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers) "
+        ... "is_admin, country, telefrags, shots_shotguns, hits_shotguns, shots_scatterguns, hits_scatterguns, shots_pistols, hits_pistols, shots_rocketlaunchers, hits_rocketlaunchers, shots_grenadelaunchers, hits_grenadelaunchers, shots_stickylaunchers, hits_stickylaunchers, shots_snipers, hits_snipers, shots_revolvers, hits_revolvers) "
         ... "VALUES ('%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, "
         ... "%d, %d, %d, %d, %d, %d, %d, "
-        ... "%d, '%s', %s) "
+        ... "%d, '%s', %d, %s) "
         ... "ON DUPLICATE KEY UPDATE "
         ... "first_seen = LEAST(first_seen, VALUES(first_seen)), "
         ... "kills = GREATEST(kills, VALUES(kills)), "
@@ -589,6 +590,7 @@ void QueueStatsSave(int client, int userId, bool forceSync)
         ... "last_seen = GREATEST(last_seen, VALUES(last_seen)), "
         ... "is_admin = VALUES(is_admin), "
         ... "country = IF(country = '', VALUES(country), country), "
+        ... "telefrags = GREATEST(telefrags, VALUES(telefrags)), "
 
         ... "shots_shotguns = GREATEST(shots_shotguns, VALUES(shots_shotguns)), "
         ... "hits_shotguns = GREATEST(hits_shotguns, VALUES(hits_shotguns)), "
@@ -629,6 +631,7 @@ void QueueStatsSave(int client, int userId, bool forceSync)
         g_Stats[client].lastSeen,
         g_Stats[client].isAdmin ? 1 : 0,
         escapedCountryCode,
+        g_Stats[client].totalTelefrags,
 
         accuracyValueSegment);
 
