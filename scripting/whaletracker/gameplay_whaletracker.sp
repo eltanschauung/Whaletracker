@@ -359,6 +359,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             if (telefrag)
             {
                 g_Stats[attacker].totalTelefrags++;
+                AnnounceTelefrag(attacker, victim);
                 FireTelefrag(attacker, victim);
             }
             if (spyBackstab)
@@ -747,6 +748,15 @@ void AnnounceMedicDrop(int attacker, int medic)
 
     CPrintToChatAll("%s dropped %s!", attackerName, medicName);
     FireMedicDrop(attacker, medic);
+}
+
+void AnnounceTelefrag(int attacker, int victim)
+{
+    char attackerName[256];
+    char victimName[256];
+    BuildGameplayDisplayName(attacker, attackerName, sizeof(attackerName));
+    BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
+    CPrintToChatAll("%s telefragged %s!", attackerName, victimName);
 }
 
 void BuildMedicDropDisplayName(int client, char[] buffer, int maxlen)
