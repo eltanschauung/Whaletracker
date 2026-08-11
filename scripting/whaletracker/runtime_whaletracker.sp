@@ -185,6 +185,14 @@ public void OnPluginStart()
         true,
         0.0
     );
+    g_hTopScoreMin = CreateConVar(
+        "sm_whaletracker_top_score_min",
+        "5",
+        "Minimum victim score required for top-scoring enemy player kill awards.",
+        FCVAR_NONE,
+        true,
+        0.0
+    );
     g_hDamageTrackingGate = CreateConVar(
         "sm_whaletracker_damage_tracking_gate",
         "200",

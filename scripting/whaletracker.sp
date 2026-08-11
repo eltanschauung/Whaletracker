@@ -291,6 +291,7 @@ ConVar g_hRankMinPlaytimeSeconds = null;
 ConVar g_hKillstreakBonusInterval = null;
 ConVar g_hSyncKillConfirmWindow = null;
 ConVar g_hTopScoreMinPlayers = null;
+ConVar g_hTopScoreMin = null;
 ConVar g_hDamageTrackingGate = null;
 ConVar g_hDamageSanityMax = null;
 ConVar g_hMinMatchRateMinutes = null;
@@ -357,6 +358,11 @@ float WT_GetSyncKillConfirmWindow()
 int WT_GetTopScoreMinPlayers()
 {
     return WT_GetConVarInt(g_hTopScoreMinPlayers, 10);
+}
+
+int WT_GetTopScoreMin()
+{
+    return WT_GetConVarInt(g_hTopScoreMin, 5);
 }
 
 int WT_GetDamageTrackingGate()

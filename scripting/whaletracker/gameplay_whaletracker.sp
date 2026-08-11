@@ -65,7 +65,7 @@ bool IsTopScoringPlayerOnTeam(int client)
     }
 
     int clientScore = GetTrackedClientScore(client);
-    if (clientScore <= 0)
+    if (clientScore < WT_GetTopScoreMin())
     {
         return false;
     }
@@ -337,7 +337,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             victimUberPercent = GetMedicUberPercent(victim);
             victimUberBonusEligible = IsMedicUberBonusEligible(victim);
         }
-        victimMedicDrop = victimIsHuman && IsMedicDrop(victim);
+        victimMedicDrop = victimIsHuman && attackerIsHuman && IsMedicDrop(victim);
 
         if (victimIsHuman && attackerIsHuman && WhaleTracker_IsTrackingEnabled(attacker))
         {
@@ -474,7 +474,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
         {
             AnnounceMedicDrop(attacker, victim);
         }
-        if (victimUberPercent >= 95 && victimUberPercent <= 99)
+        if (attackerIsHuman && victimUberPercent >= 95 && victimUberPercent <= 99)
         {
             AnnounceHighUberDeath(victim, victimUberPercent);
         }
@@ -730,18 +730,14 @@ void AnnounceHighUberDeath(int medic, int percent)
 
 void AnnounceMedicDrop(int attacker, int medic)
 {
-    if (!IsValidClient(medic) || IsFakeClient(medic))
+    if (!IsValidClient(medic) || IsFakeClient(medic)
+        || !IsValidClient(attacker) || IsFakeClient(attacker) || attacker == medic)
+    {
         return;
+    }
 
     char medicName[256];
     BuildMedicDropDisplayName(medic, medicName, sizeof(medicName));
-
-    if (!IsValidClient(attacker) || IsFakeClient(attacker) || attacker == medic)
-    {
-        CPrintToChatAll("%s dropped!", medicName);
-        FireMedicDrop(attacker, medic);
-        return;
-    }
 
     char attackerName[256];
     BuildMedicDropDisplayName(attacker, attackerName, sizeof(attackerName));
@@ -757,6 +753,7 @@ void AnnounceTelefrag(int attacker, int victim)
     BuildGameplayDisplayName(attacker, attackerName, sizeof(attackerName));
     BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
     CPrintToChatAll("%s telefragged %s!", attackerName, victimName);
+    PrintCenterTextAll("%N telefragged %N!", attacker, victim);
 }
 
 void BuildMedicDropDisplayName(int client, char[] buffer, int maxlen)
