@@ -937,6 +937,11 @@ public Action Timer_BroadcastAirShot(Handle timer, any victimUserId)
 
 void TryHandleDropShot(Event event, int attacker, int victim)
 {
+    if (TF2_GetPlayerClass(attacker) == TFClass_Scout)
+    {
+        return;
+    }
+
     int customKill = event.GetInt("customkill");
     bool headshot = customKill == TF_CUSTOM_HEADSHOT
         || customKill == TF_CUSTOM_HEADSHOT_DECAPITATION
