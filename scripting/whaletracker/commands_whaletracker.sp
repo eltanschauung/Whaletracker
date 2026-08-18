@@ -1159,6 +1159,11 @@ bool NormalizeCountryCodeArg(const char[] input, char[] countryCode, int maxlen)
         return strcopy(countryCode, maxlen, "dixie") > 0;
     }
 
+    if (StrEqual(input, "mi", false) || StrEqual(input, "millennium", false))
+    {
+        return strcopy(countryCode, maxlen, "millennium") > 0;
+    }
+
     if (maxlen < 3 || input[0] == '\0' || input[1] == '\0' || input[2] != '\0')
     {
         return false;
@@ -1187,10 +1192,10 @@ void SetCountryForClient(int client, const char[] countryArg)
         return;
     }
 
-    char countryCode[8];
+    char countryCode[16];
     if (!NormalizeCountryCodeArg(countryArg, countryCode, sizeof(countryCode)))
     {
-        CPrintToChat(client, "{green}[WhaleTracker]{default} Usage: {gold}!country CA{default}, {gold}!country ancap{default}, or {gold}!country dixie{default}");
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Usage: {gold}!flag CA{default}, {gold}!flag ancap{default}, {gold}!flag dixie{default}, or {gold}!flag millennium{default}");
         return;
     }
 
