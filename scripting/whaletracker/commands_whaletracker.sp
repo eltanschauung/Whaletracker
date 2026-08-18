@@ -1149,6 +1149,16 @@ void SetFavoriteClassForClient(int client, int favoriteClass)
 
 bool NormalizeCountryCodeArg(const char[] input, char[] countryCode, int maxlen)
 {
+    if (StrEqual(input, "ancap", false))
+    {
+        return strcopy(countryCode, maxlen, "ancap") > 0;
+    }
+
+    if (StrEqual(input, "dixie", false))
+    {
+        return strcopy(countryCode, maxlen, "dixie") > 0;
+    }
+
     if (maxlen < 3 || input[0] == '\0' || input[1] == '\0' || input[2] != '\0')
     {
         return false;
@@ -1177,10 +1187,10 @@ void SetCountryForClient(int client, const char[] countryArg)
         return;
     }
 
-    char countryCode[3];
+    char countryCode[8];
     if (!NormalizeCountryCodeArg(countryArg, countryCode, sizeof(countryCode)))
     {
-        CPrintToChat(client, "{green}[WhaleTracker]{default} Usage: {gold}!country CA{default}");
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Usage: {gold}!country CA{default}, {gold}!country ancap{default}, or {gold}!country dixie{default}");
         return;
     }
 
@@ -1320,7 +1330,7 @@ void SetShowCountryForClient(int client, bool showCountry)
         ... "VALUES ('%s', %d, '%s', %d) "
         ... "ON DUPLICATE KEY UPDATE "
         ... "first_seen = LEAST(first_seen, VALUES(first_seen)), "
-        ... "country = VALUES(country), "
+        ... "country = IF(country = '', VALUES(country), country), "
         ... "show_country = VALUES(show_country)",
         escapedSteamId,
         firstSeen,
