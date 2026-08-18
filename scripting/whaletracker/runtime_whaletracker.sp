@@ -324,6 +324,8 @@ public void OnPluginStart()
     RegConsoleCmd("sm_fav", Command_SetFavoriteClass, "Set your favorite class for WhaleTracker.");
     RegConsoleCmd("sm_favorite", Command_SetFavoriteClass, "Set your favorite class for WhaleTracker.");
     RegConsoleCmd("sm_country", Command_ToggleCountryVisibility, "Toggle country flag visibility on kogasa.tf/stats.");
+    RegConsoleCmd("sm_flags", Command_ToggleCountryVisibility, "Toggle country flag visibility on kogasa.tf/stats.");
+    RegConsoleCmd("sm_flag", Command_ToggleCountryVisibility, "Toggle country flag visibility on kogasa.tf/stats.");
     RegConsoleCmd("sm_markets", Command_ShowMarketGardens, "Show your market garden total.");
     RegConsoleCmd("sm_mg", Command_ShowMarketGardens, "Show your market garden total.");
     RegConsoleCmd("sm_gardens", Command_ShowMarketGardens, "Show your market garden total.");
