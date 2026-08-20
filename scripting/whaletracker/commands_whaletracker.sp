@@ -1684,6 +1684,17 @@ public any Native_WhaleTracker_GetCumulativeKills(Handle plugin, int numParams)
     return g_Stats[client].kills;
 }
 
+public any Native_WhaleTracker_GetCumulativeAssists(Handle plugin, int numParams)
+{
+    int client = GetNativeCell(1);
+    if (client <= 0 || client > MaxClients)
+    {
+        return 0;
+    }
+
+    return g_Stats[client].totalAssists;
+}
+
 public any Native_WhaleTracker_AreStatsLoaded(Handle plugin, int numParams)
 {
     int client = GetNativeCell(1);

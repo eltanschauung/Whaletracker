@@ -39,6 +39,7 @@ Only plugin-facing natives and forwards are listed here; third-party includes ar
 
 ## whaletracker_api.inc
 - `WhaleTracker_GetCumulativeKills` - Returns a client's cumulative tracked kills.
+- `WhaleTracker_GetCumulativeAssists` - Returns a client's cumulative tracked assists.
 - `WhaleTracker_AreStatsLoaded` - Returns whether a client's WhaleTracker stats are loaded.
 - `WhaleTracker_HasPlaytimeHours` - Returns whether a client's loaded playtime meets an hour threshold.
 - `WhaleTracker_GetRankedPlaytimeHours` - Returns whole playtime hours for a ranked client or Steam identity.

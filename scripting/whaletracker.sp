@@ -94,6 +94,7 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("ServerMail_SendCurrencySteamId");
     RegPluginLibrary("whaletracker");
     CreateNative("WhaleTracker_GetCumulativeKills", Native_WhaleTracker_GetCumulativeKills);
+    CreateNative("WhaleTracker_GetCumulativeAssists", Native_WhaleTracker_GetCumulativeAssists);
     CreateNative("WhaleTracker_AreStatsLoaded", Native_WhaleTracker_AreStatsLoaded);
     CreateNative("WhaleTracker_HasPlaytimeHours", Native_WhaleTracker_HasPlaytimeHours);
     CreateNative("WhaleTracker_GetRankedPlaytimeHours", Native_WhaleTracker_GetRankedPlaytimeHours);
