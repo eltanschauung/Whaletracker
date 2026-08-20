@@ -1552,7 +1552,7 @@ void SendMatchStatsMessage(int viewer, int target)
     char timeBuffer[32];
     FormatMatchDuration(matchStats.playtime, timeBuffer, sizeof(timeBuffer));
 
-    CPrintToChat(viewer, "{green}[WhaleTracker]{default} {%s}%s{default} — This Match: K %d | D %d | KD %.2f | A %d | Dmg %d | Dmg/min %.1f",
+    CPrintToChatEx(viewer, target, "{green}[WhaleTracker]{default} {%s}%s{default} — This Match: K %d | D %d | KD %.2f | A %d | Dmg %d | Dmg/min %.1f",
         colorTag, playerName, kills, deaths, kd, assists, damage, dpm);
     CPrintToChat(viewer, "Taken %d | Taken/min %.1f | Heal %d | HS %d | BS %d | Übers %d | Time %s",
         damageTaken, dtpm, healing, headshots, backstabs, ubers, timeBuffer);
