@@ -600,6 +600,7 @@ void WhaleTracker_ScheduleReconnect(float delay)
     g_bDatabaseConnectInFlight = false;
     g_bSchemaReady = false;
     g_bSchemaCheckInFlight = false;
+    g_iDatabaseConnectGeneration++;
 
     if (g_hDatabase != null)
     {
@@ -617,6 +618,12 @@ void WhaleTracker_ScheduleReconnect(float delay)
     {
         CloseHandle(g_hSchemaRetryTimer);
         g_hSchemaRetryTimer = null;
+    }
+
+    if (g_hDatabaseConnectTimeoutTimer != null)
+    {
+        CloseHandle(g_hDatabaseConnectTimeoutTimer);
+        g_hDatabaseConnectTimeoutTimer = null;
     }
 
     PrintToServer("[WhaleTracker] DB reconnect scheduled delay=%.2f players=%d round=%d",

@@ -218,6 +218,8 @@ bool g_bSyncDatabaseConnected = false;
 bool g_bDatabaseConnectInFlight = false;
 bool g_bSchemaReady = false;
 bool g_bSchemaCheckInFlight = false;
+Handle g_hDatabaseConnectTimeoutTimer = null;
+int g_iDatabaseConnectGeneration = 0;
 
 enum MatchStatField
 {

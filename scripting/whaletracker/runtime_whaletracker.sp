@@ -98,6 +98,9 @@ public void OnPluginStart()
     g_PendingSaveQueries = 0;
     g_bShuttingDown = false;
     g_hReconnectTimer = null;
+    g_hSchemaRetryTimer = null;
+    g_hDatabaseConnectTimeoutTimer = null;
+    g_iDatabaseConnectGeneration = 0;
     g_hSavePumpTimer = null;
     WhaleTracker_ResetJoinLeaderboardCache();
 
@@ -505,6 +508,7 @@ public void OnPluginEnd()
     g_hPeriodicSaveTimer = null;
     g_hReconnectTimer = null;
     g_hSchemaRetryTimer = null;
+    g_hDatabaseConnectTimeoutTimer = null;
     g_hSavePumpTimer = null;
 
     GameplayEvents_Shutdown();
@@ -533,6 +537,7 @@ public void OnPluginEnd()
     g_bDatabaseConnectInFlight = false;
     g_bSchemaReady = false;
     g_bSchemaCheckInFlight = false;
+    g_iDatabaseConnectGeneration++;
     g_hVisibleMaxPlayers = null;
 
     for (int i = 1; i <= MaxClients; i++)

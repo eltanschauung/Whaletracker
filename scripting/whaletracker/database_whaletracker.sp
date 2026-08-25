@@ -1,5 +1,6 @@
 #define WT_DATABASE_RECONNECT_DELAY 5.0
 #define WT_DATABASE_QUICK_RECONNECT_DELAY 2.0
+#define WT_DATABASE_CONNECT_TIMEOUT 15.0
 #define WT_SCHEMA_READY_RETRY_DELAY 2.0
 #define WT_ONLINE_STALE_SECONDS 120
 
@@ -17,6 +18,11 @@ void WhaleTracker_MaybeMarkDatabaseReady()
 
     g_bDatabaseConnectInFlight = false;
     g_bDatabaseReady = true;
+    if (g_hDatabaseConnectTimeoutTimer != null)
+    {
+        CloseHandle(g_hDatabaseConnectTimeoutTimer);
+        g_hDatabaseConnectTimeoutTimer = null;
+    }
     PrintToServer("[WhaleTracker] Database ready schema=%d players=%d round=%d",
         WHALETRACKER_SCHEMA_VERSION,
         GetClientCount(false),
@@ -133,7 +139,8 @@ void WhaleTracker_RequestSchemaReadyCheck()
 
     g_bSchemaCheckInFlight = true;
     g_hDatabase.Query(WhaleTracker_SchemaVersionCallback,
-        "SELECT COALESCE(MAX(version), 0) FROM whaletracker_schema_migrations");
+        "SELECT COALESCE(MAX(version), 0) FROM whaletracker_schema_migrations",
+        g_iDatabaseConnectGeneration);
 }
 
 public void WhaleTracker_SQLConnect()
@@ -150,6 +157,12 @@ public void WhaleTracker_SQLConnect()
     {
         CloseHandle(g_hSchemaRetryTimer);
         g_hSchemaRetryTimer = null;
+    }
+
+    if (g_hDatabaseConnectTimeoutTimer != null)
+    {
+        CloseHandle(g_hDatabaseConnectTimeoutTimer);
+        g_hDatabaseConnectTimeoutTimer = null;
     }
 
     if (g_hDatabase != null)
@@ -172,12 +185,35 @@ public void WhaleTracker_SQLConnect()
     g_bSchemaCheckInFlight = false;
     g_CvarDatabase.GetString(g_sDatabaseConfig, sizeof(g_sDatabaseConfig));
     g_bShuttingDown = false;
-    Database.Connect(T_SQLConnect, g_sDatabaseConfig);
-    Database.Connect(T_SQLSyncConnect, g_sDatabaseConfig);
+    g_iDatabaseConnectGeneration++;
+    int generation = g_iDatabaseConnectGeneration;
+    g_hDatabaseConnectTimeoutTimer = CreateTimer(
+        WT_DATABASE_CONNECT_TIMEOUT,
+        WhaleTracker_DatabaseConnectTimeoutTimer,
+        generation);
+    PrintToServer("[WhaleTracker] Database connect attempt=%d players=%d round=%d",
+        generation,
+        GetClientCount(false),
+        WhaleTracker_IsRoundRunning() ? 1 : 0);
+    Database.Connect(T_SQLConnect, g_sDatabaseConfig, generation);
+    Database.Connect(T_SQLSyncConnect, g_sDatabaseConfig, generation);
 }
 
 public void T_SQLConnect(Database db, const char[] error, any data)
 {
+    int generation = data;
+    if (g_bShuttingDown || generation != g_iDatabaseConnectGeneration)
+    {
+        if (db != null)
+        {
+            delete db;
+        }
+        PrintToServer("[WhaleTracker] Ignored stale async database callback attempt=%d current=%d",
+            generation,
+            g_iDatabaseConnectGeneration);
+        return;
+    }
+
     if (db == null)
     {
         LogError("[WhaleTracker] Database connection failed: %s", error);
@@ -188,6 +224,10 @@ public void T_SQLConnect(Database db, const char[] error, any data)
         return;
     }
 
+    if (g_hDatabase != null)
+    {
+        delete g_hDatabase;
+    }
     g_hDatabase = db;
     g_bAsyncDatabaseConnected = true;
 
@@ -200,6 +240,19 @@ public void T_SQLConnect(Database db, const char[] error, any data)
 
 public void T_SQLSyncConnect(Database db, const char[] error, any data)
 {
+    int generation = data;
+    if (g_bShuttingDown || generation != g_iDatabaseConnectGeneration)
+    {
+        if (db != null)
+        {
+            delete db;
+        }
+        PrintToServer("[WhaleTracker] Ignored stale sync database callback attempt=%d current=%d",
+            generation,
+            g_iDatabaseConnectGeneration);
+        return;
+    }
+
     if (db == null)
     {
         LogError("[WhaleTracker] Sync database connection failed: %s", error);
@@ -226,8 +279,42 @@ public void T_SQLSyncConnect(Database db, const char[] error, any data)
     WhaleTracker_RequestSchemaReadyCheck();
 }
 
+public Action WhaleTracker_DatabaseConnectTimeoutTimer(Handle timer, any data)
+{
+    if (timer != g_hDatabaseConnectTimeoutTimer)
+    {
+        return Plugin_Stop;
+    }
+
+    g_hDatabaseConnectTimeoutTimer = null;
+    int generation = data;
+    if (g_bShuttingDown || generation != g_iDatabaseConnectGeneration || g_bDatabaseReady)
+    {
+        return Plugin_Stop;
+    }
+
+    LogError(
+        "[WhaleTracker] Database connect attempt %d timed out (async=%d sync=%d schema=%d schema_check=%d).",
+        generation,
+        g_bAsyncDatabaseConnected ? 1 : 0,
+        g_bSyncDatabaseConnected ? 1 : 0,
+        g_bSchemaReady ? 1 : 0,
+        g_bSchemaCheckInFlight ? 1 : 0);
+    WhaleTracker_ScheduleReconnect(WT_DATABASE_QUICK_RECONNECT_DELAY);
+    return Plugin_Stop;
+}
+
 public void WhaleTracker_SchemaVersionCallback(Database db, DBResultSet results, const char[] error, any data)
 {
+    int generation = data;
+    if (g_bShuttingDown || generation != g_iDatabaseConnectGeneration)
+    {
+        PrintToServer("[WhaleTracker] Ignored stale schema callback attempt=%d current=%d",
+            generation,
+            g_iDatabaseConnectGeneration);
+        return;
+    }
+
     if (error[0] != '\0')
     {
         g_bSchemaCheckInFlight = false;
