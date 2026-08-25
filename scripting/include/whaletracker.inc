@@ -156,6 +156,11 @@ bool WhaleTracker_IsRoundRunning()
         return DGM_IsRoundRunning();
     }
 
+    if (FindEntityByClassname(-1, "tf_gamerules") == -1)
+    {
+        return false;
+    }
+
     return (GameRules_GetRoundState() == RoundState_RoundRunning);
 }
 
