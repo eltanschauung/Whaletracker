@@ -365,17 +365,18 @@ public Action Command_ShowLastSeen(int client, int args)
 
     char steamId[STEAMID64_LEN];
     char matchedName[256];
-    if (FindOnlineSeenMatch(search, steamId, sizeof(steamId), matchedName, sizeof(matchedName)))
+    int matchedClient = FindOnlineSeenMatch(search, steamId, sizeof(steamId), matchedName, sizeof(matchedName));
+    if (matchedClient > 0)
     {
         int lastSeen = 0;
         int firstSeen = 0;
         if (GetOnlineSeenTimesForSteamId64(steamId, lastSeen, firstSeen) && lastSeen > 0)
         {
-            PrintSeenResult(client, matchedName, lastSeen, firstSeen);
+            PrintSeenResult(client, matchedName, lastSeen, firstSeen, matchedClient);
             return Plugin_Handled;
         }
 
-        RequestSeenTimesBySteamId(client, steamId, matchedName);
+        RequestSeenTimesBySteamId(client, steamId, matchedName, matchedClient);
         return Plugin_Handled;
     }
 
@@ -753,7 +754,7 @@ int GetSeenNameMatchRank(const char[] loweredSearch, const char[] name)
     return 999;
 }
 
-bool FindOnlineSeenMatch(const char[] search, char[] steamId, int steamIdLen, char[] matchedName, int matchedNameLen)
+int FindOnlineSeenMatch(const char[] search, char[] steamId, int steamIdLen, char[] matchedName, int matchedNameLen)
 {
     steamId[0] = '\0';
     matchedName[0] = '\0';
@@ -811,7 +812,7 @@ bool FindOnlineSeenMatch(const char[] search, char[] steamId, int steamIdLen, ch
 
     if (bestClient <= 0 || bestRank >= 999)
     {
-        return false;
+        return 0;
     }
 
     GetClientAuthId(bestClient, AuthId_SteamID64, steamId, steamIdLen);
@@ -822,7 +823,7 @@ bool FindOnlineSeenMatch(const char[] search, char[] steamId, int steamIdLen, ch
     }
     TrimString(steamId);
     TrimString(matchedName);
-    return (steamId[0] != '\0');
+    return steamId[0] != '\0' ? bestClient : 0;
 }
 
 bool GetOnlineSeenTimesForSteamId64(const char[] steamId, int &lastSeen, int &firstSeen)
@@ -861,22 +862,27 @@ bool GetOnlineSeenTimesForSteamId64(const char[] steamId, int &lastSeen, int &fi
     return false;
 }
 
-void PrintSeenResult(int client, const char[] matchedName, int lastSeen, int firstSeen)
+void PrintSeenResult(int client, const char[] matchedName, int lastSeen, int firstSeen, int colorSource = 0)
 {
     if (!IsValidClient(client) || IsFakeClient(client))
     {
         return;
     }
 
+    if (!IsValidClient(colorSource) || IsFakeClient(colorSource))
+    {
+        colorSource = client;
+    }
+
     if (lastSeen <= 0)
     {
-        CPrintToChat(client, "{green}[WhaleTracker]{default} %s{default} has no last seen data.", matchedName);
+        CPrintToChatEx(client, colorSource, "{green}[WhaleTracker]{default} %s{default} has no last seen data.", matchedName);
         return;
     }
 
     char timestamp[32];
     FormatTime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", lastSeen);
-    CPrintToChat(client, "{green}[WhaleTracker]{default} %s{default} last seen: {gold}%s", matchedName, timestamp);
+    CPrintToChatEx(client, colorSource, "{green}[WhaleTracker]{default} %s{default} last seen: {gold}%s", matchedName, timestamp);
 
     if (firstSeen > 0)
     {
@@ -886,7 +892,7 @@ void PrintSeenResult(int client, const char[] matchedName, int lastSeen, int fir
     }
 }
 
-void RequestSeenTimesBySteamId(int client, const char[] steamId, const char[] matchedName)
+void RequestSeenTimesBySteamId(int client, const char[] steamId, const char[] matchedName, int colorSource)
 {
     if (!IsValidClient(client) || IsFakeClient(client) || steamId[0] == '\0' || !g_bDatabaseReady || g_hDatabase == null)
     {
@@ -898,6 +904,7 @@ void RequestSeenTimesBySteamId(int client, const char[] steamId, const char[] ma
 
     DataPack pack = new DataPack();
     pack.WriteCell(GetClientUserId(client));
+    pack.WriteCell(GetClientUserId(colorSource));
     pack.WriteString(matchedName);
 
     char query[256];
@@ -912,6 +919,7 @@ public void WhaleTracker_SeenTimesBySteamIdCallback(Database db, DBResultSet res
     DataPack pack = view_as<DataPack>(data);
     pack.Reset();
     int client = GetClientOfUserId(pack.ReadCell());
+    int colorSource = GetClientOfUserId(pack.ReadCell());
     char matchedName[256];
     pack.ReadString(matchedName, sizeof(matchedName));
     delete pack;
@@ -936,7 +944,7 @@ public void WhaleTracker_SeenTimesBySteamIdCallback(Database db, DBResultSet res
         firstSeen = results.FetchInt(1);
     }
 
-    PrintSeenResult(client, matchedName, lastSeen, firstSeen);
+    PrintSeenResult(client, matchedName, lastSeen, firstSeen, colorSource);
 }
 
 void RequestRankedSeenMatch(int client, const char[] search)
