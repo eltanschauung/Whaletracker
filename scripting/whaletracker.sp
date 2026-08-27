@@ -91,6 +91,7 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("DGM_GetServerCapacity");
     MarkNativeAsOptional("DGM_ServerCapacitycheck");
     MarkNativeAsOptional("DGM_IsRoundRunning");
+    MarkNativeAsOptional("DGM_IsSetupActive");
     MarkNativeAsOptional("ServerMail_SendCurrencySteamId");
     RegPluginLibrary("whaletracker");
     CreateNative("WhaleTracker_GetCumulativeKills", Native_WhaleTracker_GetCumulativeKills);

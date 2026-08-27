@@ -14,7 +14,8 @@ Only plugin-facing natives and forwards are listed here; third-party includes ar
 - `DGM_GetServerCapacity` - Returns the configured server capacity.
 - `DGM_GetPopulationRatio` - Returns real players divided by server capacity.
 - `DGM_ServerCapacitycheck` - Returns whether population meets a capacity ratio.
-- `DGM_IsRoundRunning` - Returns whether a round is active.
+- `DGM_IsRoundRunning` - Returns whether live round gameplay is active outside setup.
+- `DGM_IsSetupActive` - Returns whether setup time is active.
 - `DGM_GetLastRoundDurationSeconds` - Returns the previous round length in seconds.
 - `DGM_GetRoundDurationSeconds` - Returns the seconds between two round timestamps.
 
