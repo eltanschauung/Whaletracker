@@ -557,10 +557,9 @@ public void WhaleTracker_LoadOnlineSnapshotCallback(Database db, DBResultSet res
         g_MapStats[client].totalUbers = results.FetchInt(13);
         g_MapStats[client].bestKillstreak = results.FetchInt(14);
         g_MapStats[client].bestUbersLife = results.FetchInt(15);
-        g_MapStats[client].currentKillstreak = results.FetchInt(16);
         g_MapStats[client].currentUbersLife = results.FetchInt(17);
-        g_Stats[client].currentKillstreak = g_MapStats[client].currentKillstreak;
         g_Stats[client].currentUbersLife = g_MapStats[client].currentUbersLife;
+        WhaleTracker_SyncNativeKillstreak(client);
         g_MapStats[client].weaponShots[WeaponCategory_Shotguns] = results.FetchInt(18);
         g_MapStats[client].weaponHits[WeaponCategory_Shotguns] = results.FetchInt(19);
         g_MapStats[client].weaponShots[WeaponCategory_Scatterguns] = results.FetchInt(20);

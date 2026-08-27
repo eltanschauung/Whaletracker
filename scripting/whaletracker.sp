@@ -180,7 +180,7 @@ enum struct WhaleStats
     int playtime; // seconds
 
     // runtime counters (not persisted directly)
-    int currentKillstreak;
+    int currentKillstreak; // Cached from TF2's native m_nStreaks[0] for database output.
     int currentUbersLife;
     int currentAssistsLife;
     int currentMeatshotKillsLife;

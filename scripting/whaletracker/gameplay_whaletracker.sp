@@ -332,6 +332,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
             ApplyKillStats(g_Stats[attacker], backstab, headshotKill, medicDrop);
             ApplyKillStats(g_MapStats[attacker], backstab, headshotKill, medicDrop);
+            int killstreak = WhaleTracker_SyncNativeKillstreak(attacker);
             if (telefrag)
             {
                 g_Stats[attacker].totalTelefrags++;
@@ -350,7 +351,6 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             WhaleTracker_CheckPlaytimeMilestones(attacker);
             RegisterMultikill(attacker);
-            int killstreak = g_Stats[attacker].currentKillstreak;
             int killstreakBonusInterval = WT_GetKillstreakBonusInterval();
             if (killstreak > 0 && killstreak % killstreakBonusInterval == 0)
             {
@@ -430,7 +430,12 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
         if (IsValidClient(victim) && WhaleTracker_IsTrackingEnabled(victim))
         {
-            int victimKillstreak = g_Stats[victim].currentKillstreak;
+            int victimKillstreak = WhaleTracker_GetNativeKillstreak(victim);
+            int eventVictimKillstreak = event.GetInt("kill_streak_victim");
+            if (eventVictimKillstreak > victimKillstreak)
+            {
+                victimKillstreak = eventVictimKillstreak;
+            }
             if (attackerIsHuman && victimKillstreak >= WT_GetKillstreakBonusInterval())
             {
                 FireKillstreakEnd(attacker, victim, victimKillstreak);
@@ -443,6 +448,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
             }
             ApplyCumulativeDeathStats(g_Stats[victim], attackerUserId != 0);
             ApplyDeathStats(g_MapStats[victim]);
+            RequestFrame(WhaleTracker_FrameSyncNativeKillstreak, GetClientUserId(victim));
             MarkClientDirty(victim);
         }
 

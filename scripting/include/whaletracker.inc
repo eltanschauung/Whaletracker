@@ -9,9 +9,48 @@ public void OnConfigsExecuted()
     RefreshServerFlags();
 }
 
+int WhaleTracker_GetNativeKillstreak(int client)
+{
+    if (client <= 0
+        || client > MaxClients
+        || !IsClientInGame(client)
+        || !HasEntProp(client, Prop_Send, "m_nStreaks"))
+    {
+        return 0;
+    }
+
+    return GetEntProp(client, Prop_Send, "m_nStreaks", _, 0);
+}
+
+int WhaleTracker_SyncNativeKillstreak(int client)
+{
+    int nativeStreak = WhaleTracker_GetNativeKillstreak(client);
+    g_Stats[client].currentKillstreak = nativeStreak;
+    g_MapStats[client].currentKillstreak = nativeStreak;
+
+    if (nativeStreak > g_Stats[client].bestKillstreak)
+    {
+        g_Stats[client].bestKillstreak = nativeStreak;
+    }
+    if (nativeStreak > g_MapStats[client].bestKillstreak)
+    {
+        g_MapStats[client].bestKillstreak = nativeStreak;
+    }
+
+    return nativeStreak;
+}
+
+public void WhaleTracker_FrameSyncNativeKillstreak(any userId)
+{
+    int client = GetClientOfUserId(userId);
+    if (client > 0)
+    {
+        WhaleTracker_SyncNativeKillstreak(client);
+    }
+}
+
 void ResetRuntimeCounters(WhaleStats stats)
 {
-    stats.currentKillstreak = 0;
     stats.currentUbersLife = 0;
     stats.currentAssistsLife = 0;
     stats.currentMeatshotKillsLife = 0;
@@ -54,6 +93,7 @@ void ResetStatsStruct(WhaleStats stats, bool resetIdentity)
     }
     stats.lastSeen = 0;
     stats.bestKillstreak = 0;
+    stats.currentKillstreak = 0;
     stats.bestUbersLife = 0;
     stats.playtime = 0;
     stats.connectTime = 0.0;
@@ -261,6 +301,8 @@ bool QueueClientOnlineSnapshot(int client, int now, float engineNow, int playerC
         playtime += RoundToFloor(engineNow - g_MapStats[client].connectTime);
     }
 
+    int currentKillstreak = WhaleTracker_SyncNativeKillstreak(client);
+
     char weaponValueSegment[512];
     BuildWeaponAccuracySegment(g_MapStats[client], weaponValueSegment, sizeof(weaponValueSegment));
 
@@ -292,7 +334,7 @@ bool QueueClientOnlineSnapshot(int client, int now, float engineNow, int playerC
         g_MapStats[client].totalUbers,
         g_MapStats[client].bestKillstreak,
         g_MapStats[client].bestUbersLife,
-        g_MapStats[client].currentKillstreak,
+        currentKillstreak,
         g_MapStats[client].currentUbersLife,
         visibleMax,
         playtime,
@@ -2181,7 +2223,6 @@ void BuildWeaponAccuracySegment(const WhaleStats stats, char[] buffer, int maxle
 
 void ResetLifeCounters(WhaleStats stats)
 {
-    stats.currentKillstreak = 0;
     stats.currentUbersLife = 0;
     stats.currentAssistsLife = 0;
     stats.currentMeatshotKillsLife = 0;
@@ -2192,14 +2233,6 @@ void ResetLifeCounters(WhaleStats stats)
 void ApplyKillStats(WhaleStats stats, bool backstab, bool headshotKill, bool medicDrop)
 {
     stats.kills++;
-
-    stats.currentKillstreak++;
-
-
-    if (stats.currentKillstreak > stats.bestKillstreak)
-    {
-        stats.bestKillstreak = stats.currentKillstreak;
-    }
     if (backstab)
     {
         stats.totalBackstabs++;
