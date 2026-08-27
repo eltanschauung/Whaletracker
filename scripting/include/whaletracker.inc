@@ -149,20 +149,6 @@ bool WhaleTracker_AreClientStatsReady(int client)
         && !g_bOnlineStateLoadPending[client]);
 }
 
-bool WhaleTracker_TryGetGameRulesInt(const char[] prop, int &value, int size = 4)
-{
-    int gameRules = FindEntityByClassname(-1, "tf_gamerules");
-    if (gameRules <= 0
-        || !IsValidEntity(gameRules)
-        || !HasEntProp(gameRules, Prop_Send, prop))
-    {
-        return false;
-    }
-
-    value = GetEntProp(gameRules, Prop_Send, prop, size);
-    return true;
-}
-
 bool WhaleTracker_IsRoundRunning()
 {
     if (GetFeatureStatus(FeatureType_Native, "DGM_IsRoundRunning") == FeatureStatus_Available)
@@ -176,16 +162,7 @@ bool WhaleTracker_IsRoundRunning()
             || !DGM_IsSetupActive();
     }
 
-    int roundState;
-    int inSetup;
-    if (!WhaleTracker_TryGetGameRulesInt("m_iRoundState", roundState)
-        || view_as<RoundState>(roundState) != RoundState_RoundRunning
-        || !WhaleTracker_TryGetGameRulesInt("m_bInSetup", inSetup, 1))
-    {
-        return false;
-    }
-
-    return inSetup == 0;
+    return false;
 }
 
 bool WhaleTracker_HasHumanClientsExcept(int excludedClient)
