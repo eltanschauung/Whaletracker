@@ -1,6 +1,5 @@
 bool g_bPlayerTakenDirectHit[MAXPLAYERS + 1];
 bool g_bPlayerTakenReflectDirectHit[MAXPLAYERS + 1];
-bool g_bInExplosiveJump[MAXPLAYERS + 1];
 int g_iPendingMarketGardenAttacker[MAXPLAYERS + 1];
 float g_fPendingMarketGardenTime[MAXPLAYERS + 1];
 int g_iPendingReflectAttacker[MAXPLAYERS + 1];
@@ -207,7 +206,6 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
     g_bPlayerTakenDirectHit[client] = false;
     g_bPlayerTakenReflectDirectHit[client] = false;
-    g_bInExplosiveJump[client] = false;
     ResetMarketGardenKillCandidate(client);
     ResetReflectKillCandidate(client);
     ResetDemoSyncState(client);
@@ -215,28 +213,6 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
     ResetJuggleState(client);
     ResetLifeCounters(g_Stats[client]);
     ResetLifeCounters(g_MapStats[client]);
-}
-
-public void Event_ExplosiveJump(Event event, const char[] name, bool dontBroadcast)
-{
-    int client = GetClientOfUserId(event.GetInt("userid"));
-    if (!IsValidClient(client))
-    {
-        return;
-    }
-
-    g_bInExplosiveJump[client] = true;
-}
-
-public void Event_ExplosiveJumpLanded(Event event, const char[] name, bool dontBroadcast)
-{
-    int client = GetClientOfUserId(event.GetInt("userid"));
-    if (!IsValidClient(client))
-    {
-        return;
-    }
-
-    g_bInExplosiveJump[client] = false;
 }
 
 public void OnEntityCreated(int entity, const char[] classname)
@@ -1138,15 +1114,8 @@ bool IsMarketGardenerWeapon(int weapon)
 
 bool IsMarketGardenerHit(int attacker, int weapon)
 {
-    bool validAttacker = IsValidClient(attacker);
-    bool inExplosiveJump = validAttacker ? g_bInExplosiveJump[attacker] : false;
-
-    if (!inExplosiveJump)
-    {
-        return false;
-    }
-
-    if (!validAttacker)
+    if (!IsValidClient(attacker)
+        || !TF2_IsPlayerInCondition(attacker, TFCond_BlastJumping))
     {
         return false;
     }
@@ -1209,7 +1178,8 @@ bool IsWeaponClass(int weapon, const char[] expectedClassname)
 
 bool IsSoldierSyncRocketLauncherDamage(int attacker, int weapon)
 {
-    if (!IsValidClient(attacker) || !g_bInExplosiveJump[attacker])
+    if (!IsValidClient(attacker)
+        || !TF2_IsPlayerInCondition(attacker, TFCond_BlastJumping))
     {
         return false;
     }

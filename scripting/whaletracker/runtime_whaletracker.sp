@@ -307,10 +307,6 @@ public void OnPluginStart()
     HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Post);
     HookEvent("player_healed", Event_PlayerHealed, EventHookMode_Post);
     HookEvent("player_chargedeployed", Event_UberDeployed, EventHookMode_Post);
-    HookEvent("rocket_jump", Event_ExplosiveJump, EventHookMode_Pre);
-    HookEvent("sticky_jump", Event_ExplosiveJump, EventHookMode_Pre);
-    HookEvent("rocket_jump_landed", Event_ExplosiveJumpLanded, EventHookMode_Pre);
-    HookEvent("sticky_jump_landed", Event_ExplosiveJumpLanded, EventHookMode_Pre);
     HookEvent("teamplay_round_win", Event_RoundWin, EventHookMode_PostNoCopy);
     HookEvent("teamplay_round_start", Event_ResetMultikillAll, EventHookMode_PostNoCopy);
 
