@@ -55,6 +55,7 @@
 #define TF_CLASS_MEDIC          5
 #define WT_MEDIC_ASSISTS_LIFE_BONUS_INTERVAL 4
 #define WT_DROPSHOT_MIN_HEIGHT 50.0
+#define WT_MEATSHOT_MIN_PELLETS 4
 #define WT_AIRSHOT_SOUND "misc/taps_02.wav"
 #define WT_AIRSHOT_SOUND_DOWNLOAD "sound/misc/taps_02.wav"
 #define WT_AIRSHOT_SAYSOUND "airshot"

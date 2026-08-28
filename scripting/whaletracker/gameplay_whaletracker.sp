@@ -604,7 +604,7 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] weaponname
 
 public void TF2Shotgun_OnPelletShot(int attacker, int victim, int pellets, int total, bool kill)
 {
-    if (total < 1 || pellets != total
+    if (total < WT_MEATSHOT_MIN_PELLETS || pellets != total
         || !IsValidClient(attacker) || IsFakeClient(attacker)
         || !IsValidClient(victim) || IsFakeClient(victim)
         || attacker == victim || !WhaleTracker_IsTrackingEnabled(attacker))
