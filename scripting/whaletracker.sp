@@ -12,6 +12,11 @@
 #include <connect>
 #include <scattergun_pellets>
 #define REQUIRE_EXTENSIONS
+
+#undef REQUIRE_PLUGIN
+#include <tf2attributes>
+#define REQUIRE_PLUGIN
+
 #include <geoip>
 #include <adt_array>
 #include <datapack>
@@ -38,6 +43,7 @@
 #define WT_TRACE_DOWN_DISTANCE -16384.0
 #define WT_MARKET_GARDENER_DEF_INDEX 416
 #define WT_HANDSHAKE_DEF_INDEX 609
+#define WT_ATTR_CLASS_CRIT_WHILE_AIRBORNE "crit_while_airborne"
 #define WT_VACCINATOR_DEF_INDEX 998
 #define WT_SOLDIER_SYNC_EXCLUDED_DEF_INDEX 730
 #define WT_WHALE_POINTS_SCALE 1000.0

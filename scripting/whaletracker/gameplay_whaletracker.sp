@@ -1112,10 +1112,23 @@ int GetWeaponDefIndexSafe(int weapon)
     return GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex");
 }
 
-bool IsMarketGardenerWeapon(int weapon)
+bool IsMarketGardenerWeapon(int attacker, int weapon)
 {
+    if (weapon <= MaxClients
+        || !IsValidEntity(weapon)
+        || GetPlayerWeaponSlot(attacker, TFWeaponSlot_Melee) != weapon)
+    {
+        return false;
+    }
+
     int def = GetWeaponDefIndexSafe(weapon);
-    return def == WT_MARKET_GARDENER_DEF_INDEX || def == WT_HANDSHAKE_DEF_INDEX;
+    if (def == WT_MARKET_GARDENER_DEF_INDEX || def == WT_HANDSHAKE_DEF_INDEX)
+    {
+        return true;
+    }
+
+    return GetFeatureStatus(FeatureType_Native, "TF2Attrib_HookValueInt") == FeatureStatus_Available
+        && TF2Attrib_HookValueInt(0, WT_ATTR_CLASS_CRIT_WHILE_AIRBORNE, weapon) != 0;
 }
 
 bool IsMarketGardenerHit(int attacker, int weapon)
@@ -1126,11 +1139,7 @@ bool IsMarketGardenerHit(int attacker, int weapon)
         return false;
     }
 
-    if (IsMarketGardenerWeapon(weapon))
-    {
-        return true;
-    }
-    return false;
+    return IsMarketGardenerWeapon(attacker, weapon);
 }
 
 void MarkMarketGardenKillCandidate(int attacker, int victim)
