@@ -486,7 +486,7 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
     QueueSaveQuery(query, 0, false);
 
     int duration = (g_iMatchStartTime > 0) ? (now - g_iMatchStartTime) : 0;
-    InsertMatchLogRecord(now, duration, serverPlayerCount, false);
+    InsertMatchLogRecord(now, duration, serverPlayerCount, false, false);
 
     return Plugin_Continue;
 }
@@ -1738,7 +1738,7 @@ void WhaleTracker_RecordRoundStatistics(Event event)
     QueueSaveQuery(query, 0, false);
 }
 
-void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool forceSync)
+void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool forceSync, bool finalized)
 {
     if (!WhaleTracker_ShouldUseMatchLogs())
         return;
@@ -1764,12 +1764,18 @@ void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool 
     EscapeSqlString(gamemode, escapedMode, sizeof(escapedMode));
 
     int started = (g_iMatchStartTime > 0) ? g_iMatchStartTime : endTime;
+    char cacheMarker[40];
+    cacheMarker[0] = '\0';
+    if (finalized)
+    {
+        strcopy(cacheMarker, sizeof(cacheMarker), "/* wt_points_cache_finalize */ ");
+    }
 
     char query[SAVE_QUERY_MAXLEN];
     Format(query, sizeof(query),
-        "INSERT INTO whaletracker_logs "
-        ... "(log_id, map, gamemode, started_at, ended_at, duration, player_count, created_at, updated_at) "
-        ... "VALUES ('%s', '%s', '%s', %d, %d, %d, %d, %d, %d) "
+        "%sINSERT INTO whaletracker_logs "
+        ... "(log_id, map, gamemode, started_at, ended_at, duration, player_count, created_at, updated_at, finalized) "
+        ... "VALUES ('%s', '%s', '%s', %d, %d, %d, %d, %d, %d, %d) "
         ... "ON DUPLICATE KEY UPDATE "
         ... "map = VALUES(map), "
         ... "gamemode = VALUES(gamemode), "
@@ -1777,7 +1783,9 @@ void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool 
         ... "ended_at = VALUES(ended_at), "
         ... "duration = VALUES(duration), "
         ... "player_count = VALUES(player_count), "
+        ... "finalized = VALUES(finalized), "
         ... "updated_at = VALUES(updated_at)",
+        cacheMarker,
         g_sCurrentLogId,
         escapedMap,
         escapedMode,
@@ -1786,7 +1794,8 @@ void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool 
         duration,
         participantCount,
         started,
-        endTime);
+        endTime,
+        finalized ? 1 : 0);
 
     QueueSaveQuery(query, 0, forceSync);
 }
@@ -1899,7 +1908,7 @@ void FinalizeCurrentMatch(bool shuttingDown)
 
     delete snap;
 
-    InsertMatchLogRecord(endTime, duration, participantCount, shuttingDown);
+    InsertMatchLogRecord(endTime, duration, participantCount, shuttingDown, true);
 
     if (g_sCurrentLogId[0])
     {

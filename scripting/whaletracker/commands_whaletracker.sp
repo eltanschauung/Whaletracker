@@ -83,25 +83,19 @@ public Action Command_RecordHistoricalSnapshot(int client, int args)
     return Plugin_Handled;
 }
 
-void PrintUnrankedWhalePointsMessage(int client, int target)
+void PrintUnrankedWhalePointsMessage(int client, int target, int matchesUsed)
 {
     char displayName[128];
     GetClientChatDisplayName(target, displayName, sizeof(displayName));
 
-    if (g_Stats[target].loaded)
-    {
-        int combined = g_Stats[target].kills + g_Stats[target].deaths;
-        int playtime = (g_Stats[target].playtime > 0) ? g_Stats[target].playtime : 0;
-        float hours = float(playtime) / float(WT_SECONDS_PER_HOUR);
-        float requiredHours = float(WT_GetRankMinPlaytimeSeconds()) / float(WT_SECONDS_PER_HOUR);
-        CPrintToChatEx(client, target, "{green}[WhaleTracker]{default} %s{default} is unranked until Kills + Deaths reaches at least %d and playtime reaches %.2f hours (current: %d K+D, %.2f hours).", displayName, WT_GetRankMinKdSum(), requiredHours, combined, hours);
-        return;
-    }
-
-    CPrintToChatEx(client, target, "{green}[WhaleTracker]{default} %s{default} is currently unranked.", displayName);
+    CPrintToChatEx(client, target,
+        "{green}[WhaleTracker]{default} %s{default} is unranked until they have %d qualifying matches (current: %d).",
+        displayName,
+        WT_WHALE_POINTS_MIN_MATCHES,
+        matchesUsed);
 }
 
-void PrintLiveWhalePointsMessage(int client, int target, bool broadcast, bool showHints, int points, int rank, bool hasRank)
+void PrintLiveWhalePointsMessage(int client, int target, bool broadcast, bool showHints, int points, int rank)
 {
     char displayName[128];
     GetClientChatDisplayName(target, displayName, sizeof(displayName));
@@ -115,31 +109,12 @@ void PrintLiveWhalePointsMessage(int client, int target, bool broadcast, bool sh
                 continue;
             }
 
-            if (hasRank && rank > 0)
-            {
-                CPrintToChatEx(i, target, "{gold}[Whaletracker]{default} %s{default}'s Points: %d, Rank #%d", displayName, points, rank);
-            }
-            else
-            {
-                CPrintToChatEx(i, target, "{gold}[Whaletracker]{default} %s{default}'s Points: %d", displayName, points);
-            }
+            CPrintToChatEx(i, target, "{gold}[Whaletracker]{default} %s{default}'s Points: %d, Rank #%d", displayName, points, rank);
         }
     }
     else
     {
-        if (hasRank && rank > 0)
-        {
-            CPrintToChatEx(client, target, "{gold}[Whaletracker]{default} %s{default}'s Points: %d, Rank #%d", displayName, points, rank);
-        }
-        else
-        {
-            CPrintToChatEx(client, target, "{gold}[Whaletracker]{default} %s{default}'s Points: %d", displayName, points);
-        }
-    }
-
-    if (!hasRank)
-    {
-        CPrintToChat(client, "{green}[WhaleTracker]{default} Live rank unavailable right now.");
+        CPrintToChatEx(client, target, "{gold}[Whaletracker]{default} %s{default}'s Points: %d, Rank #%d", displayName, points, rank);
     }
 
     if (g_Stats[target].loaded)
@@ -168,23 +143,24 @@ public Action Command_ShowPointsCalculation(int client, int args)
     CPrintToChat(client, "Combat: {lightgreen}(kills + assists * 0.35) / (deaths + 20)");
     CPrintToChat(client, "Pressure: {lightgreen}ln(1 + damage / (150 * eng))");
     CPrintToChat(client, "Support: {lightgreen}0.60 * ln(1 + healing / (100 * eng)) + 0.90 * ln(1 + 60 * ubers / eng)");
-    CPrintToChat(client, "Confidence: {axis}sqrt(eng / (eng + 400)) * (hours / (hours + 20))");
-    CPrintToChat(client, "Where {lightgreen}eng = kills + deaths{default} and {lightgreen}hours = playtime / 3600");
+    CPrintToChat(client, "Confidence: {axis}sqrt(eng / (eng + 400))");
+    CPrintToChat(client, "Uses up to your latest {lightgreen}300{default} qualifying match logs; at least {lightgreen}50{default} are required.");
+    CPrintToChat(client, "Logs must be over 5 minutes with more than 5 kills + assists on an approved map.");
     return Plugin_Handled;
 }
 
-void QueryLiveWhalePointsRank(int client, int target, bool broadcast, bool showHints, int points)
+void QueryLiveWhalePointsRank(int client, int target, bool broadcast, bool showHints)
 {
     if (!g_bDatabaseReady || g_hDatabase == null)
     {
-        PrintLiveWhalePointsMessage(client, target, broadcast, showHints, points, 0, false);
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Database is not ready.");
         return;
     }
 
     EnsureClientSteamId(target);
     if (g_Stats[target].steamId[0] == '\0')
     {
-        PrintLiveWhalePointsMessage(client, target, broadcast, showHints, points, 0, false);
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Target SteamID is not available.");
         return;
     }
 
@@ -196,21 +172,10 @@ void QueryLiveWhalePointsRank(int client, int target, bool broadcast, bool showH
     pack.WriteCell(GetClientUserId(target));
     pack.WriteCell(broadcast ? 1 : 0);
     pack.WriteCell(showHints ? 1 : 0);
-    pack.WriteCell(points);
-
-    char query[6144];
+    char query[512];
     Format(query, sizeof(query),
-        "SELECT 1 + COUNT(*) "
-        ... "FROM whaletracker "
-        ... "WHERE ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) >= %d "
-        ... "AND (CASE WHEN playtime > 0 THEN playtime ELSE 0 END) >= %d "
-        ... "AND (%s > %d OR (%s = %d AND steamid < '%s'))",
-        WT_GetRankMinKdSum(),
-        WT_GetRankMinPlaytimeSeconds(),
-        WHALE_POINTS_SQL_EXPR,
-        points,
-        WHALE_POINTS_SQL_EXPR,
-        points,
+        "SELECT points, rank, matches_used "
+        ... "FROM whaletracker_points_cache WHERE steamid = '%s' LIMIT 1",
         escapedSteamId);
     g_hDatabase.Query(WhaleTracker_ShowLivePointsRankCallback, query, pack);
 }
@@ -223,7 +188,6 @@ public void WhaleTracker_ShowLivePointsRankCallback(Database db, DBResultSet res
     int target = GetClientOfUserId(pack.ReadCell());
     bool broadcast = (pack.ReadCell() != 0);
     bool showHints = (pack.ReadCell() != 0);
-    int points = pack.ReadCell();
     delete pack;
 
     if (!IsValidClient(client) || !IsClientInGame(client) || IsFakeClient(client))
@@ -244,19 +208,32 @@ public void WhaleTracker_ShowLivePointsRankCallback(Database db, DBResultSet res
         {
             WhaleTracker_ScheduleReconnect(WT_COMMAND_QUICK_RECONNECT_DELAY);
         }
-        PrintLiveWhalePointsMessage(client, target, broadcast, showHints, points, 0, false);
+        CPrintToChat(client, "{green}[WhaleTracker]{default} Points cache is temporarily unavailable.");
         return;
     }
 
+    int points = 0;
     int rank = 0;
-    bool hasRank = false;
+    int matchesUsed = 0;
     if (results != null && results.FetchRow())
     {
-        rank = results.FetchInt(0);
-        hasRank = (rank > 0);
+        points = results.FetchInt(0);
+        rank = results.FetchInt(1);
+        matchesUsed = results.FetchInt(2);
     }
 
-    PrintLiveWhalePointsMessage(client, target, broadcast, showHints, points, rank, hasRank);
+    g_iRollingPointsCache[target] = points > 0 ? points : 0;
+    g_iRollingRankCache[target] = rank > 0 ? rank : 0;
+    g_iRollingMatchesCache[target] = matchesUsed > 0 ? matchesUsed : 0;
+    g_bRollingPointsLoaded[target] = true;
+
+    if (rank <= 0)
+    {
+        PrintUnrankedWhalePointsMessage(client, target, matchesUsed);
+        return;
+    }
+
+    PrintLiveWhalePointsMessage(client, target, broadcast, showHints, points, rank);
 }
 
 Action HandleShowPointsCommand(int client, int target, bool broadcast, bool showHints)
@@ -269,16 +246,7 @@ Action HandleShowPointsCommand(int client, int target, bool broadcast, bool show
         return Plugin_Handled;
     }
 
-    int combined = g_Stats[target].kills + g_Stats[target].deaths;
-    int playtime = (g_Stats[target].playtime > 0) ? g_Stats[target].playtime : 0;
-    if (combined < WT_GetRankMinKdSum() || playtime < WT_GetRankMinPlaytimeSeconds())
-    {
-        PrintUnrankedWhalePointsMessage(client, target);
-        return Plugin_Handled;
-    }
-
-    int points = GetWhalePointsForStats(g_Stats[target]);
-    QueryLiveWhalePointsRank(client, target, broadcast, showHints, points);
+    QueryLiveWhalePointsRank(client, target, broadcast, showHints);
     return Plugin_Handled;
 }
 
@@ -656,6 +624,10 @@ void ResetClientCommandCaches(int client)
     g_bShowCountryPending[client] = false;
     g_bShowCountryCache[client] = false;
     g_bShowCountryToggleAfterLoad[client] = false;
+    g_iRollingPointsCache[client] = 0;
+    g_iRollingRankCache[client] = 0;
+    g_iRollingMatchesCache[client] = 0;
+    g_bRollingPointsLoaded[client] = false;
 }
 
 void GetClientChatDisplayName(int client, char[] buffer, int maxlen)
@@ -1586,22 +1558,17 @@ int GetWhalePointsForStats(const WhaleStats stats)
     int safeTotalUbers = (stats.totalUbers > 0) ? stats.totalUbers : 0;
     int safeDamage = (stats.totalDamage > 0) ? stats.totalDamage : 0;
     int safeHealing = (stats.totalHealing > 0) ? stats.totalHealing : 0;
-    int safePlaytime = (stats.playtime > 0) ? stats.playtime : 0;
     int safeEngagement = safeKills + safeDeaths;
-
-    if (safeEngagement < WT_GetRankMinKdSum() || safePlaytime < WT_GetRankMinPlaytimeSeconds())
-    {
-        return 0;
-    }
+    if (safeEngagement < 1)
+        safeEngagement = 1;
 
     float engagement = float(safeEngagement);
-    float hours = float(safePlaytime) / float(WT_SECONDS_PER_HOUR);
     float combat = (float(safeKills) + (float(safeAssists) * WT_WHALE_POINTS_ASSIST_WEIGHT)) / (float(safeDeaths) + WT_WHALE_POINTS_DEATH_OFFSET);
     float pressure = Logarithm(1.0 + (float(safeDamage) / (WT_WHALE_POINTS_DAMAGE_SCALE * engagement)), WT_WHALE_POINTS_LOG_BASE_E);
     float support =
         (WT_WHALE_POINTS_HEALING_WEIGHT * Logarithm(1.0 + (float(safeHealing) / (WT_WHALE_POINTS_HEALING_SCALE * engagement)), WT_WHALE_POINTS_LOG_BASE_E))
         + (WT_WHALE_POINTS_UBER_WEIGHT * Logarithm(1.0 + ((WT_WHALE_POINTS_UBER_SCALE * float(safeTotalUbers)) / engagement), WT_WHALE_POINTS_LOG_BASE_E));
-    float confidence = SquareRoot(engagement / (engagement + WT_WHALE_POINTS_CONFIDENCE_ENGAGEMENT_OFFSET)) * (hours / (hours + WT_WHALE_POINTS_CONFIDENCE_HOURS_OFFSET));
+    float confidence = SquareRoot(engagement / (engagement + WT_WHALE_POINTS_CONFIDENCE_ENGAGEMENT_OFFSET));
 
     float pointsFloat = WT_WHALE_POINTS_SCALE * confidence * ((WT_WHALE_POINTS_COMBAT_WEIGHT * combat) + pressure + support);
     if (pointsFloat < 0.0)
@@ -1628,9 +1595,9 @@ public int GetWhalePointsForClient(int client)
         return 0;
     }
 
-    if (g_Stats[client].loaded)
+    if (g_bRollingPointsLoaded[client])
     {
-        return GetWhalePointsForStats(g_Stats[client]);
+        return g_iRollingRankCache[client] > 0 ? g_iRollingPointsCache[client] : 0;
     }
 
     if (!g_bDatabaseReady || g_hDatabase == null)
@@ -1649,8 +1616,8 @@ public int GetWhalePointsForClient(int client)
 
     char query[256];
     Format(query, sizeof(query),
-        "SELECT kills, deaths, assists, total_ubers, damage_dealt, healing, playtime "
-        ... "FROM whaletracker WHERE steamid = '%s' LIMIT 1",
+        "SELECT points, rank, matches_used "
+        ... "FROM whaletracker_points_cache WHERE steamid = '%s' LIMIT 1",
         escapedSteamId);
 
     DBResultSet results = SQLQuerySync(query);
@@ -1668,17 +1635,13 @@ public int GetWhalePointsForClient(int client)
         return 0;
     }
 
-    WhaleStats pointStats;
-    pointStats.kills = results.FetchInt(0);
-    pointStats.deaths = results.FetchInt(1);
-    pointStats.totalAssists = results.FetchInt(2);
-    pointStats.totalUbers = results.FetchInt(3);
-    pointStats.totalDamage = results.FetchInt(4);
-    pointStats.totalHealing = results.FetchInt(5);
-    pointStats.playtime = results.FetchInt(6);
+    g_iRollingPointsCache[client] = results.FetchInt(0);
+    g_iRollingRankCache[client] = results.FetchInt(1);
+    g_iRollingMatchesCache[client] = results.FetchInt(2);
+    g_bRollingPointsLoaded[client] = true;
     delete results;
 
-    return GetWhalePointsForStats(pointStats);
+    return g_iRollingRankCache[client] > 0 ? g_iRollingPointsCache[client] : 0;
 }
 
 public any Native_WhaleTracker_GetCumulativeKills(Handle plugin, int numParams)
@@ -1879,7 +1842,8 @@ public any Native_WhaleTracker_ComputeWhalePoints(Handle plugin, int numParams)
     pointStats.totalUbers = GetNativeCell(4);
     pointStats.totalDamage = GetNativeCell(5);
     pointStats.totalHealing = GetNativeCell(6);
-    pointStats.playtime = GetNativeCell(7);
+    // Parameter 7 remains accepted for API compatibility; rolling points have
+    // no playtime multiplier.
     return GetWhalePointsForStats(pointStats);
 }
 

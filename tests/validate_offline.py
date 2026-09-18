@@ -211,46 +211,76 @@ class ExtractedCacheSqlTests(unittest.TestCase):
         if REPO!='whaletracker': raise unittest.SkipTest('WhaleTracker-only cache SQL')
         cls.source=(ROOT/'src/points_cache.rs').read_text()
         cls.expr=re.search(r'const WHALE_POINTS_SQL_EXPR: &str = r#"(.*?)"#;',cls.source,re.S).group(1)
-        query=re.search(r'let insert_sql = format!\(\s*"(.*?)",\s*now =',cls.source,re.S).group(1)
+        maps_block=re.search(r'const RANKED_MAPS: &\[&str\] = &\[(.*?)\];',cls.source,re.S).group(1)
+        cls.maps=', '.join(f"'{value}'" for value in re.findall(r'"([^"]+)"',maps_block))
+        query=re.search(
+            r'format!\(\s*"(INSERT INTO whaletracker_points_cache_build.*?)",\s*min_duration =',
+            cls.source,
+            re.S,
+        ).group(1)
         cls.template=re.sub(r'\\\n\s*','',query)
     def setUp(self):
         self.db=sqlite3.connect(':memory:'); self.addCleanup(self.db.close)
         self.db.create_function('SQRT',1,math.sqrt); self.db.create_function('LN',1,math.log)
+        self.db.create_function('GREATEST',-1,lambda *values:max(values))
+        self.db.create_function('SUBSTRING_INDEX',3,self.substring_index)
         self.db.create_collation('utf8mb4_uca1400_ai_ci',lambda a,b:(a.casefold()>b.casefold())-(a.casefold()<b.casefold()))
-        self.db.executescript('''CREATE TABLE whaletracker (steamid TEXT PRIMARY KEY,kills INTEGER,deaths INTEGER,assists INTEGER,playtime INTEGER,damage_dealt INTEGER,healing INTEGER,total_ubers INTEGER);
+        self.db.executescript('''CREATE TABLE whaletracker (steamid TEXT PRIMARY KEY,cached_personaname TEXT);
 CREATE TABLE filters_namecolors (steamid TEXT PRIMARY KEY,color TEXT);
-CREATE TABLE whaletracker_points_cache (steamid TEXT PRIMARY KEY,points INTEGER,rank INTEGER,name_color TEXT,updated_at INTEGER);
-CREATE TABLE whaletracker_points_cache_build (steamid TEXT PRIMARY KEY,points INTEGER,rank INTEGER,name_color TEXT,updated_at INTEGER);''')
-    def insert(self,id,k,d,a=0,t=10800,dmg=1000,h=0,u=0):
-        self.db.execute('INSERT INTO whaletracker VALUES (?,?,?,?,?,?,?,?)',(id,k,d,a,t,dmg,h,u))
+CREATE TABLE whaletracker_logs (log_id TEXT PRIMARY KEY,map TEXT,started_at INTEGER,ended_at INTEGER,duration INTEGER,finalized INTEGER);
+CREATE TABLE whaletracker_log_players (log_id TEXT,steamid TEXT,kills INTEGER,deaths INTEGER,assists INTEGER,damage INTEGER,healing INTEGER,total_ubers INTEGER);
+CREATE TABLE whaletracker_points_cache (steamid TEXT PRIMARY KEY,points INTEGER,rank INTEGER,name_color TEXT,updated_at INTEGER,matches_used INTEGER,window_started_at INTEGER,window_ended_at INTEGER);
+CREATE TABLE whaletracker_points_cache_build (steamid TEXT PRIMARY KEY,points INTEGER,rank INTEGER,name_color TEXT,updated_at INTEGER,matches_used INTEGER,window_started_at INTEGER,window_ended_at INTEGER);''')
+    @staticmethod
+    def substring_index(value,delimiter,count):
+        parts=value.split(delimiter)
+        if count > 0: return delimiter.join(parts[:count])
+        if count < 0: return delimiter.join(parts[count:])
+        return ''
+    def insert(self,id,k,d,a=0,dmg=1000,h=0,u=0,matches=50,duration=301,map_name='cp_sunshine'):
+        self.db.execute('INSERT INTO whaletracker VALUES (?,?)',(id,id))
+        for n in range(matches):
+            log_id=f'{id}-{n}'
+            self.db.execute('INSERT INTO whaletracker_logs VALUES (?,?,?,?,?,1)',
+                (log_id,map_name,1000+n,2000+n,duration))
+            self.db.execute('INSERT INTO whaletracker_log_players VALUES (?,?,?,?,?,?,?,?)',
+                (log_id,id,k,d,a,dmg,h,u))
     def rebuild(self):
-        self.db.execute(self.template.format(now=1234567890,expr=self.expr,min_kd_sum=200,min_playtime=10800))
-        return self.db.execute('SELECT steamid,points,rank,name_color,updated_at FROM whaletracker_points_cache_build ORDER BY steamid').fetchall()
+        self.db.execute(self.template.format(
+            now=1234567890,expr=self.expr,min_duration=300,min_kills_assists=5,
+            max_matches=300,min_matches=50,maps=self.maps))
+        return self.db.execute('SELECT steamid,points,rank,name_color,updated_at,matches_used FROM whaletracker_points_cache_build ORDER BY steamid').fetchall()
     def test_thresholds_and_stable_tie_break(self):
-        self.insert('1',100,100); self.insert('2',100,100)
-        self.insert('3',99,100); self.insert('4',100,100,t=10799)
+        self.insert('1',10,10); self.insert('2',10,10)
+        self.insert('3',10,10,matches=49); self.insert('4',10,10,duration=300)
         rows=self.rebuild()
         self.assertEqual([r[2] for r in rows],[1,2,0,0])
         self.assertEqual(rows[0][1],rows[1][1])
     def test_name_color_precedence_and_fallback(self):
-        for id in ['1','2','3']: self.insert(id,100,100)
+        for id in ['1','2','3']: self.insert(id,10,10)
         self.db.execute("INSERT INTO filters_namecolors VALUES ('1','cyan')")
-        self.db.executemany('INSERT INTO whaletracker_points_cache VALUES (?,0,0,?,0)',[('1','red'),('2','blue')])
+        self.db.executemany('INSERT INTO whaletracker_points_cache VALUES (?,0,0,?,0,0,0,0)',[('1','red'),('2','blue')])
         self.assertEqual([r[3] for r in self.rebuild()],['cyan','blue','gold'])
-    def test_formula_against_independent_math_for_512_players(self):
+    def test_formula_against_independent_math_for_32_players(self):
         rng=random.Random(789); expected={}
-        for n in range(512):
-            k,d,a,t,dmg,h,u=[rng.randrange(0,v) for v in [5000,5000,1000,500000,1000000,1000000,1000]]
-            self.insert(str(n),k,d,a,t,dmg,h,u)
-            eng=max(k+d,1); hours=t/3600
-            value=1000*math.sqrt(eng/(eng+400))*(hours/(hours+20))*(5*(k+0.35*a)/(d+20)+math.log1p(dmg/(150*eng))+0.60*math.log1p(h/(100*eng))+0.90*math.log1p(60*u/eng))
+        for n in range(32):
+            k,d,a,dmg,h,u=[rng.randrange(0,v) for v in [100,100,100,20000,20000,20]]
+            if k+a <= 5: k=6
+            self.insert(str(n),k,d,a,dmg,h,u)
+            k*=50; d*=50; a*=50; dmg*=50; h*=50; u*=50
+            eng=max(k+d,1)
+            value=1000*math.sqrt(eng/(eng+400))*(5*(k+0.35*a)/(d+20)+math.log1p(dmg/(150*eng))+0.60*math.log1p(h/(100*eng))+0.90*math.log1p(60*u/eng))
             expected[str(n)]=math.floor(value+0.5)
-        rows=self.rebuild(); self.assertEqual(len(rows),512)
-        for id,points,rank,color,at in rows:
+        rows=self.rebuild(); self.assertEqual(len(rows),32)
+        for id,points,rank,color,at,matches in rows:
             self.assertEqual(points,expected[id],id); self.assertEqual(at,1234567890)
     def test_nonpositive_stats_do_not_produce_domain_error(self):
-        self.insert('1',-1,-2,-3,-10,-20,-30,-40)
+        self.insert('1',-1,-2,-3,-10,-20,-30)
         row=self.rebuild()[0]; self.assertEqual(row[1:3],(0,0))
+    def test_map_normalization_accepts_workshop_ugc_suffix(self):
+        self.insert('1',10,10,map_name='workshop/cp_sunshine.ugc454207393')
+        row=self.rebuild()[0]
+        self.assertEqual(row[2],1)
     def test_generation_cas_keeps_same_millisecond_new_work(self):
         self.db.execute('CREATE TABLE whaletracker_points_cache_state (cache_key TEXT,dirty INTEGER,dirty_since INTEGER,last_rebuilt_at INTEGER,last_reason TEXT,dirty_generation INTEGER)')
         self.db.execute("INSERT INTO whaletracker_points_cache_state VALUES ('global',1,1000,0,'pending',5)")

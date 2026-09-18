@@ -45,8 +45,8 @@ Only plugin-facing natives and forwards are listed here; third-party includes ar
 - `WhaleTracker_HasPlaytimeHours` - Returns whether a client's loaded playtime meets an hour threshold.
 - `WhaleTracker_GetRankedPlaytimeHours` - Returns whole playtime hours for a ranked client or Steam identity.
 - `WhaleTracker_GetRankedPlaytimeSeconds` - Returns exact playtime seconds for a ranked client or Steam identity.
-- `WhaleTracker_GetWhalePoints` - Returns a client's current Whale Points total.
-- `WhaleTracker_ComputeWhalePoints` - Computes Whale Points from raw cumulative totals.
+- `WhaleTracker_GetWhalePoints` - Returns a client's cached rolling-match Whale Points total.
+- `WhaleTracker_ComputeWhalePoints` - Applies the rolling points formula to caller-provided aggregate totals without checking match eligibility.
 - `WhaleTracker_GetLastRecordedName` - Writes the best recorded name for a SteamID64 into a buffer.
 - `WhaleTracker_GetLastSeen` - Returns the best known last_seen timestamp for a SteamID64.
 - `WhaleTracker_OnAirshot` - Fires when WhaleTracker records an airshot.

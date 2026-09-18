@@ -712,7 +712,7 @@ public bool OnClientPreConnectEx(const char[] name, char password[255], const ch
 
     char query[512];
     FormatEx(query, sizeof(query),
-        "SELECT points, rank FROM whaletracker_points_cache WHERE steamid = '%s' LIMIT 1",
+        "SELECT points, rank, matches_used FROM whaletracker_points_cache WHERE steamid = '%s' LIMIT 1",
         steamId64);
     g_hDatabase.Query(WhaleTracker_PreConnectLeaderboardQueryCallback, query, pack);
     return true;
@@ -739,15 +739,18 @@ public void WhaleTracker_PreConnectLeaderboardQueryCallback(Database db, DBResul
         return;
     }
 
-    if (results == null || !results.FetchRow())
+    int points = 0;
+    int rank = 0;
+    int matchesUsed = 0;
+    if (results != null && results.FetchRow())
     {
-        return;
+        points = results.FetchInt(0);
+        rank = results.FetchInt(1);
+        matchesUsed = results.FetchInt(2);
     }
-
-    int points = results.FetchInt(0);
-    int rank = results.FetchInt(1);
     g_JoinLeaderboardPoints.SetValue(steamId64, points > 0 ? points : 0);
     g_JoinLeaderboardRanks.SetValue(steamId64, rank > 0 ? rank : 0);
+    g_JoinLeaderboardMatches.SetValue(steamId64, matchesUsed > 0 ? matchesUsed : 0);
 
     int client = WhaleTracker_FindClientBySteamId64(steamId64);
     if (client > 0)
@@ -768,6 +771,7 @@ public Action Timer_ExpireJoinLeaderboardPrefetch(Handle timer, DataPack pack)
     pack.ReadString(steamId64, sizeof(steamId64));
     g_JoinLeaderboardPoints.Remove(steamId64);
     g_JoinLeaderboardRanks.Remove(steamId64);
+    g_JoinLeaderboardMatches.Remove(steamId64);
     return Plugin_Stop;
 }
 
@@ -776,9 +780,11 @@ void WhaleTracker_ResetJoinLeaderboardCache()
     delete g_JoinLeaderboardPending;
     delete g_JoinLeaderboardPoints;
     delete g_JoinLeaderboardRanks;
+    delete g_JoinLeaderboardMatches;
     g_JoinLeaderboardPending = new StringMap();
     g_JoinLeaderboardPoints = new StringMap();
     g_JoinLeaderboardRanks = new StringMap();
+    g_JoinLeaderboardMatches = new StringMap();
 }
 
 bool WhaleTracker_ConsumePrefetchedJoinLeaderboard(int client)
@@ -798,11 +804,18 @@ bool WhaleTracker_ConsumePrefetchedJoinLeaderboard(int client)
 
     int points;
     int rank;
+    int matchesUsed;
     if (g_JoinLeaderboardPoints.GetValue(steamId64, points)
-        && g_JoinLeaderboardRanks.GetValue(steamId64, rank))
+        && g_JoinLeaderboardRanks.GetValue(steamId64, rank)
+        && g_JoinLeaderboardMatches.GetValue(steamId64, matchesUsed))
     {
         g_JoinLeaderboardPoints.Remove(steamId64);
         g_JoinLeaderboardRanks.Remove(steamId64);
+        g_JoinLeaderboardMatches.Remove(steamId64);
+        g_iRollingPointsCache[client] = points > 0 ? points : 0;
+        g_iRollingRankCache[client] = rank > 0 ? rank : 0;
+        g_iRollingMatchesCache[client] = matchesUsed > 0 ? matchesUsed : 0;
+        g_bRollingPointsLoaded[client] = true;
         WhaleTracker_PrintJoinLeaderboardMessage(client, points, rank);
         return true;
     }
@@ -856,7 +869,7 @@ void RequestClientJoinLeaderboardQuery(int client)
 
     char query[512];
     Format(query, sizeof(query),
-        "SELECT points, rank FROM whaletracker_points_cache WHERE steamid = '%s' LIMIT 1",
+        "SELECT points, rank, matches_used FROM whaletracker_points_cache WHERE steamid = '%s' LIMIT 1",
         escapedSteamId);
     g_hDatabase.Query(WhaleTracker_JoinLeaderboardQueryCallback, query, pack);
 }
@@ -885,14 +898,20 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
 
     int points = 0;
     int rank = 0;
+    int matchesUsed = 0;
 
     if (results == null || !results.FetchRow())
     {
+        g_iRollingPointsCache[client] = 0;
+        g_iRollingRankCache[client] = 0;
+        g_iRollingMatchesCache[client] = 0;
+        g_bRollingPointsLoaded[client] = true;
         return;
     }
 
     points = results.FetchInt(0);
     rank = results.FetchInt(1);
+    matchesUsed = results.FetchInt(2);
     if (points < 0)
     {
         points = 0;
@@ -901,6 +920,15 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
     {
         rank = 0;
     }
+    if (matchesUsed < 0)
+    {
+        matchesUsed = 0;
+    }
+
+    g_iRollingPointsCache[client] = points;
+    g_iRollingRankCache[client] = rank;
+    g_iRollingMatchesCache[client] = matchesUsed;
+    g_bRollingPointsLoaded[client] = true;
 
     WhaleTracker_PrintJoinLeaderboardMessage(client, points, rank);
 }

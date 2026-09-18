@@ -33,12 +33,11 @@
 #define WT_SECONDS_PER_MINUTE 60
 #define WT_MATCH_LOG_MAX_DAMAGE_PER_MINUTE 3000.0
 #define WT_WHALE_POINTS_LOG_BASE_E 2.718281828
-#define WHALE_POINTS_SQL_EXPR "ROUND(1000.0 * SQRT(((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)) / (((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)) + 400.0)) * (((CASE WHEN playtime > 0 THEN playtime ELSE 0 END) / 3600.0) / (((CASE WHEN playtime > 0 THEN playtime ELSE 0 END) / 3600.0) + 20.0)) * ((5.0 * (((CASE WHEN kills > 0 THEN kills ELSE 0 END) + ((CASE WHEN assists > 0 THEN assists ELSE 0 END) * 0.35)) / ((CASE WHEN deaths > 0 THEN deaths ELSE 0 END) + 20.0))) + LN(1.0 + ((CASE WHEN damage_dealt > 0 THEN damage_dealt ELSE 0 END) / (150.0 * ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END))))) + (0.60 * LN(1.0 + ((CASE WHEN healing > 0 THEN healing ELSE 0 END) / (100.0 * ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)))))) + (0.90 * LN(1.0 + ((60.0 * (CASE WHEN total_ubers > 0 THEN total_ubers ELSE 0 END)) / ((CASE WHEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) > 0 THEN ((CASE WHEN kills > 0 THEN kills ELSE 0 END) + (CASE WHEN deaths > 0 THEN deaths ELSE 0 END)) ELSE 1 END)))))))"
 #define WT_TEAM_BLUE 3
 #define WT_TEAM_FIRST_PLAYING WT_TEAM_RED
 #define WHALE_LEADERBOARD_PAGE_SIZE 10
 #define WT_WHALE_POINTS_MAX_FLOAT 2147483000.0
-#define WHALETRACKER_SCHEMA_VERSION 4
+#define WHALETRACKER_SCHEMA_VERSION 6
 #define DB_CONFIG_DEFAULT "default"
 #define WT_TRACE_DOWN_DISTANCE -16384.0
 #define WT_MARKET_GARDENER_DEF_INDEX 416
@@ -56,7 +55,7 @@
 #define WT_WHALE_POINTS_UBER_WEIGHT 0.90
 #define WT_WHALE_POINTS_UBER_SCALE 60.0
 #define WT_WHALE_POINTS_CONFIDENCE_ENGAGEMENT_OFFSET 400.0
-#define WT_WHALE_POINTS_CONFIDENCE_HOURS_OFFSET 20.0
+#define WT_WHALE_POINTS_MIN_MATCHES 50
 #define WT_NATIVE_MAX_PLAYTIME_HOURS 596523
 #define TF_CLASS_MEDIC          5
 #define WT_MEDIC_ASSISTS_LIFE_BONUS_INTERVAL 4
@@ -278,6 +277,11 @@ StringMap g_MatchNames = null;
 StringMap g_JoinLeaderboardPending = null;
 StringMap g_JoinLeaderboardPoints = null;
 StringMap g_JoinLeaderboardRanks = null;
+StringMap g_JoinLeaderboardMatches = null;
+int g_iRollingPointsCache[MAXPLAYERS + 1];
+int g_iRollingRankCache[MAXPLAYERS + 1];
+int g_iRollingMatchesCache[MAXPLAYERS + 1];
+bool g_bRollingPointsLoaded[MAXPLAYERS + 1];
 
 char g_sCurrentMap[64];
 char g_sCurrentLogId[64];

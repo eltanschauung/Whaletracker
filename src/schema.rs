@@ -1,5 +1,5 @@
-//! Historical migrations 1–4 retain their columns and SQL semantics. Migration 5
-//! adds a versioned cache invalidation token; schema work is serialized in MySQL.
+//! Historical migrations retain their columns and SQL semantics. Schema work is
+//! serialized in MySQL so the SourceMod plugin only sees complete migrations.
 use crate::{
     config::{now_ms, number, Config, SCHEMA_VERSION},
     database::{connection, with_named_lock},
@@ -235,6 +235,7 @@ pub fn migrations() -> Vec<Migration> {
         "`player_count` INTEGER DEFAULT 0",
         "`created_at` INTEGER DEFAULT 0",
         "`updated_at` INTEGER DEFAULT 0",
+        "`finalized` TINYINT NOT NULL DEFAULT 1",
     ]);
     let mut players = columns(&[
         "`log_id` VARCHAR(64) NOT NULL",
@@ -284,6 +285,9 @@ pub fn migrations() -> Vec<Migration> {
         "`rank` INTEGER DEFAULT 0",
         "`name_color` VARCHAR(32) DEFAULT ''",
         "`updated_at` INTEGER DEFAULT 0",
+        "`matches_used` INTEGER DEFAULT 0",
+        "`window_started_at` INTEGER DEFAULT 0",
+        "`window_ended_at` INTEGER DEFAULT 0",
     ]);
     let create = vec![
         create_table("whaletracker", &lifetime, &[
@@ -341,6 +345,17 @@ pub fn migrations() -> Vec<Migration> {
         Migration {version: 5, name: "version_cache_invalidations", statements: columns(&[
             "ALTER TABLE whaletracker_points_cache_state ADD COLUMN IF NOT EXISTS dirty_generation BIGINT UNSIGNED NOT NULL DEFAULT 0",
             "ALTER TABLE whaletracker_points_cache_state ADD COLUMN IF NOT EXISTS dirty_since BIGINT UNSIGNED NOT NULL DEFAULT 0",
+        ])},
+        Migration {version: 6, name: "rolling_match_points", statements: columns(&[
+            "ALTER TABLE whaletracker_logs ADD COLUMN IF NOT EXISTS finalized TINYINT NOT NULL DEFAULT 1",
+            "ALTER TABLE whaletracker_points_cache ADD COLUMN IF NOT EXISTS matches_used INTEGER DEFAULT 0",
+            "ALTER TABLE whaletracker_points_cache ADD COLUMN IF NOT EXISTS window_started_at INTEGER DEFAULT 0",
+            "ALTER TABLE whaletracker_points_cache ADD COLUMN IF NOT EXISTS window_ended_at INTEGER DEFAULT 0",
+            "ALTER TABLE whaletracker_points_cache_build ADD COLUMN IF NOT EXISTS matches_used INTEGER DEFAULT 0",
+            "ALTER TABLE whaletracker_points_cache_build ADD COLUMN IF NOT EXISTS window_started_at INTEGER DEFAULT 0",
+            "ALTER TABLE whaletracker_points_cache_build ADD COLUMN IF NOT EXISTS window_ended_at INTEGER DEFAULT 0",
+            "CREATE INDEX IF NOT EXISTS idx_whaletracker_logs_rank_window ON whaletracker_logs (finalized, ended_at, duration, log_id)",
+            "CREATE INDEX IF NOT EXISTS idx_whaletracker_log_players_steamid_log ON whaletracker_log_players (steamid, log_id)",
         ])},
     ]
 }

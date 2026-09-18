@@ -268,8 +268,7 @@ impl SqlSink {
                     };
                     match result {
                         Ok(()) => {
-                            if sql::target_table(&job.write.sql).as_deref() == Some("whaletracker")
-                            {
+                            if sql::invalidates_points_cache(&job.write.sql) {
                                 self.cache.mark_dirty();
                             }
                             self.counters.executed.fetch_add(1, Ordering::Relaxed);

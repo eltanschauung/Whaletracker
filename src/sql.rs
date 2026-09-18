@@ -156,6 +156,10 @@ pub fn lane_for(sql: &str) -> Lane {
     }
 }
 
+pub fn invalidates_points_cache(sql: &str) -> bool {
+    sql.contains("wt_points_cache_finalize")
+}
+
 pub fn validate_write(sql: &str) -> Result<(), String> {
     if sql.trim().is_empty() {
         return Err("empty SQL write".into());
@@ -409,6 +413,18 @@ mod tests {
             lane_for("DELETE FROM whaletracker_online WHERE host_port=27015"),
             Lane::Online
         );
+    }
+    #[test]
+    fn only_explicit_finalization_invalidates_points() {
+        assert!(!invalidates_points_cache(
+            "UPDATE whaletracker SET kills=kills+1"
+        ));
+        assert!(!invalidates_points_cache(
+            "INSERT INTO whaletracker_logs (finalized) VALUES (0)"
+        ));
+        assert!(invalidates_points_cache(
+            "/* wt_points_cache_finalize */ INSERT INTO whaletracker_logs (finalized) VALUES (1)"
+        ));
     }
     #[test]
     fn preserves_plausibility_thresholds() {

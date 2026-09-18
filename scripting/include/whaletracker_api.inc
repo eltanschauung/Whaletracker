@@ -71,7 +71,8 @@ native int WhaleTracker_GetRankedPlaytimeSeconds(int client = 0, const char[] st
 native int WhaleTracker_GetWhalePoints(int client);
 
 /**
- * Computes Whale Points from raw cumulative totals.
+ * Computes the rolling points formula from caller-provided aggregate totals.
+ * This helper does not apply the qualifying-match eligibility threshold.
  *
  * @param kills         Total kills.
  * @param deaths        Total deaths.
@@ -79,7 +80,7 @@ native int WhaleTracker_GetWhalePoints(int client);
  * @param totalUbers    Total ubers.
  * @param damageDealt   Total damage dealt.
  * @param healing       Total healing.
- * @param playtime      Total playtime in seconds.
+ * @param playtime      Retained for binary compatibility; currently ignored.
  * @return              Whale Points for the merged totals.
  */
 native int WhaleTracker_ComputeWhalePoints(int kills, int deaths, int assists, int totalUbers, int damageDealt, int healing, int playtime);
