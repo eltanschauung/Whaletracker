@@ -300,7 +300,7 @@ mod tests {
     fn rolling_query_has_required_boundaries() {
         let sql = build_insert_sql(123);
         assert!(sql.contains("l.duration > 300"));
-        assert!(sql.contains("recent_row <= 300"));
+        assert!(sql.contains("recent_row <= 50"));
         assert!(sql.contains("matches_used >= 50"));
         assert!(sql.contains("SUBSTRING_INDEX(SUBSTRING_INDEX(l.map, '/', -1), '.ugc', 1)"));
         assert!(!sql.contains("playtime"));
