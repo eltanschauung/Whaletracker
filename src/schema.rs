@@ -286,6 +286,8 @@ pub fn migrations() -> Vec<Migration> {
         "`name_color` VARCHAR(32) DEFAULT ''",
         "`updated_at` INTEGER DEFAULT 0",
         "`matches_used` INTEGER DEFAULT 0",
+        "`rolling_kills` INTEGER DEFAULT 0",
+        "`rolling_deaths` INTEGER DEFAULT 0",
         "`window_started_at` INTEGER DEFAULT 0",
         "`window_ended_at` INTEGER DEFAULT 0",
     ]);
@@ -356,6 +358,12 @@ pub fn migrations() -> Vec<Migration> {
             "ALTER TABLE whaletracker_points_cache_build ADD COLUMN IF NOT EXISTS window_ended_at INTEGER DEFAULT 0",
             "CREATE INDEX IF NOT EXISTS idx_whaletracker_logs_rank_window ON whaletracker_logs (finalized, ended_at, duration, log_id)",
             "CREATE INDEX IF NOT EXISTS idx_whaletracker_log_players_steamid_log ON whaletracker_log_players (steamid, log_id)",
+        ])},
+        Migration {version: 7, name: "cache_rolling_kd_totals", statements: columns(&[
+            "ALTER TABLE whaletracker_points_cache ADD COLUMN IF NOT EXISTS rolling_kills INTEGER DEFAULT 0",
+            "ALTER TABLE whaletracker_points_cache ADD COLUMN IF NOT EXISTS rolling_deaths INTEGER DEFAULT 0",
+            "ALTER TABLE whaletracker_points_cache_build ADD COLUMN IF NOT EXISTS rolling_kills INTEGER DEFAULT 0",
+            "ALTER TABLE whaletracker_points_cache_build ADD COLUMN IF NOT EXISTS rolling_deaths INTEGER DEFAULT 0",
         ])},
     ]
 }

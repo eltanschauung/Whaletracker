@@ -4,7 +4,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-pub const SCHEMA_VERSION: u32 = 6;
+pub const SCHEMA_VERSION: u32 = 7;
 pub const MAX_LOG_DAMAGE_PER_MINUTE: f64 = 3000.0;
 pub const RANK_MAX_MATCHES: usize = 50;
 pub const RANK_MIN_MATCHES: usize = 50;

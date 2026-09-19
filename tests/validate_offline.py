@@ -229,8 +229,8 @@ class ExtractedCacheSqlTests(unittest.TestCase):
 CREATE TABLE filters_namecolors (steamid TEXT PRIMARY KEY,color TEXT);
 CREATE TABLE whaletracker_logs (log_id TEXT PRIMARY KEY,map TEXT,started_at INTEGER,ended_at INTEGER,duration INTEGER,finalized INTEGER);
 CREATE TABLE whaletracker_log_players (log_id TEXT,steamid TEXT,kills INTEGER,deaths INTEGER,assists INTEGER,damage INTEGER,healing INTEGER,total_ubers INTEGER);
-CREATE TABLE whaletracker_points_cache (steamid TEXT PRIMARY KEY,points INTEGER,rank INTEGER,name_color TEXT,updated_at INTEGER,matches_used INTEGER,window_started_at INTEGER,window_ended_at INTEGER);
-CREATE TABLE whaletracker_points_cache_build (steamid TEXT PRIMARY KEY,points INTEGER,rank INTEGER,name_color TEXT,updated_at INTEGER,matches_used INTEGER,window_started_at INTEGER,window_ended_at INTEGER);''')
+CREATE TABLE whaletracker_points_cache (steamid TEXT PRIMARY KEY,points INTEGER,rank INTEGER,name_color TEXT,updated_at INTEGER,matches_used INTEGER,rolling_kills INTEGER,rolling_deaths INTEGER,window_started_at INTEGER,window_ended_at INTEGER);
+CREATE TABLE whaletracker_points_cache_build (steamid TEXT PRIMARY KEY,points INTEGER,rank INTEGER,name_color TEXT,updated_at INTEGER,matches_used INTEGER,rolling_kills INTEGER,rolling_deaths INTEGER,window_started_at INTEGER,window_ended_at INTEGER);''')
     @staticmethod
     def substring_index(value,delimiter,count):
         parts=value.split(delimiter)
@@ -249,7 +249,7 @@ CREATE TABLE whaletracker_points_cache_build (steamid TEXT PRIMARY KEY,points IN
         self.db.execute(self.template.format(
             now=1234567890,expr=self.expr,min_duration=300,min_kills_assists=5,
             max_matches=300,min_matches=50,maps=self.maps))
-        return self.db.execute('SELECT steamid,points,rank,name_color,updated_at,matches_used FROM whaletracker_points_cache_build ORDER BY steamid').fetchall()
+        return self.db.execute('SELECT steamid,points,rank,name_color,updated_at,matches_used,rolling_kills,rolling_deaths FROM whaletracker_points_cache_build ORDER BY steamid').fetchall()
     def test_thresholds_and_stable_tie_break(self):
         self.insert('1',10,10); self.insert('2',10,10)
         self.insert('3',10,10,matches=49); self.insert('4',10,10,duration=300)
@@ -259,7 +259,7 @@ CREATE TABLE whaletracker_points_cache_build (steamid TEXT PRIMARY KEY,points IN
     def test_name_color_precedence_and_fallback(self):
         for id in ['1','2','3']: self.insert(id,10,10)
         self.db.execute("INSERT INTO filters_namecolors VALUES ('1','cyan')")
-        self.db.executemany('INSERT INTO whaletracker_points_cache VALUES (?,0,0,?,0,0,0,0)',[('1','red'),('2','blue')])
+        self.db.executemany('INSERT INTO whaletracker_points_cache VALUES (?,0,0,?,0,0,0,0,0,0)',[('1','red'),('2','blue')])
         self.assertEqual([r[3] for r in self.rebuild()],['cyan','blue','gold'])
     def test_formula_against_independent_math_for_32_players(self):
         rng=random.Random(789); expected={}
@@ -272,8 +272,12 @@ CREATE TABLE whaletracker_points_cache_build (steamid TEXT PRIMARY KEY,points IN
             value=1000*math.sqrt(eng/(eng+400))*(5*(k+0.35*a)/(d+20)+math.log1p(dmg/(150*eng))+0.60*math.log1p(h/(100*eng))+0.90*math.log1p(60*u/eng))
             expected[str(n)]=math.floor(value+0.5)
         rows=self.rebuild(); self.assertEqual(len(rows),32)
-        for id,points,rank,color,at,matches in rows:
+        for id,points,rank,color,at,matches,kills,deaths in rows:
             self.assertEqual(points,expected[id],id); self.assertEqual(at,1234567890)
+    def test_cache_includes_rolling_kd_totals(self):
+        self.insert('1',7,3,a=2)
+        row=self.rebuild()[0]
+        self.assertEqual(row[6:8],(350,150))
     def test_nonpositive_stats_do_not_produce_domain_error(self):
         self.insert('1',-1,-2,-3,-10,-20,-30)
         row=self.rebuild()[0]; self.assertEqual(row[1:3],(0,0))

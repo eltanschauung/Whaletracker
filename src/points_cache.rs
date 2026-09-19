@@ -218,7 +218,7 @@ fn build_insert_sql(now: u64) -> String {
 
     format!(
         "INSERT INTO whaletracker_points_cache_build \
-         (steamid, points, rank, name_color, updated_at, matches_used, window_started_at, window_ended_at) \
+         (steamid, points, rank, name_color, updated_at, matches_used, rolling_kills, rolling_deaths, window_started_at, window_ended_at) \
          WITH recent_matches AS (\
              SELECT lp.steamid, \
                     GREATEST(COALESCE(lp.kills, 0), 0) AS kills, \
@@ -263,6 +263,7 @@ fn build_insert_sql(now: u64) -> String {
                 COALESCE(NULLIF(f.color COLLATE utf8mb4_uca1400_ai_ci, ''), \
                          COALESCE(NULLIF(c.name_color, ''), 'gold')), \
                 {now}, COALESCE(s.matches_used, 0), \
+                COALESCE(s.kills, 0), COALESCE(s.deaths, 0), \
                 COALESCE(s.window_started_at, 0), COALESCE(s.window_ended_at, 0) \
          FROM whaletracker w \
          LEFT JOIN scored s ON s.steamid = w.steamid \

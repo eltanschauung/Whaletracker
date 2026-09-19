@@ -95,7 +95,15 @@ void PrintUnrankedWhalePointsMessage(int client, int target, int matchesUsed)
         matchesUsed);
 }
 
-void PrintLiveWhalePointsMessage(int client, int target, bool broadcast, bool showHints, int points, int rank)
+void PrintLiveWhalePointsMessage(
+    int client,
+    int target,
+    bool broadcast,
+    bool showHints,
+    int points,
+    int rank,
+    int rollingKills,
+    int rollingDeaths)
 {
     char displayName[128];
     GetClientChatDisplayName(target, displayName, sizeof(displayName));
@@ -117,13 +125,10 @@ void PrintLiveWhalePointsMessage(int client, int target, bool broadcast, bool sh
         CPrintToChatEx(client, target, "{gold}[Whaletracker]{default} %s{default}'s Points: %d, Rank #%d", displayName, points, rank);
     }
 
-    if (g_Stats[target].loaded)
-    {
-        int lifetimeKills = g_Stats[target].kills;
-        int lifetimeDeaths = g_Stats[target].deaths;
-        float lifetimeKd = (lifetimeDeaths > 0) ? float(lifetimeKills) / float(lifetimeDeaths) : float(lifetimeKills);
-        CPrintToChat(client, "Kill/Death ratio: %.2f", lifetimeKd);
-    }
+    float rollingKd = (rollingDeaths > 0)
+        ? float(rollingKills) / float(rollingDeaths)
+        : float(rollingKills);
+    CPrintToChat(client, "Kill/Death ratio: %.2f", rollingKd);
 
     if (showHints)
     {
@@ -174,7 +179,7 @@ void QueryLiveWhalePointsRank(int client, int target, bool broadcast, bool showH
     pack.WriteCell(showHints ? 1 : 0);
     char query[512];
     Format(query, sizeof(query),
-        "SELECT points, rank, matches_used "
+        "SELECT points, rank, matches_used, rolling_kills, rolling_deaths "
         ... "FROM whaletracker_points_cache WHERE steamid = '%s' LIMIT 1",
         escapedSteamId);
     g_hDatabase.Query(WhaleTracker_ShowLivePointsRankCallback, query, pack);
@@ -215,11 +220,15 @@ public void WhaleTracker_ShowLivePointsRankCallback(Database db, DBResultSet res
     int points = 0;
     int rank = 0;
     int matchesUsed = 0;
+    int rollingKills = 0;
+    int rollingDeaths = 0;
     if (results != null && results.FetchRow())
     {
         points = results.FetchInt(0);
         rank = results.FetchInt(1);
         matchesUsed = results.FetchInt(2);
+        rollingKills = results.FetchInt(3);
+        rollingDeaths = results.FetchInt(4);
     }
 
     g_iRollingPointsCache[target] = points > 0 ? points : 0;
@@ -233,7 +242,16 @@ public void WhaleTracker_ShowLivePointsRankCallback(Database db, DBResultSet res
         return;
     }
 
-    PrintLiveWhalePointsMessage(client, target, broadcast, showHints, points, rank);
+    PrintLiveWhalePointsMessage(
+        client,
+        target,
+        broadcast,
+        showHints,
+        points,
+        rank,
+        rollingKills,
+        rollingDeaths
+    );
 }
 
 Action HandleShowPointsCommand(int client, int target, bool broadcast, bool showHints)
