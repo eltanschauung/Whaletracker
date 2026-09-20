@@ -556,7 +556,7 @@ public void OnClientPutInServer(int client)
         return;
     }
 
-    if (GetClientCount(true) == 1 && !g_sCurrentLogId[0])
+    if (!g_sCurrentLogId[0])
     {
         BeginMatchTracking();
     }
