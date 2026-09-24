@@ -941,7 +941,7 @@ void TryHandleDropShot(Event event, int attacker, int victim)
     BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
     CPrintToChatAll("%s dropshot %s!", attackerName, victimName);
     FireDropShot(attacker, victim);
-    PlayAirShotSound(attacker, victim);
+    PlayDefaultAirShotSound(attacker, victim);
 }
 
 void BuildGameplayDisplayName(int client, char[] buffer, int maxlen)
@@ -972,6 +972,17 @@ void BuildGameplayTeamColor(int client, char[] buffer, int maxlen)
 }
 
 void PlayAirShotSound(int attacker, int victim)
+{
+    if (GetFeatureStatus(FeatureType_Native, "Announcers_PlayAirshot") == FeatureStatus_Available
+        && Announcers_PlayAirshot(attacker, victim))
+    {
+        return;
+    }
+
+    PlayDefaultAirShotSound(attacker, victim);
+}
+
+void PlayDefaultAirShotSound(int attacker, int victim)
 {
     if (GetFeatureStatus(FeatureType_Native, "SaySounds_PlayCommand") == FeatureStatus_Available
         && SaySounds_PlayCommand(0, WT_AIRSHOT_SAYSOUND))
