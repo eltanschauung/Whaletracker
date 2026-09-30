@@ -955,12 +955,12 @@ void WhaleTracker_PrintJoinLeaderboardMessage(int client, int points, int rank)
 
     if (rank > 0)
     {
-        CPrintToChatAll("%s{default} (%d Points, Rank #%d) joined the game", displayName, points, rank);
+        WhaleTracker_PublicMessage(client, 0, false, "%s{default} (%d Points, Rank #%d) joined the game", displayName, points, rank);
         PrintToServer("[WhaleTracker] %s (%d Points, Rank #%d) joined the game", displayName, points, rank);
     }
     else
     {
-        CPrintToChatAll("%s{default} (Unranked) joined the game", displayName);
+        WhaleTracker_PublicMessage(client, 0, false, "%s{default} (Unranked) joined the game", displayName);
         PrintToServer("[WhaleTracker] %s (Unranked) joined the game", displayName);
     }
 }

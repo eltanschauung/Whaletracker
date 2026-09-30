@@ -270,6 +270,7 @@ void RemoveOnlineStats(int client)
 
 bool QueueClientOnlineSnapshot(int client, int now, float engineNow, int playerCount, int visibleMax, const char[] escapedMapName, const char[] escapedHostIp, bool forceSync)
 {
+    if (PublicActivity_IsExcluded(client)) { RemoveOnlineStats(client); return true; }
     if (!WhaleTracker_AreClientStatsReady(client))
     {
         return false;
@@ -364,6 +365,10 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
     float engineNow = GetEngineTime();
     int onlinePlayerCount = WhaleTracker_GetOnlinePlayerCount();
     int serverPlayerCount = onlinePlayerCount;
+    int publicPlayerCount = onlinePlayerCount;
+    for (int viewer = 1; viewer <= MaxClients; viewer++)
+        if (IsClientInGame(viewer) && !IsFakeClient(viewer) && PublicActivity_IsExcluded(viewer)) publicPlayerCount--;
+    if (publicPlayerCount < 0) publicPlayerCount = 0;
     int visibleMax = WhaleTracker_GetCurrentServerCapacity();
 
     char query[SAVE_QUERY_MAXLEN];
@@ -449,7 +454,7 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
         if (!IsClientInGame(client) || IsFakeClient(client))
             continue;
 
-        if (!QueueClientOnlineSnapshot(client, now, engineNow, onlinePlayerCount, visibleMax, escapedMapName, escapedHostIp, false))
+        if (!QueueClientOnlineSnapshot(client, now, engineNow, publicPlayerCount, visibleMax, escapedMapName, escapedHostIp, false))
             continue;
 
         int snapshotData[MATCH_STAT_COUNT];
@@ -474,7 +479,7 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
         ... "VALUES ('%s', %d, %d, %d, '%s', '%s', '%s', '%s', '%s', '%s', %d)",
         escapedHostIp,
         g_iHostPort,
-        serverPlayerCount,
+        publicPlayerCount,
         visibleMax,
         escapedGameName,
         escapedGameUrl,

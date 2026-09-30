@@ -707,7 +707,7 @@ void AnnounceHighUberDeath(int medic, int percent)
 {
     char medicName[256];
     BuildMedicDropDisplayName(medic, medicName, sizeof(medicName));
-    CPrintToChatAll("%s died with %d%% Über!", medicName, percent);
+    WhaleTracker_PublicMessage(medic, 0, false, "%s died with %d%% Über!", medicName, percent);
 }
 
 void AnnounceMedicDrop(int attacker, int medic)
@@ -724,7 +724,7 @@ void AnnounceMedicDrop(int attacker, int medic)
     char attackerName[256];
     BuildMedicDropDisplayName(attacker, attackerName, sizeof(attackerName));
 
-    CPrintToChatAll("%s dropped %s!", attackerName, medicName);
+    WhaleTracker_PublicMessage(attacker, medic, false, "%s dropped %s!", attackerName, medicName);
     FireMedicDrop(attacker, medic);
 }
 
@@ -734,8 +734,8 @@ void AnnounceTelefrag(int attacker, int victim)
     char victimName[256];
     BuildGameplayDisplayName(attacker, attackerName, sizeof(attackerName));
     BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
-    CPrintToChatAll("%s telefragged %s!", attackerName, victimName);
-    PrintCenterTextAll("%N telefragged %N!", attacker, victim);
+    WhaleTracker_PublicMessage(attacker, victim, false, "%s telefragged %s!", attackerName, victimName);
+    WhaleTracker_PublicMessage(attacker, victim, true, "%N telefragged %N!", attacker, victim);
 }
 
 void BuildMedicDropDisplayName(int client, char[] buffer, int maxlen)
@@ -900,12 +900,19 @@ public Action Timer_BroadcastAirShot(Handle timer, any victimUserId)
         return Plugin_Stop;
     }
 
+    if (PublicActivity_IsPairExcluded(attacker, victim))
+    {
+        ResetAirShotBroadcastState(victim);
+        return Plugin_Stop;
+    }
     bool killed = !IsPlayerAlive(victim);
     char attackerName[256];
     char victimName[256];
     BuildGameplayDisplayName(attacker, attackerName, sizeof(attackerName));
     BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
-    CPrintToChatAll("%s airshot %s!", attackerName, victimName);
+    for (int viewer = 1; viewer <= MaxClients; viewer++)
+        if (IsClientInGame(viewer) && !Oblivion_ShouldHide(viewer, attacker) && !Oblivion_ShouldHide(viewer, victim))
+            CPrintToChat(viewer, "%s airshot %s!", attackerName, victimName);
     FireAirShot(attacker, victim, killed);
 
     if (killed)
@@ -939,7 +946,7 @@ void TryHandleDropShot(Event event, int attacker, int victim)
     char victimName[256];
     BuildGameplayDisplayName(attacker, attackerName, sizeof(attackerName));
     BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
-    CPrintToChatAll("%s dropshot %s!", attackerName, victimName);
+    WhaleTracker_PublicMessage(attacker, victim, false, "%s dropshot %s!", attackerName, victimName);
     FireDropShot(attacker, victim);
     PlayDefaultAirShotSound(attacker, victim);
 }

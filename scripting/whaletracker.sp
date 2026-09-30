@@ -1,6 +1,8 @@
 #pragma semicolon 1
 
 #include <sourcemod>
+#include <public_activity>
+#include <oblivion>
 #include <tf2>
 #include <tf2_stocks>
 #include <sdktools>
@@ -457,6 +459,7 @@ bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 #include "include/server_mail.inc"
 #define REQUIRE_PLUGIN
 #include "include/whaletracker.inc"
+#include "whaletracker/public_activity.sp"
 #include "whaletracker/motd_whaletracker.sp"
 #undef REQUIRE_EXTENSIONS
 #include "whaletracker/rust_sql_outlet_whaletracker.sp"

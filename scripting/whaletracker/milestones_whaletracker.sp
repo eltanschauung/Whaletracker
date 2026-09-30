@@ -460,7 +460,8 @@ void WhaleTracker_AnnounceStimulus(int client)
         GetClientName(client, coloredName, sizeof(coloredName));
     }
 
-    CPrintToChatAllEx(client,
+    if (PublicActivity_IsExcluded(client)) return;
+    WhaleTracker_PublicMessage(client, 0, false,
         "{gold}[WhaleTracker] %s{default} just got a %sStimulus Check{default} for reaching {gold}10 hours playtime!",
         coloredName,
         currencyColor);
