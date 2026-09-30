@@ -32,7 +32,7 @@ void WhaleTracker_MaybeMarkDatabaseReady()
     WhaleTracker_EnsureRoundStatisticsTable();
     WhaleTracker_EnsureHistoricalTable();
     WhaleTracker_EnsurePlaytimeMilestoneTable();
-    WhaleTracker_EnsureDemoColumn();
+    WhaleDemos_EnsureColumn();
     PumpSaveQueue();
 }
 

@@ -311,7 +311,6 @@ public void OnPluginStart()
     HookEvent("player_chargedeployed", Event_UberDeployed, EventHookMode_Post);
     HookEvent("teamplay_round_win", Event_RoundWin, EventHookMode_PostNoCopy);
     HookEvent("teamplay_round_start", Event_ResetMultikillAll, EventHookMode_PostNoCopy);
-    HookEvent("teamplay_round_start", WhaleTracker_CaptureRoundDemo, EventHookMode_PostNoCopy);
 
     RegConsoleCmd("sm_whalestats", Command_ShowStats, "Show your Whale Tracker statistics.");
     RegConsoleCmd("sm_stats", Command_ShowStats, "Show your Whale Tracker statistics.");
@@ -375,6 +374,7 @@ public void OnPluginStart()
         {
             OnClientPutInServer(i);
             RequestClientStateLoads(i);
+            WhaleDemos_OnClientPostAdminCheck(i);
         }
     }
 }
@@ -406,6 +406,7 @@ public void OnMapStart()
         {
             ResetClientCommandCaches(i);
             g_MapStats[i].connectTime = GetEngineTime();
+            WhaleDemos_OnClientPostAdminCheck(i);
         }
         g_KillSaveCounter[i] = 0;
     }
@@ -698,6 +699,7 @@ public void OnClientPostAdminCheck(int client)
     }
 
     WhaleTracker_UpdateClientAdminStatus(client);
+    WhaleDemos_OnClientPostAdminCheck(client);
     CreateTimer(5.0, Timer_JoinAnnouncementFallback, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
     if (!WhaleTracker_ConsumePrefetchedJoinLeaderboard(client))
     {

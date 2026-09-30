@@ -458,7 +458,7 @@ bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 #undef REQUIRE_PLUGIN
 #include "include/server_mail.inc"
 #define REQUIRE_PLUGIN
-#include "whaletracker/demo_recording.sp"
+#include "whaletracker/whale_demos.sp"
 #include "include/whaletracker.inc"
 #include "whaletracker/public_activity.sp"
 #include "whaletracker/motd_whaletracker.sp"

@@ -358,6 +358,8 @@ public Action Timer_UpdateOnlineStats(Handle timer, any data)
         FinalizeCurrentMatch(false);
     }
 
+    WhaleDemos_TryStart();
+
     if (!g_bDatabaseReady || g_hDatabase == null)
         return Plugin_Continue;
 
@@ -581,7 +583,7 @@ void ResetMatchStorage()
 
 void ClearCurrentMatchTracking()
 {
-    g_MatchDemoFile[0] = '\0';
+    WhaleDemos_ResetMatch();
     ResetMatchStorage();
     g_bMatchFinalized = true;
     g_sCurrentLogId[0] = '\0';
@@ -1096,7 +1098,7 @@ void ApplySnapshotToStats(WhaleStats stats, const int data[MATCH_STAT_COUNT])
 
 void BeginMatchTracking()
 {
-    g_MatchDemoFile[0] = '\0';
+    WhaleDemos_ResetMatch();
     if (!WhaleTracker_ShouldUseMatchLogs())
     {
         ClearCurrentMatchTracking();
@@ -1779,19 +1781,7 @@ void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool 
     }
 
     char demoColumn[32], demoValue[PLATFORM_MAX_PATH * 2 + 8], demoUpdate[96];
-    if (g_MatchDemoColumnReady)
-    {
-        strcopy(demoColumn, sizeof(demoColumn), ", demo_filename");
-        strcopy(demoUpdate, sizeof(demoUpdate), ", demo_filename = COALESCE(demo_filename, VALUES(demo_filename))");
-        if (g_MatchDemoFile[0])
-        {
-            char escapedDemo[PLATFORM_MAX_PATH * 2 + 1];
-            EscapeSqlString(g_MatchDemoFile, escapedDemo, sizeof(escapedDemo));
-            FormatEx(demoValue, sizeof(demoValue), ", '%s'", escapedDemo);
-        }
-        else
-            strcopy(demoValue, sizeof(demoValue), ", NULL");
-    }
+    WhaleDemos_GetLogFields(demoColumn, sizeof(demoColumn), demoValue, sizeof(demoValue), demoUpdate, sizeof(demoUpdate));
 
     char query[SAVE_QUERY_MAXLEN];
     Format(query, sizeof(query),
