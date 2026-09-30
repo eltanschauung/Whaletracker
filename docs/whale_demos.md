@@ -21,6 +21,8 @@ Example filename: `koth_genbu_ravine_b1_sept_30_14-36.dem`.
 Time follows the VPS's `America/New_York` timezone, including daylight saving.
 SourceTV rejects colons, so the time uses a hyphen. Workshop prefixes and UGC
 suffixes are removed; a numeric suffix avoids same-minute filename collisions.
+Collision checks include both GAME and /var/www/fastdl/demos, since the
+background publisher moves completed recordings out of the server directory.
 The `.dem` filename stored in the row is the same one passed to the native.
 
 Offline contracts: `python3 tests/test_whale_demos.py`. Compile the full plugin

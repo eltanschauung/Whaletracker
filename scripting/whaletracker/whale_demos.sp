@@ -154,9 +154,17 @@ void WhaleDemos_BuildFilename(char[] filename, int maxlen)
     FormatTime(clock, sizeof(clock), "%H-%M", now);
     FormatEx(base, sizeof(base), "%s_%s_%d_%s", mapName, months[StringToInt(month) - 1], StringToInt(day), clock);
     FormatEx(filename, maxlen, "%s.dem", base);
-    // Both servers share the demo directory; never overwrite a same-minute recording.
-    for (int suffix = 2; FileExists(filename, true); suffix++)
+    // Completed demos move out of GAME, but their published names stay reserved.
+    for (int suffix = 2; WhaleDemos_FilenameExists(filename); suffix++)
         FormatEx(filename, maxlen, "%s_%d.dem", base, suffix);
+}
+
+bool WhaleDemos_FilenameExists(const char[] filename)
+{
+    if (FileExists(filename, true)) return true;
+    char published[PLATFORM_MAX_PATH];
+    FormatEx(published, sizeof(published), "/var/www/fastdl/demos/%s", filename);
+    return FileExists(published);
 }
 
 void WhaleDemos_ResetMatch()

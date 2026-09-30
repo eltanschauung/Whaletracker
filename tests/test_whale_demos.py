@@ -37,6 +37,9 @@ class WhaleDemosTest(unittest.TestCase):
         self.assertIn('"%H-%M"', MODULE)
         self.assertNotIn('"%H:%M"', MODULE)
         self.assertIn('FileExists(filename, true)', MODULE)
+        self.assertIn('WhaleDemos_FilenameExists(filename)', MODULE)
+        self.assertIn('"/var/www/fastdl/demos/%s"', MODULE)
+        self.assertIn('return FileExists(published)', MODULE)
         self.assertIn('"%s_%d.dem"', MODULE)
 
     def test_null_row_check_and_filename_preservation_use_shipped_sql(self):
