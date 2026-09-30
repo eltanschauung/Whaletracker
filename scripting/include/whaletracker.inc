@@ -581,6 +581,7 @@ void ResetMatchStorage()
 
 void ClearCurrentMatchTracking()
 {
+    g_MatchDemoFile[0] = '\0';
     ResetMatchStorage();
     g_bMatchFinalized = true;
     g_sCurrentLogId[0] = '\0';
@@ -1095,6 +1096,7 @@ void ApplySnapshotToStats(WhaleStats stats, const int data[MATCH_STAT_COUNT])
 
 void BeginMatchTracking()
 {
+    g_MatchDemoFile[0] = '\0';
     if (!WhaleTracker_ShouldUseMatchLogs())
     {
         ClearCurrentMatchTracking();
@@ -1776,11 +1778,26 @@ void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool 
         strcopy(cacheMarker, sizeof(cacheMarker), "/* wt_points_cache_finalize */ ");
     }
 
+    char demoColumn[32], demoValue[PLATFORM_MAX_PATH * 2 + 8], demoUpdate[96];
+    if (g_MatchDemoColumnReady)
+    {
+        strcopy(demoColumn, sizeof(demoColumn), ", demo_filename");
+        strcopy(demoUpdate, sizeof(demoUpdate), ", demo_filename = COALESCE(demo_filename, VALUES(demo_filename))");
+        if (g_MatchDemoFile[0])
+        {
+            char escapedDemo[PLATFORM_MAX_PATH * 2 + 1];
+            EscapeSqlString(g_MatchDemoFile, escapedDemo, sizeof(escapedDemo));
+            FormatEx(demoValue, sizeof(demoValue), ", '%s'", escapedDemo);
+        }
+        else
+            strcopy(demoValue, sizeof(demoValue), ", NULL");
+    }
+
     char query[SAVE_QUERY_MAXLEN];
     Format(query, sizeof(query),
         "%sINSERT INTO whaletracker_logs "
-        ... "(log_id, map, gamemode, started_at, ended_at, duration, player_count, created_at, updated_at, finalized) "
-        ... "VALUES ('%s', '%s', '%s', %d, %d, %d, %d, %d, %d, %d) "
+        ... "(log_id, map, gamemode, started_at, ended_at, duration, player_count, created_at, updated_at, finalized%s) "
+        ... "VALUES ('%s', '%s', '%s', %d, %d, %d, %d, %d, %d, %d%s) "
         ... "ON DUPLICATE KEY UPDATE "
         ... "map = VALUES(map), "
         ... "gamemode = VALUES(gamemode), "
@@ -1789,8 +1806,9 @@ void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool 
         ... "duration = VALUES(duration), "
         ... "player_count = VALUES(player_count), "
         ... "finalized = VALUES(finalized), "
-        ... "updated_at = VALUES(updated_at)",
+        ... "updated_at = VALUES(updated_at)%s",
         cacheMarker,
+        demoColumn,
         g_sCurrentLogId,
         escapedMap,
         escapedMode,
@@ -1800,7 +1818,9 @@ void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool 
         participantCount,
         started,
         endTime,
-        finalized ? 1 : 0);
+        finalized ? 1 : 0,
+        demoValue,
+        demoUpdate);
 
     QueueSaveQuery(query, 0, forceSync);
 }

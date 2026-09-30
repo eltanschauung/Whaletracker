@@ -332,6 +332,8 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
             ApplyKillStats(g_Stats[attacker], backstab, headshotKill, medicDrop);
             ApplyKillStats(g_MapStats[attacker], backstab, headshotKill, medicDrop);
+            if (medicDrop)
+                WhaleTracker_AnnounceCountMilestone(attacker, g_Stats[attacker].totalMedicDrops, "drops");
             int killstreak = WhaleTracker_SyncNativeKillstreak(attacker);
             if (telefrag)
             {
@@ -561,6 +563,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
         {
             g_Stats[attacker].totalMarketGardenHits += 1;
             g_MapStats[attacker].totalMarketGardenHits += 1;
+            WhaleTracker_AnnounceCountMilestone(attacker, g_Stats[attacker].totalMarketGardenHits, "market gardens");
             MarkMarketGardenKillCandidate(attacker, victim);
         }
 
@@ -613,6 +616,7 @@ public void TF2Shotgun_OnPelletShot(int attacker, int victim, int pellets, int t
     }
 
     g_Stats[attacker].totalMeatshots++;
+    WhaleTracker_AnnounceCountMilestone(attacker, g_Stats[attacker].totalMeatshots, "meatshots");
     MarkClientDirty(attacker);
 
     if (!kill)
@@ -648,6 +652,7 @@ public void Event_UberDeployed(Event event, const char[] name, bool dontBroadcas
 
     ApplyUberStats(g_Stats[medic]);
     ApplyUberStats(g_MapStats[medic]);
+    WhaleTracker_AnnounceCountMilestone(medic, g_Stats[medic].totalUbers, "ubers");
     if (WhaleTracker_IsRoundRunning() && IsMedicUberBonusEligible(medic))
     {
         FireUberDeployed(medic, g_Stats[medic].currentUbersLife);
@@ -707,7 +712,7 @@ void AnnounceHighUberDeath(int medic, int percent)
 {
     char medicName[256];
     BuildMedicDropDisplayName(medic, medicName, sizeof(medicName));
-    WhaleTracker_PublicMessage(medic, 0, false, "%s died with %d%% Über!", medicName, percent);
+    WhaleTracker_PublicMessage(medic, 0, false, "%s died with %d%% Ãœber!", medicName, percent);
 }
 
 void AnnounceMedicDrop(int attacker, int medic)
@@ -864,6 +869,7 @@ void RecordSupstatsAirshot(int attacker, int victim)
 {
     g_Stats[attacker].totalAirshots += 1;
     g_MapStats[attacker].totalAirshots += 1;
+    WhaleTracker_AnnounceCountMilestone(attacker, g_Stats[attacker].totalAirshots, "airshots");
     FireLegacyAirShot(attacker, victim);
     QueueAirShotBroadcast(attacker, victim);
 }
@@ -1555,9 +1561,9 @@ void SendMatchStatsMessage(int viewer, int target)
     char timeBuffer[32];
     FormatMatchDuration(matchStats.playtime, timeBuffer, sizeof(timeBuffer));
 
-    CPrintToChatEx(viewer, target, "{green}[WhaleTracker]{default} {%s}%s{default} — This Match: K %d | D %d | KD %.2f | A %d | Dmg %d | Dmg/min %.1f",
+    CPrintToChatEx(viewer, target, "{green}[WhaleTracker]{default} {%s}%s{default} â€” This Match: K %d | D %d | KD %.2f | A %d | Dmg %d | Dmg/min %.1f",
         colorTag, playerName, kills, deaths, kd, assists, damage, dpm);
-    CPrintToChat(viewer, "Taken %d | Taken/min %.1f | Heal %d | HS %d | BS %d | Übers %d | Time %s",
+    CPrintToChat(viewer, "Taken %d | Taken/min %.1f | Heal %d | HS %d | BS %d | Ãœbers %d | Time %s",
         damageTaken, dtpm, healing, headshots, backstabs, ubers, timeBuffer);
     CPrintToChat(viewer, "{green}[WhaleTracker]{default} Lifetime Kills: %d | Deaths %d | KD: %.2f", lifetimeKills, lifetimeDeaths, lifetimeKd);
     CPrintToChat(viewer, "{green}[WhaleTracker]{default} Visit kogasa.tf/stats for full");

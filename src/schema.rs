@@ -236,6 +236,7 @@ pub fn migrations() -> Vec<Migration> {
         "`created_at` INTEGER DEFAULT 0",
         "`updated_at` INTEGER DEFAULT 0",
         "`finalized` TINYINT NOT NULL DEFAULT 1",
+        "`demo_filename` VARCHAR(260) NULL DEFAULT NULL",
     ]);
     let mut players = columns(&[
         "`log_id` VARCHAR(64) NOT NULL",

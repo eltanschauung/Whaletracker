@@ -396,7 +396,7 @@ int WT_GetDamageSanityMax()
 
 float WT_GetMultikillWindow()
 {
-    return WT_GetConVarFloat(g_hMultikillWindow, 3.0);
+    return WT_GetConVarFloat(g_hMultikillWindow, 4.0);
 }
 
 float WT_GetMinMatchRateMinutes()
@@ -458,6 +458,7 @@ bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 #undef REQUIRE_PLUGIN
 #include "include/server_mail.inc"
 #define REQUIRE_PLUGIN
+#include "whaletracker/demo_recording.sp"
 #include "include/whaletracker.inc"
 #include "whaletracker/public_activity.sp"
 #include "whaletracker/motd_whaletracker.sp"
@@ -469,4 +470,5 @@ bool g_SaveQuerySlotUsed[MAX_CONCURRENT_SAVE_QUERIES];
 #include "whaletracker/database_whaletracker.sp"
 #include "whaletracker/gameplay_whaletracker.sp"
 #include "whaletracker/commands_whaletracker.sp"
+#include "whaletracker/seen_history.sp"
 #include "whaletracker/milestones_whaletracker.sp"

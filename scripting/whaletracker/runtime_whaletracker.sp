@@ -9,7 +9,7 @@ public Plugin myinfo =
     name = "WhaleTracker",
     author = "Hombre",
     description = "Cumulative player stats system",
-    version = "1.0.3",
+    version = "1.1.0",
     url = "https://kogasa.tf"
 };
 
@@ -142,7 +142,7 @@ public void OnPluginStart()
     );
     g_hMultikillWindow = CreateConVar(
         "sm_multikill_window",
-        "3.0",
+        "4.0",
         "Seconds allowed for double/triple/quadra/penta kill tracking.",
         FCVAR_NOTIFY,
         true,
@@ -303,12 +303,15 @@ public void OnPluginStart()
         g_hVisibleMaxPlayers = FindConVar("sv_visiblemaxplayers");
     }
 
+    HookEventEx("player_connect", WhaleTracker_SuppressStockJoin, EventHookMode_Pre);
+    HookEventEx("player_connect_client", WhaleTracker_SuppressStockJoin, EventHookMode_Pre);
     HookEvent("player_death", Event_PlayerDeath, EventHookMode_Post);
     HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Post);
     HookEvent("player_healed", Event_PlayerHealed, EventHookMode_Post);
     HookEvent("player_chargedeployed", Event_UberDeployed, EventHookMode_Post);
     HookEvent("teamplay_round_win", Event_RoundWin, EventHookMode_PostNoCopy);
     HookEvent("teamplay_round_start", Event_ResetMultikillAll, EventHookMode_PostNoCopy);
+    HookEvent("teamplay_round_start", WhaleTracker_CaptureRoundDemo, EventHookMode_PostNoCopy);
 
     RegConsoleCmd("sm_whalestats", Command_ShowStats, "Show your Whale Tracker statistics.");
     RegConsoleCmd("sm_stats", Command_ShowStats, "Show your Whale Tracker statistics.");
@@ -666,6 +669,24 @@ public void OnClientAuthorized(int client, const char[] auth)
     strcopy(g_MapStats[client].steamId, sizeof(g_MapStats[client].steamId), auth);
 }
 
+static int g_JoinAnnouncedSerial[MAXPLAYERS + 1];
+
+public Action WhaleTracker_SuppressStockJoin(Event event, const char[] name, bool dontBroadcast)
+{
+    if (event.GetBool("bot")) return Plugin_Continue;
+    event.BroadcastDisabled = true;
+    return Plugin_Changed;
+}
+
+public Action Timer_JoinAnnouncementFallback(Handle timer, any userId)
+{
+    int client = GetClientOfUserId(userId);
+    if (client > 0 && IsClientInGame(client) && !IsFakeClient(client)
+        && g_JoinAnnouncedSerial[client] != GetClientSerial(client))
+        WhaleTracker_PrintJoinLeaderboardMessage(client, 0, -1);
+    return Plugin_Stop;
+}
+
 public void OnClientPostAdminCheck(int client)
 {
     if (!IsValidClient(client))
@@ -677,6 +698,7 @@ public void OnClientPostAdminCheck(int client)
     }
 
     WhaleTracker_UpdateClientAdminStatus(client);
+    CreateTimer(5.0, Timer_JoinAnnouncementFallback, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
     if (!WhaleTracker_ConsumePrefetchedJoinLeaderboard(client))
     {
         RequestClientJoinLeaderboardQuery(client);
@@ -906,6 +928,7 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
         g_iRollingRankCache[client] = 0;
         g_iRollingMatchesCache[client] = 0;
         g_bRollingPointsLoaded[client] = true;
+        WhaleTracker_PrintJoinLeaderboardMessage(client, 0, 0);
         return;
     }
 
@@ -935,6 +958,10 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
 
 void WhaleTracker_PrintJoinLeaderboardMessage(int client, int points, int rank)
 {
+    if (!IsValidClient(client) || !IsClientInGame(client) || IsFakeClient(client)) return;
+    int serial = GetClientSerial(client);
+    if (g_JoinAnnouncedSerial[client] == serial) return;
+    g_JoinAnnouncedSerial[client] = serial;
     char displayName[128];
     if (GetFeatureStatus(FeatureType_Native, "Filters_GetChatName") == FeatureStatus_Available
         && Filters_GetChatName(client, displayName, sizeof(displayName)) && displayName[0] != '\0')
@@ -958,9 +985,13 @@ void WhaleTracker_PrintJoinLeaderboardMessage(int client, int points, int rank)
         WhaleTracker_PublicMessage(client, 0, false, "%s{default} (%d Points, Rank #%d) joined the game", displayName, points, rank);
         PrintToServer("[WhaleTracker] %s (%d Points, Rank #%d) joined the game", displayName, points, rank);
     }
-    else
+    else if (rank == 0)
     {
         WhaleTracker_PublicMessage(client, 0, false, "%s{default} (Unranked) joined the game", displayName);
         PrintToServer("[WhaleTracker] %s (Unranked) joined the game", displayName);
+    }
+    else
+    {
+        WhaleTracker_PublicMessage(client, 0, false, "%s{default} (Ranking unavailable) joined the game", displayName);
     }
 }

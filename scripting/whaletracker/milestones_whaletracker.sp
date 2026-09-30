@@ -1,4 +1,17 @@
 #define WT_PLAYTIME_MILESTONE_TABLE "whaletracker_playtime_milestones"
+
+void WhaleTracker_AnnounceCountMilestone(int client, int count, const char[] label)
+{
+    if (count <= 0 || count % 500 != 0 || !IsValidClient(client)
+        || !IsClientInGame(client) || IsFakeClient(client)) return;
+    char displayName[256];
+    if (GetFeatureStatus(FeatureType_Native, "Filters_GetChatName") != FeatureStatus_Available
+        || !Filters_GetChatName(client, displayName, sizeof(displayName)))
+        FormatEx(displayName, sizeof(displayName), "{teamcolor}%N", client);
+    WhaleTracker_PublicMessage(client, 0, false,
+        "{gold}[WhaleTracker] %s{default} now has {lightgreen}%d %s{default}!",
+        displayName, count, label);
+}
 #define WT_PLAYTIME_MILESTONE_ID_MAX 64
 #define WT_PLAYTIME_MILESTONE_REQUEST_MAX 128
 #define WT_PLAYTIME_MILESTONE_TWO_HOURS "playtime_2h"
