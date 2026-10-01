@@ -1,4 +1,6 @@
 bool g_bPlayerTakenDirectHit[MAXPLAYERS + 1];
+int g_iDirectHitProjectileRef[MAXPLAYERS + 1];
+int g_iJuggleProjectileRef[MAXPLAYERS + 1];
 bool g_bPlayerTakenReflectDirectHit[MAXPLAYERS + 1];
 int g_iPendingMarketGardenAttacker[MAXPLAYERS + 1];
 float g_fPendingMarketGardenTime[MAXPLAYERS + 1];
@@ -243,6 +245,7 @@ public void OnProjectileTouch(int entity, int other)
         if (IsSupstatsDirectHitProjectileClassname(classname))
         {
             g_bPlayerTakenDirectHit[other] = true;
+            g_iDirectHitProjectileRef[other] = EntIndexToEntRef(entity);
         }
 
         if (IsReflectBonusProjectileClassname(classname))
@@ -469,9 +472,6 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int damagecustom)
 {
-    if (attacker == victim)
-        return Plugin_Continue;
-
     int damageInt = RoundToFloor(damage);
     if (damageInt < 0 || damageInt > WT_GetDamageSanityMax())
     {
@@ -480,14 +480,20 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 
     bool wasDirectHit = false;
     bool wasReflectDirectHit = false;
+    int directProjectileRef = INVALID_ENT_REFERENCE;
     if (IsValidClient(victim))
     {
         wasDirectHit = g_bPlayerTakenDirectHit[victim];
+        directProjectileRef = g_iDirectHitProjectileRef[victim];
+        g_iDirectHitProjectileRef[victim] = INVALID_ENT_REFERENCE;
         wasReflectDirectHit = g_bPlayerTakenReflectDirectHit[victim];
         g_bPlayerTakenDirectHit[victim] = false;
         g_bPlayerTakenReflectDirectHit[victim] = false;
     }
 
+    // Self-damage must consume its contact marker too; otherwise a later
+    // hitscan shot can inherit a rocket/grenade touch from this victim.
+    if (attacker == victim) return Plugin_Continue;
     bool reflectBonusEligible = IsReflectBonusDamage(attacker, victim, inflictor);
 
     // Gate expensive tracking until an attacker has dealt enough damage and is not spectator.
@@ -532,10 +538,10 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
             }
 
             bool isRocketLauncherDamage = IsSoldierSyncRocketLauncherDamage(attacker, weapon);
-            if (IsValidProjectileDirectHit(attacker, victim, weapon, wasDirectHit))
+            if (IsValidProjectileDirectHit(attacker, victim, weapon, inflictor, wasDirectHit, directProjectileRef))
             {
                 FireProjectileDirectHit(attacker, victim, weapon);
-                RegisterJuggleDirectHit(attacker, victim);
+                RegisterJuggleDirectHit(attacker, victim, directProjectileRef);
                 if (IsWeaponClass(weapon, "tf_weapon_grenadelauncher"))
                 {
                     MarkDemoSyncKillCandidate(attacker, victim);
@@ -712,7 +718,7 @@ void AnnounceHighUberDeath(int medic, int percent)
 {
     char medicName[256];
     BuildMedicDropDisplayName(medic, medicName, sizeof(medicName));
-    WhaleTracker_PublicMessage(medic, 0, false, "%s died with %d%% Ãœber!", medicName, percent);
+    WhaleTracker_PublicMessage(medic, 0, false, "%s died with %d%% Über!", medicName, percent);
 }
 
 void AnnounceMedicDrop(int attacker, int medic)
@@ -906,11 +912,6 @@ public Action Timer_BroadcastAirShot(Handle timer, any victimUserId)
         return Plugin_Stop;
     }
 
-    if (PublicActivity_IsPairExcluded(attacker, victim))
-    {
-        ResetAirShotBroadcastState(victim);
-        return Plugin_Stop;
-    }
     bool killed = !IsPlayerAlive(victim);
     char attackerName[256];
     char victimName[256];
@@ -997,14 +998,15 @@ void PlayAirShotSound(int attacker, int victim)
 
 void PlayDefaultAirShotSound(int attacker, int victim)
 {
-    if (GetFeatureStatus(FeatureType_Native, "SaySounds_PlayCommand") == FeatureStatus_Available
-        && SaySounds_PlayCommand(0, WT_AIRSHOT_SAYSOUND))
-    {
-        return;
-    }
-
-    EmitSoundToClient(attacker, WT_AIRSHOT_SOUND);
-    EmitSoundToClient(victim, WT_AIRSHOT_SOUND);
+    bool played;
+    if (GetFeatureStatus(FeatureType_Native, "SaySounds_PlayCommandAs") == FeatureStatus_Available)
+        for (int viewer = 1; viewer <= MaxClients; viewer++)
+            if (IsClientInGame(viewer) && !IsFakeClient(viewer)
+                && !Oblivion_ShouldHide(viewer, attacker) && !Oblivion_ShouldHide(viewer, victim))
+                played = SaySounds_PlayCommandAs(attacker, viewer, WT_AIRSHOT_SAYSOUND) || played;
+    if (played) return;
+    if (!Oblivion_ShouldHide(attacker, victim)) EmitSoundToClient(attacker, WT_AIRSHOT_SOUND);
+    if (!Oblivion_ShouldHide(victim, attacker)) EmitSoundToClient(victim, WT_AIRSHOT_SOUND);
 }
 
 void ResetAirShotBroadcastState(int client)
@@ -1231,8 +1233,16 @@ bool IsSoldierSyncRocketLauncherDamage(int attacker, int weapon)
     return GetWeaponDefIndexSafe(weapon) != WT_SOLDIER_SYNC_EXCLUDED_DEF_INDEX;
 }
 
-bool IsValidProjectileDirectHit(int attacker, int victim, int weapon, bool wasDirectHit)
+bool IsValidProjectileDirectHit(int attacker, int victim, int weapon, int inflictor, bool wasDirectHit, int projectileRef)
 {
+    if (inflictor <= MaxClients || !IsValidEntity(inflictor)
+        || EntIndexToEntRef(inflictor) != projectileRef) return false;
+    char classname[64];GetEntityClassname(inflictor, classname, sizeof(classname));
+    if (!IsSupstatsDirectHitProjectileClassname(classname)) return false;
+    int owner = HasEntProp(inflictor, Prop_Send, "m_hThrower")
+        ? GetEntPropEnt(inflictor, Prop_Send, "m_hThrower")
+        : GetEntPropEnt(inflictor, Prop_Send, "m_hOwnerEntity");
+    if (owner != attacker) return false;
     if (!wasDirectHit || !IsValidClient(attacker) || IsFakeClient(attacker) || !IsValidClient(victim) || IsFakeClient(victim))
     {
         return false;
@@ -1247,9 +1257,9 @@ bool IsValidProjectileDirectHit(int attacker, int victim, int weapon, bool wasDi
     return primary > MaxClients && primary == weapon;
 }
 
-void RegisterJuggleDirectHit(int attacker, int victim)
+void RegisterJuggleDirectHit(int attacker, int victim, int projectileRef)
 {
-    if (!IsVictimAirshotEligible(victim))
+    if (TF2_GetPlayerClass(attacker) == TFClass_Scout || !IsVictimAirshotEligible(victim))
     {
         ResetJuggleState(victim);
         return;
@@ -1258,6 +1268,7 @@ void RegisterJuggleDirectHit(int attacker, int victim)
     int attackerUserId = GetClientUserId(attacker);
     float now = GetGameTime();
     bool completedJuggle = g_iPendingJuggleAttackerUserId[victim] == attackerUserId
+        && g_iJuggleProjectileRef[victim] != projectileRef
         && g_fPendingJuggleDirectHitTime[victim] > 0.0
         && now - g_fPendingJuggleDirectHitTime[victim] <= WT_GetJuggleWindow();
 
@@ -1269,6 +1280,7 @@ void RegisterJuggleDirectHit(int attacker, int victim)
     }
 
     g_iPendingJuggleAttackerUserId[victim] = attackerUserId;
+    g_iJuggleProjectileRef[victim] = projectileRef;
     g_fPendingJuggleDirectHitTime[victim] = now;
 }
 
@@ -1280,6 +1292,7 @@ void ResetJuggleState(int client)
     }
 
     g_iPendingJuggleAttackerUserId[client] = 0;
+    g_iJuggleProjectileRef[client] = INVALID_ENT_REFERENCE;
     g_fPendingJuggleDirectHitTime[client] = 0.0;
 }
 
@@ -1561,9 +1574,9 @@ void SendMatchStatsMessage(int viewer, int target)
     char timeBuffer[32];
     FormatMatchDuration(matchStats.playtime, timeBuffer, sizeof(timeBuffer));
 
-    CPrintToChatEx(viewer, target, "{green}[WhaleTracker]{default} {%s}%s{default} â€” This Match: K %d | D %d | KD %.2f | A %d | Dmg %d | Dmg/min %.1f",
+    CPrintToChatEx(viewer, target, "{green}[WhaleTracker]{default} {%s}%s{default} — This Match: K %d | D %d | KD %.2f | A %d | Dmg %d | Dmg/min %.1f",
         colorTag, playerName, kills, deaths, kd, assists, damage, dpm);
-    CPrintToChat(viewer, "Taken %d | Taken/min %.1f | Heal %d | HS %d | BS %d | Ãœbers %d | Time %s",
+    CPrintToChat(viewer, "Taken %d | Taken/min %.1f | Heal %d | HS %d | BS %d | Übers %d | Time %s",
         damageTaken, dtpm, healing, headshots, backstabs, ubers, timeBuffer);
     CPrintToChat(viewer, "{green}[WhaleTracker]{default} Lifetime Kills: %d | Deaths %d | KD: %.2f", lifetimeKills, lifetimeDeaths, lifetimeKd);
     CPrintToChat(viewer, "{green}[WhaleTracker]{default} Visit kogasa.tf/stats for full");

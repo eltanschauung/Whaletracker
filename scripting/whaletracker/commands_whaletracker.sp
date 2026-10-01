@@ -367,7 +367,7 @@ public Action Command_ShowMarketGardens(int client, int args)
         g_Stats[client].totalMarketGardenHits,
         g_Stats[client].totalAirshots,
         g_Stats[client].totalMeatshots);
-    CPrintToChat(client, "{green}[WhaleTracker]{default} Ãœbers: {gold}%d {default}| Drops: {gold}%d {default}| Dropped: {gold}%d",
+    CPrintToChat(client, "{green}[WhaleTracker]{default} Übers: {gold}%d {default}| Drops: {gold}%d {default}| Dropped: {gold}%d",
         g_Stats[client].totalUbers,
         g_Stats[client].totalMedicDrops,
         g_Stats[client].totalUberDrops);

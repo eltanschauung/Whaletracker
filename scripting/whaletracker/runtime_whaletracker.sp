@@ -9,7 +9,7 @@ public Plugin myinfo =
     name = "WhaleTracker",
     author = "Hombre",
     description = "Cumulative player stats system",
-    version = "1.1.0",
+    version = "1.1.1",
     url = "https://kogasa.tf"
 };
 
@@ -671,11 +671,50 @@ public void OnClientAuthorized(int client, const char[] auth)
 }
 
 static int g_JoinAnnouncedSerial[MAXPLAYERS + 1];
+static StringMap g_EarlyJoinAnnouncedUsers;
+
+bool WhaleTracker_TryEarlyJoin(Event event)
+{
+    int userId = event.GetInt("userid");
+    if (userId <= 0) return false;
+    char userKey[16];IntToString(userId, userKey, sizeof(userKey));
+    int sent;
+    if (g_EarlyJoinAnnouncedUsers != null && g_EarlyJoinAnnouncedUsers.GetValue(userKey, sent)) return true;
+    char identity[64], steamId[STEAMID64_LEN];
+    event.GetString("networkid", identity, sizeof(identity));
+    bool known = WhaleTracker_NormalizeSteamId64(identity, steamId, sizeof(steamId));
+    int client = GetClientOfUserId(userId);
+    if (!known && client > 0 && IsClientConnected(client))
+        known = GetClientAuthId(client, AuthId_SteamID64, steamId, sizeof(steamId), false);
+    int points, rank;
+    if (!known || g_JoinLeaderboardPoints == null || g_JoinLeaderboardRanks == null
+        || !g_JoinLeaderboardPoints.GetValue(steamId, points)
+        || !g_JoinLeaderboardRanks.GetValue(steamId, rank)) return false;
+    char rawName[MAX_NAME_LENGTH], displayName[256];event.GetString("name", rawName, sizeof(rawName));
+    if (!rawName[0] && client > 0 && IsClientConnected(client)) GetClientName(client, rawName, sizeof(rawName));
+    if (!rawName[0]) return false;
+    if (GetFeatureStatus(FeatureType_Native, "Filters_GetSteamIdChatName") != FeatureStatus_Available
+        || !Filters_GetSteamIdChatName(steamId, rawName, displayName, sizeof(displayName)))
+        FormatEx(displayName, sizeof(displayName), "{gold}%s", rawName);
+    ReplaceString(displayName, sizeof(displayName), "{teamcolor}", "{gold}", false);
+    char message[512];
+    if (rank > 0) FormatEx(message, sizeof(message), "%s{default} (%d Points, Rank #%d) joined the game", displayName, points, rank);
+    else FormatEx(message, sizeof(message), "%s{default} (Unranked) joined the game", displayName);
+    for (int viewer = 1; viewer <= MaxClients; viewer++)
+        if (IsClientInGame(viewer) && !IsFakeClient(viewer)
+            && (GetFeatureStatus(FeatureType_Native, "Oblivion_IsSteamHidden") != FeatureStatus_Available
+                || !Oblivion_IsSteamHidden(viewer, steamId))) CPrintToChat(viewer, "%s", message);
+    PrintToServer("[WhaleTracker] %s", message);
+    if (g_EarlyJoinAnnouncedUsers == null) g_EarlyJoinAnnouncedUsers = new StringMap();
+    g_EarlyJoinAnnouncedUsers.SetValue(userKey, 1);
+    return true;
+}
 
 public Action WhaleTracker_SuppressStockJoin(Event event, const char[] name, bool dontBroadcast)
 {
     if (event.GetBool("bot")) return Plugin_Continue;
     event.BroadcastDisabled = true;
+    WhaleTracker_TryEarlyJoin(event);
     return Plugin_Changed;
 }
 
@@ -801,6 +840,8 @@ public Action Timer_ExpireJoinLeaderboardPrefetch(Handle timer, DataPack pack)
 
 void WhaleTracker_ResetJoinLeaderboardCache()
 {
+    delete g_EarlyJoinAnnouncedUsers;
+    g_EarlyJoinAnnouncedUsers = new StringMap();
     delete g_JoinLeaderboardPending;
     delete g_JoinLeaderboardPoints;
     delete g_JoinLeaderboardRanks;
@@ -962,6 +1003,13 @@ void WhaleTracker_PrintJoinLeaderboardMessage(int client, int points, int rank)
 {
     if (!IsValidClient(client) || !IsClientInGame(client) || IsFakeClient(client)) return;
     int serial = GetClientSerial(client);
+    char userKey[16];IntToString(GetClientUserId(client), userKey, sizeof(userKey));
+    int early;
+    if (g_EarlyJoinAnnouncedUsers != null && g_EarlyJoinAnnouncedUsers.GetValue(userKey, early))
+    {
+        g_JoinAnnouncedSerial[client] = serial;
+        return;
+    }
     if (g_JoinAnnouncedSerial[client] == serial) return;
     g_JoinAnnouncedSerial[client] = serial;
     char displayName[128];

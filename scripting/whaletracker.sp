@@ -72,9 +72,11 @@
 #define TF_CLASS_HEAVY          6
 
 native int Filters_GetChatName(int client, char[] buffer, int maxlen);
+native bool Filters_GetSteamIdChatName(const char[] steamId64, const char[] fallbackName, char[] buffer, int maxlen);
 native int Filters_GetSteamIdColorTag(const char[] steamId, char[] buffer, int maxlen);
 native bool Filters_GetLastRecordedSteamName(const char[] steamId64, char[] buffer, int maxlen);
 native bool SaySounds_PlayCommand(int client, const char[] commandName, bool ignoreOptIn = false);
+native bool SaySounds_PlayCommandAs(int sourceClient, int targetClient, const char[] commandName, bool force = false, bool bypassAPIOnly = true);
 native bool Announcers_PlayAirshot(int attacker, int victim);
 forward bool WhaleTracker_RustQueueSqlWrite(const char[] query, int userId, bool forceSync);
 forward bool WhaleTracker_RustQueueTypedWrite(const char[] fallbackQuery, const char[] fieldsJson, int userId, bool forceSync);
@@ -88,9 +90,11 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max)
     MarkNativeAsOptional("SDKUnhook");
     MarkNativeAsOptional("SteamWorks_GetPublicIP");
     MarkNativeAsOptional("Filters_GetChatName");
+    MarkNativeAsOptional("Filters_GetSteamIdChatName");
     MarkNativeAsOptional("Filters_GetSteamIdColorTag");
     MarkNativeAsOptional("Filters_GetLastRecordedSteamName");
     MarkNativeAsOptional("SaySounds_PlayCommand");
+    MarkNativeAsOptional("SaySounds_PlayCommandAs");
     MarkNativeAsOptional("Announcers_PlayAirshot");
     MarkNativeAsOptional("DGM_GetGameMode");
     MarkNativeAsOptional("DGM_RealPlayerCount");

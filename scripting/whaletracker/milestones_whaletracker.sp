@@ -473,7 +473,6 @@ void WhaleTracker_AnnounceStimulus(int client)
         GetClientName(client, coloredName, sizeof(coloredName));
     }
 
-    if (PublicActivity_IsExcluded(client)) return;
     WhaleTracker_PublicMessage(client, 0, false,
         "{gold}[WhaleTracker] %s{default} just got a %sStimulus Check{default} for reaching {gold}10 hours playtime!",
         coloredName,
@@ -481,7 +480,7 @@ void WhaleTracker_AnnounceStimulus(int client)
 
     if (GetFeatureStatus(FeatureType_Native, "SaySounds_PlayCommand") == FeatureStatus_Available)
     {
-        SaySounds_PlayCommand(0, "xp_gain", true);
+        SaySounds_PlayCommand(client, "xp_gain", true);
     }
 }
 

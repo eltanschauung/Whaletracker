@@ -1566,6 +1566,17 @@ bool WhaleTracker_GetClientSteamId64(int client, char[] buffer, int maxlen)
 bool WhaleTracker_NormalizeSteamId64(const char[] input, char[] steamId64, int maxlen)
 {
     steamId64[0] = '\0';
+    if (StrContains(input, "[U:1:", false) == 0)
+    {
+        int length = strlen(input);
+        if (length < 7 || length > 16 || input[length - 1] != ']') return false;
+        char account[24];strcopy(account, sizeof(account), input[5]);
+        int n = strlen(account);account[n - 1] = '\0';
+        for (int i = 0; account[i]; i++) if (!IsCharNumeric(account[i])) return false;
+        if (StrEqual(account, "0") || (strlen(account) == 10 && strcmp(account, "4294967295") > 0)) return false;
+        WhaleTracker_AddDecimalStrings("76561197960265728", account, steamId64, maxlen);
+        return true;
+    }
 
     if (StrContains(input, "STEAM_", false) != 0)
     {
