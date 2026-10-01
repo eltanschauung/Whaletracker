@@ -14,6 +14,11 @@ adoption of recordings created by other plugins remains.
 An outstanding eligible join request is retried through the existing online
 update timer when the database or SourceTV is not ready. Concurrent joins queue
 one check, and callbacks from a finalized match or previous map are ignored.
+Queries carry the database connection generation rather than comparing database
+handles: SourceMod supplies a cloned handle to asynchronous query callbacks.
+The column-ready query is connection-scoped (and survives map changes); row
+lookups additionally carry the match generation and log ID. Stale callbacks
+cannot release a newer lookup's pending flag.
 Map end, finalization, the last human leaving, and plugin unload stop only the
 recording started for that match. A manual recording is not stopped or adopted.
 

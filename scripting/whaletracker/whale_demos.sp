@@ -19,12 +19,15 @@ void WhaleDemos_EnsureColumn()
     g_WhaleDemosColumnReady = false;
     if (g_hDatabase == null) return;
     g_hDatabase.Query(WhaleDemos_ColumnReady,
-        "ALTER TABLE whaletracker_logs ADD COLUMN IF NOT EXISTS demo_filename VARCHAR(260) NULL DEFAULT NULL");
+        "ALTER TABLE whaletracker_logs ADD COLUMN IF NOT EXISTS demo_filename VARCHAR(260) NULL DEFAULT NULL",
+        g_iDatabaseConnectGeneration);
 }
 
 public void WhaleDemos_ColumnReady(Database db, DBResultSet result, const char[] error, any data)
 {
-    if (db != g_hDatabase) return;
+    // Query callbacks use cloned database handles; identity is the connection generation.
+    if (g_bShuttingDown || data != g_iDatabaseConnectGeneration
+        || !g_bDatabaseReady || g_hDatabase == null) return;
     if (error[0])
     {
         LogError("[WhaleDemos] Demo filename column unavailable: %s", error);
@@ -73,6 +76,7 @@ void WhaleDemos_TryStart()
         "SELECT demo_filename FROM whaletracker_logs WHERE log_id = '%s' LIMIT 1", escapedId);
 
     DataPack pack = new DataPack();
+    pack.WriteCell(g_iDatabaseConnectGeneration);
     pack.WriteCell(g_WhaleDemosGeneration);
     pack.WriteString(g_sCurrentLogId);
     g_WhaleDemosQueryPending = true;
@@ -83,15 +87,17 @@ public void WhaleDemos_CheckCurrentRow(Database db, DBResultSet result, const ch
 {
     DataPack pack = view_as<DataPack>(data);
     pack.Reset();
+    int connectionGeneration = pack.ReadCell();
     int generation = pack.ReadCell();
     char logId[64];
     pack.ReadString(logId, sizeof(logId));
     delete pack;
 
     // A map change/finalization must not let an old query start the next match's demo.
-    if (generation != g_WhaleDemosGeneration || !StrEqual(logId, g_sCurrentLogId)) return;
+    if (g_bShuttingDown || connectionGeneration != g_iDatabaseConnectGeneration
+        || generation != g_WhaleDemosGeneration || !StrEqual(logId, g_sCurrentLogId)) return;
     g_WhaleDemosQueryPending = false;
-    if (db != g_hDatabase || !g_bDatabaseReady || g_bMatchFinalized) return;
+    if (!g_bDatabaseReady || g_hDatabase == null || g_bMatchFinalized) return;
     if (error[0] || result == null)
     {
         LogError("[WhaleDemos] Failed to read demo filename for %s: %s", logId, error);

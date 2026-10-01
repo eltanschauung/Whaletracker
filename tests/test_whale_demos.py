@@ -42,6 +42,33 @@ class WhaleDemosTest(unittest.TestCase):
         self.assertIn('return FileExists(published)', MODULE)
         self.assertIn('"%s_%d.dem"', MODULE)
 
+    def test_schema_callback_uses_connection_not_handle_or_match_identity(self):
+        ensure = MODULE.split('void WhaleDemos_EnsureColumn()', 1)[1].split('public void', 1)[0]
+        callback = MODULE.split('public void WhaleDemos_ColumnReady(', 1)[1].split('bool WhaleDemos_HasSourceTV()', 1)[0]
+        self.assertIn('g_iDatabaseConnectGeneration);', ensure)
+        self.assertIn('data != g_iDatabaseConnectGeneration', callback)
+        self.assertIn('g_bShuttingDown', callback)
+        self.assertNotIn('db != g_hDatabase', MODULE)
+        # Map resets must not discard a successful schema query for the current connection.
+        self.assertNotIn('g_WhaleDemosGeneration', callback)
+        self.assertLess(callback.index('data != g_iDatabaseConnectGeneration'),
+                        callback.index('g_WhaleDemosColumnReady = true'))
+
+    def test_lookup_captures_connection_and_match_generations_in_order(self):
+        request = MODULE.split('void WhaleDemos_TryStart()', 1)[1].split('public void WhaleDemos_CheckCurrentRow', 1)[0]
+        callback = MODULE.split('public void WhaleDemos_CheckCurrentRow(', 1)[1].split('void WhaleDemos_BuildFilename', 1)[0]
+        self.assertLess(request.index('pack.WriteCell(g_iDatabaseConnectGeneration)'),
+                        request.index('pack.WriteCell(g_WhaleDemosGeneration)'))
+        self.assertLess(callback.index('int connectionGeneration = pack.ReadCell()'),
+                        callback.index('int generation = pack.ReadCell()'))
+        self.assertLess(callback.index('delete pack'), callback.index('connectionGeneration !='))
+        # Stale callbacks must not release a query lease belonging to the new connection/match.
+        for guard in ('g_bShuttingDown', 'connectionGeneration != g_iDatabaseConnectGeneration',
+                      'generation != g_WhaleDemosGeneration', '!StrEqual(logId, g_sCurrentLogId)'):
+            self.assertLess(callback.index(guard), callback.index('g_WhaleDemosQueryPending = false'))
+        self.assertLess(callback.index('g_WhaleDemosQueryPending = false'),
+                        callback.index('if (error[0] || result == null)'))
+
     def test_null_row_check_and_filename_preservation_use_shipped_sql(self):
         select = re.search(r'"(SELECT demo_filename FROM whaletracker_logs[^"\n]+)"', MODULE).group(1)
         update = re.search(r'", demo_filename = (COALESCE\([^"\n]+)"', MODULE).group(1)
