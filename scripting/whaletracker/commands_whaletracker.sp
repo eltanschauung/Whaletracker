@@ -149,7 +149,8 @@ public Action Command_ShowPointsCalculation(int client, int args)
     CPrintToChat(client, "Pressure: {lightgreen}ln(1 + damage / (150 * eng))");
     CPrintToChat(client, "Support: {lightgreen}0.60 * ln(1 + healing / (100 * eng)) + 0.90 * ln(1 + 60 * ubers / eng)");
     CPrintToChat(client, "Confidence: {axis}sqrt(eng / (eng + 400))");
-    CPrintToChat(client, "Uses your latest {lightgreen}50{default} qualifying match logs; at least {lightgreen}50{default} are required.");
+    CPrintToChat(client, "Uses up to your latest {lightgreen}%d{default} qualifying match logs; at least {lightgreen}%d{default} are required.",
+        WT_WHALE_POINTS_MAX_MATCHES, WT_WHALE_POINTS_MIN_MATCHES);
     CPrintToChat(client, "Logs must be over 5 minutes with more than 5 kills + assists on an approved map.");
     return Plugin_Handled;
 }

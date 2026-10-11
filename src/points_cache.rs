@@ -263,7 +263,8 @@ fn build_insert_sql(now: u64) -> String {
              WHERE recent_row <= {max_matches} \
              GROUP BY steamid\
          ), scored AS (\
-             SELECT a.*, {expr} AS points \
+             SELECT a.*, CASE WHEN a.matches_used >= {min_matches} \
+                             THEN {expr} ELSE 0 END AS points \
              FROM aggregates a\
          ), ranked AS (\
              SELECT steamid, \
@@ -313,8 +314,10 @@ mod tests {
     fn rolling_query_has_required_boundaries() {
         let sql = build_insert_sql(123);
         assert!(sql.contains("l.duration > 300"));
-        assert!(sql.contains("recent_row <= 50"));
-        assert!(sql.contains("matches_used >= 50"));
+        assert!(sql.contains("recent_row <= 100"));
+        assert!(sql.contains("CASE WHEN a.matches_used >= 20"));
+        assert!(sql.contains("matches_used >= 20"));
+        assert!(sql.contains("ORDER BY l.ended_at DESC, l.log_id DESC"));
         assert!(sql.contains("SUBSTRING_INDEX(SUBSTRING_INDEX(l.map, '/', -1), '.ugc', 1)"));
         assert!(!sql.contains("playtime"));
     }

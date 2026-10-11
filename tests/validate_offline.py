@@ -210,6 +210,10 @@ class ExtractedCacheSqlTests(unittest.TestCase):
     def setUpClass(cls):
         if REPO!='whaletracker': raise unittest.SkipTest('WhaleTracker-only cache SQL')
         cls.source=(ROOT/'src/points_cache.rs').read_text()
+        config=(ROOT/'src/config.rs').read_text()
+        cls.limits={key:int(re.search(rf'pub const {key}: \w+ = (\d+);',config).group(1))
+                    for key in ['RANK_MIN_MATCHES','RANK_MAX_MATCHES',
+                                'RANK_MIN_MATCH_DURATION','RANK_MIN_KILLS_ASSISTS']}
         cls.expr=re.search(r'const WHALE_POINTS_SQL_EXPR: &str = r#"(.*?)"#;',cls.source,re.S).group(1)
         maps_block=re.search(r'const RANKED_MAPS: &\[&str\] = &\[(.*?)\];',cls.source,re.S).group(1)
         cls.maps=', '.join(f"'{value}'" for value in re.findall(r'"([^"]+)"',maps_block))
@@ -247,15 +251,58 @@ CREATE TABLE whaletracker_points_cache_build (steamid TEXT PRIMARY KEY,points IN
                 (log_id,id,k,d,a,dmg,h,u))
     def rebuild(self):
         self.db.execute(self.template.format(
-            now=1234567890,expr=self.expr,min_duration=300,min_kills_assists=5,
-            max_matches=300,min_matches=50,maps=self.maps))
+            now=1234567890,expr=self.expr,
+            min_duration=self.limits['RANK_MIN_MATCH_DURATION'],
+            min_kills_assists=self.limits['RANK_MIN_KILLS_ASSISTS'],
+            max_matches=self.limits['RANK_MAX_MATCHES'],
+            min_matches=self.limits['RANK_MIN_MATCHES'],maps=self.maps))
         return self.db.execute('SELECT steamid,points,rank,name_color,updated_at,matches_used,rolling_kills,rolling_deaths FROM whaletracker_points_cache_build ORDER BY steamid').fetchall()
     def test_thresholds_and_stable_tie_break(self):
-        self.insert('1',10,10); self.insert('2',10,10)
-        self.insert('3',10,10,matches=49); self.insert('4',10,10,duration=300)
+        self.insert('1',10,10,matches=20); self.insert('2',10,10,matches=20)
+        self.insert('3',10,10,matches=19); self.insert('4',10,10,duration=300)
         rows=self.rebuild()
         self.assertEqual([r[2] for r in rows],[1,2,0,0])
         self.assertEqual(rows[0][1],rows[1][1])
+        self.assertEqual(rows[2][1],0)
+    def test_sourcepawn_and_backend_match_limits_agree(self):
+        source=(ROOT/'scripting/whaletracker.sp').read_text()
+        for suffix,expected in [('MIN',20),('MAX',100)]:
+            self.assertEqual(self.limits[f'RANK_{suffix}_MATCHES'],expected)
+            value=re.search(rf'#define WT_WHALE_POINTS_{suffix}_MATCHES\s+(\d+)',source)
+            self.assertIsNotNone(value)
+            self.assertEqual(int(value.group(1)),expected)
+    def test_points_and_rank_start_at_20_and_window_caps_at_100(self):
+        for count in [0,19,20,22,99,100,105]:
+            self.insert(f'{count:03d}',10,10,matches=count)
+        rows=self.rebuild()
+        for id,points,rank,color,at,matches,kills,deaths in rows:
+            count=int(id); expected=min(count,100)
+            with self.subTest(logs=count):
+                self.assertEqual(matches,expected)
+                self.assertEqual((kills,deaths),(10*expected,10*expected))
+                self.assertEqual(points > 0,count >= 20)
+                self.assertEqual(rank > 0,count >= 20)
+        eligible=[row for row in rows if row[2] > 0]
+        self.assertEqual(sorted(row[2] for row in eligible),list(range(1,len(eligible)+1)))
+    def test_22_logs_score_uses_all_22_without_padding(self):
+        self.insert('1',10,10,matches=22)
+        row=self.rebuild()[0]
+        engagement=440
+        expected=1000*math.sqrt(engagement/(engagement+400))*(5*(220/240)+math.log1p(22000/(150*engagement)))
+        self.assertEqual(row[1],math.floor(expected+0.5))
+        self.assertEqual(row[2],1)
+        self.assertEqual(row[5:],(22,220,220))
+    def test_only_latest_100_logs_contribute(self):
+        self.insert('1',10,10,matches=105)
+        self.insert('2',10,10,matches=100)
+        # Extremely high old stats must not leak into the rolling score or KD.
+        self.db.executemany('UPDATE whaletracker_log_players SET kills=9999,damage=999999 WHERE log_id=?',
+                            [(f'1-{n}',) for n in range(5)])
+        rows=self.rebuild()
+        self.assertEqual(rows[0][1],rows[1][1])
+        self.assertEqual(rows[0][5:],(100,1000,1000))
+        window=self.db.execute('SELECT window_started_at,window_ended_at FROM whaletracker_points_cache_build WHERE steamid=?',('1',)).fetchone()
+        self.assertEqual(window,(1005,2104))
     def test_name_color_precedence_and_fallback(self):
         for id in ['1','2','3']: self.insert(id,10,10)
         self.db.execute("INSERT INTO filters_namecolors VALUES ('1','cyan')")
