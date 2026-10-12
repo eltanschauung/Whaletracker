@@ -315,8 +315,8 @@ mod tests {
         let sql = build_insert_sql(123);
         assert!(sql.contains("l.duration > 300"));
         assert!(sql.contains("recent_row <= 100"));
-        assert!(sql.contains("CASE WHEN a.matches_used >= 20"));
-        assert!(sql.contains("matches_used >= 20"));
+        assert!(sql.contains("CASE WHEN a.matches_used >= 35"));
+        assert!(sql.contains("matches_used >= 35"));
         assert!(sql.contains("ORDER BY l.ended_at DESC, l.log_id DESC"));
         assert!(sql.contains("SUBSTRING_INDEX(SUBSTRING_INDEX(l.map, '/', -1), '.ugc', 1)"));
         assert!(!sql.contains("playtime"));

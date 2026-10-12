@@ -258,21 +258,21 @@ CREATE TABLE whaletracker_points_cache_build (steamid TEXT PRIMARY KEY,points IN
             min_matches=self.limits['RANK_MIN_MATCHES'],maps=self.maps))
         return self.db.execute('SELECT steamid,points,rank,name_color,updated_at,matches_used,rolling_kills,rolling_deaths FROM whaletracker_points_cache_build ORDER BY steamid').fetchall()
     def test_thresholds_and_stable_tie_break(self):
-        self.insert('1',10,10,matches=20); self.insert('2',10,10,matches=20)
-        self.insert('3',10,10,matches=19); self.insert('4',10,10,duration=300)
+        self.insert('1',10,10,matches=35); self.insert('2',10,10,matches=35)
+        self.insert('3',10,10,matches=34); self.insert('4',10,10,duration=300)
         rows=self.rebuild()
         self.assertEqual([r[2] for r in rows],[1,2,0,0])
         self.assertEqual(rows[0][1],rows[1][1])
         self.assertEqual(rows[2][1],0)
     def test_sourcepawn_and_backend_match_limits_agree(self):
         source=(ROOT/'scripting/whaletracker.sp').read_text()
-        for suffix,expected in [('MIN',20),('MAX',100)]:
+        for suffix,expected in [('MIN',35),('MAX',100)]:
             self.assertEqual(self.limits[f'RANK_{suffix}_MATCHES'],expected)
             value=re.search(rf'#define WT_WHALE_POINTS_{suffix}_MATCHES\s+(\d+)',source)
             self.assertIsNotNone(value)
             self.assertEqual(int(value.group(1)),expected)
-    def test_points_and_rank_start_at_20_and_window_caps_at_100(self):
-        for count in [0,19,20,22,99,100,105]:
+    def test_points_and_rank_start_at_35_and_window_caps_at_100(self):
+        for count in [0,19,20,22,34,35,37,99,100,105]:
             self.insert(f'{count:03d}',10,10,matches=count)
         rows=self.rebuild()
         for id,points,rank,color,at,matches,kills,deaths in rows:
@@ -280,18 +280,18 @@ CREATE TABLE whaletracker_points_cache_build (steamid TEXT PRIMARY KEY,points IN
             with self.subTest(logs=count):
                 self.assertEqual(matches,expected)
                 self.assertEqual((kills,deaths),(10*expected,10*expected))
-                self.assertEqual(points > 0,count >= 20)
-                self.assertEqual(rank > 0,count >= 20)
+                self.assertEqual(points > 0,count >= 35)
+                self.assertEqual(rank > 0,count >= 35)
         eligible=[row for row in rows if row[2] > 0]
         self.assertEqual(sorted(row[2] for row in eligible),list(range(1,len(eligible)+1)))
-    def test_22_logs_score_uses_all_22_without_padding(self):
-        self.insert('1',10,10,matches=22)
+    def test_37_logs_score_uses_all_37_without_padding(self):
+        self.insert('1',10,10,matches=37)
         row=self.rebuild()[0]
-        engagement=440
-        expected=1000*math.sqrt(engagement/(engagement+400))*(5*(220/240)+math.log1p(22000/(150*engagement)))
+        engagement=740
+        expected=1000*math.sqrt(engagement/(engagement+400))*(5*(370/390)+math.log1p(37000/(150*engagement)))
         self.assertEqual(row[1],math.floor(expected+0.5))
         self.assertEqual(row[2],1)
-        self.assertEqual(row[5:],(22,220,220))
+        self.assertEqual(row[5:],(37,370,370))
     def test_only_latest_100_logs_contribute(self):
         self.insert('1',10,10,matches=105)
         self.insert('2',10,10,matches=100)
