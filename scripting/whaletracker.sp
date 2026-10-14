@@ -16,7 +16,7 @@
 #define REQUIRE_EXTENSIONS
 
 #undef REQUIRE_PLUGIN
-#include <tf2attributes>
+#include <weapons_attributes>
 #define REQUIRE_PLUGIN
 
 #include <geoip>
