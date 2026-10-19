@@ -366,5 +366,8 @@ pub fn migrations() -> Vec<Migration> {
             "ALTER TABLE whaletracker_points_cache_build ADD COLUMN IF NOT EXISTS rolling_kills INTEGER DEFAULT 0",
             "ALTER TABLE whaletracker_points_cache_build ADD COLUMN IF NOT EXISTS rolling_deaths INTEGER DEFAULT 0",
         ])},
+        Migration {version: 8, name: "round_end_points_snapshots", statements: columns(&[
+            "ALTER TABLE whaletracker_logs ADD COLUMN IF NOT EXISTS points_snapshot_at INTEGER NOT NULL DEFAULT 0",
+        ])},
     ]
 }

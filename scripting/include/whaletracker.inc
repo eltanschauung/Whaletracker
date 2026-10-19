@@ -1758,6 +1758,136 @@ void WhaleTracker_RecordRoundStatistics(Event event)
     QueueSaveQuery(query, 0, false);
 }
 
+public void Event_RoundPointsStalemate(Event event, const char[] name, bool dontBroadcast)
+{
+    WhaleTracker_PublishRoundPointsSnapshot();
+}
+
+void WhaleTracker_PublishRoundPointsSnapshot()
+{
+    if (!WhaleTracker_ShouldUseMatchLogs() || g_bMatchFinalized || !g_sCurrentLogId[0]
+        || !g_bDatabaseReady || g_hDatabase == null)
+        return;
+
+    EnsureMatchStorage();
+    // Work on a copy: appending live stats to disconnected storage would count
+    // them twice at the next round end or finalization.
+    StringMap snapshots = g_DisconnectedStats.Clone();
+    int now = GetTime();
+    float engineNow = GetEngineTime();
+    for (int client = 1; client <= MaxClients; client++)
+    {
+        if (!IsClientInGame(client) || IsFakeClient(client)) continue;
+        EnsureClientSteamId(client);
+        if (!g_MapStats[client].steamId[0]) continue;
+        int current[MATCH_STAT_COUNT], aggregate[MATCH_STAT_COUNT];
+        SnapshotFromStatsAtTime(g_MapStats[client], current, engineNow);
+        if (snapshots.GetArray(g_MapStats[client].steamId, aggregate, MATCH_STAT_COUNT))
+        {
+            MergeSnapshotArrays(current, aggregate);
+        }
+        snapshots.SetArray(g_MapStats[client].steamId, current, MATCH_STAT_COUNT);
+        char name[MAX_NAME_LENGTH];
+        ResolveMatchPlayerName(client, g_MapStats[client].steamId, name, sizeof(name));
+        RememberMatchPlayerName(g_MapStats[client].steamId, name);
+    }
+    StringMapSnapshot keys = snapshots.Snapshot();
+    int participants;
+    for (int i = 0; i < keys.Length; i++)
+    {
+        char steamId[STEAMID64_LEN], name[MAX_NAME_LENGTH];
+        int stats[MATCH_STAT_COUNT];
+        keys.GetKey(i, steamId, sizeof(steamId));
+        if (!snapshots.GetArray(steamId, stats, MATCH_STAT_COUNT) || !IsValidMatchLogSnapshot(stats)) continue;
+        ResolveMatchPlayerName(0, steamId, name, sizeof(name));
+        InsertPlayerLogRecord(stats, steamId, name, now, false);
+        participants++;
+    }
+    delete keys;
+    delete snapshots;
+    if (participants < 2) return;
+    InsertMatchLogRecord(now, now - g_iMatchStartTime, participants, false, false);
+    char query[256];
+    // Log-lane FIFO makes this marker execute only after all player snapshots.
+    // Keep finalized=0: map finalization remains the same log, not another match.
+    FormatEx(query, sizeof(query),
+        "/* wt_points_cache_round_end */ UPDATE whaletracker_logs SET points_snapshot_at = %d WHERE log_id = '%s'",
+        now, g_sCurrentLogId);
+    QueueSaveQuery(query, 0, false);
+    WhaleTracker_RustRequestFlush();
+    WhaleTracker_QueueRoundPointsRefresh(now, g_sCurrentLogId);
+}
+
+void WhaleTracker_QueueRoundPointsRefresh(int requestedAt, const char[] logId)
+{
+    DataPack pack;
+    CreateDataTimer(2.0, Timer_RefreshRoundPoints, pack, TIMER_FLAG_NO_MAPCHANGE);
+    pack.WriteCell(requestedAt);
+    pack.WriteString(logId);
+}
+
+public Action Timer_RefreshRoundPoints(Handle timer, DataPack pack)
+{
+    pack.Reset();
+    int requestedAt = pack.ReadCell();
+    char logId[128];
+    pack.ReadString(logId, sizeof(logId));
+    if (!StrEqual(logId, g_sCurrentLogId) || GetTime() - requestedAt > 60
+        || !g_bDatabaseReady || g_hDatabase == null) return Plugin_Stop;
+    char ids[4096];
+    for (int client = 1; client <= MaxClients; client++)
+    {
+        if (!IsClientInGame(client) || IsFakeClient(client)) continue;
+        char steamId[STEAMID64_LEN], item[40];
+        if (!GetClientAuthId(client, AuthId_SteamID64, steamId, sizeof(steamId))) continue;
+        FormatEx(item, sizeof(item), "%s'%s'", ids[0] ? "," : "", steamId);
+        StrCat(ids, sizeof(ids), item);
+    }
+    if (!ids[0]) return Plugin_Stop;
+    char query[4608];
+    // Do not invalidate local native caches before Rust publishes the new
+    // generation; that would force synchronous SQL on the next team-balance call.
+    FormatEx(query, sizeof(query),
+        "SELECT c.steamid,c.points,c.rank,c.matches_used FROM whaletracker_points_cache c "
+        ... "JOIN whaletracker_points_cache_state s ON s.cache_key='global' AND s.dirty=0 "
+        ... "AND s.last_rebuilt_at > %d000 WHERE c.steamid IN (%s)", requestedAt, ids);
+    DataPack request = new DataPack();
+    request.WriteCell(requestedAt);
+    request.WriteString(logId);
+    SQL_TQuery(g_hDatabase, SQL_OnRoundPointsRefreshed, query, request);
+    return Plugin_Stop;
+}
+
+public void SQL_OnRoundPointsRefreshed(Handle owner, Handle query, const char[] error, any data)
+{
+    DataPack pack = view_as<DataPack>(data);
+    pack.Reset();
+    int requestedAt = pack.ReadCell();
+    char logId[128];
+    pack.ReadString(logId, sizeof(logId));
+    delete pack;
+    if (!StrEqual(logId, g_sCurrentLogId) || GetTime() - requestedAt > 60) return;
+    if (query == null || !SQL_GetRowCount(query))
+    {
+        WhaleTracker_QueueRoundPointsRefresh(requestedAt, logId);
+        return;
+    }
+    while (SQL_FetchRow(query))
+    {
+        char steamId[STEAMID64_LEN];
+        SQL_FetchString(query, 0, steamId, sizeof(steamId));
+        for (int client = 1; client <= MaxClients; client++)
+        {
+            if (!IsClientInGame(client) || !StrEqual(g_Stats[client].steamId, steamId)) continue;
+            g_iRollingPointsCache[client] = SQL_FetchInt(query, 1);
+            g_iRollingRankCache[client] = SQL_FetchInt(query, 2);
+            g_iRollingMatchesCache[client] = SQL_FetchInt(query, 3);
+            g_bRollingPointsLoaded[client] = true;
+            break;
+        }
+    }
+}
+
 void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool forceSync, bool finalized)
 {
     if (!WhaleTracker_ShouldUseMatchLogs())

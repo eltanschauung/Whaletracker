@@ -157,7 +157,10 @@ pub fn lane_for(sql: &str) -> Lane {
 }
 
 pub fn invalidates_points_cache(sql: &str) -> bool {
-    sql.contains("wt_points_cache_finalize")
+    let sql = sql.trim_start();
+    (sql.starts_with("/* wt_points_cache_finalize */")
+        || sql.starts_with("/* wt_points_cache_round_end */"))
+        && target_table(sql).as_deref() == Some("whaletracker_logs")
 }
 
 pub fn validate_write(sql: &str) -> Result<(), String> {
@@ -415,7 +418,7 @@ mod tests {
         );
     }
     #[test]
-    fn only_explicit_finalization_invalidates_points() {
+    fn only_explicit_round_end_or_finalization_invalidates_points() {
         assert!(!invalidates_points_cache(
             "UPDATE whaletracker SET kills=kills+1"
         ));
@@ -425,6 +428,10 @@ mod tests {
         assert!(invalidates_points_cache(
             "/* wt_points_cache_finalize */ INSERT INTO whaletracker_logs (finalized) VALUES (1)"
         ));
+        assert!(invalidates_points_cache(
+            "/* wt_points_cache_round_end */ UPDATE whaletracker_logs SET points_snapshot_at=123 WHERE log_id='test'"
+        ));
+        assert_eq!(lane_for("/* wt_points_cache_round_end */ UPDATE whaletracker_logs SET points_snapshot_at=123"), Lane::Logs);
     }
     #[test]
     fn preserves_plausibility_thresholds() {

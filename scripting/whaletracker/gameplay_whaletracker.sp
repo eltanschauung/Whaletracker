@@ -25,6 +25,7 @@ public void Event_RoundWin(Event event, const char[] name, bool dontBroadcast)
 {
     AwardRoundTopScoringPlayerBonus();
     WhaleTracker_RecordRoundStatistics(event);
+    WhaleTracker_PublishRoundPointsSnapshot();
 }
 
 bool ShouldAwardTopScoringPlayerBonus()

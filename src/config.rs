@@ -4,7 +4,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-pub const SCHEMA_VERSION: u32 = 7;
+pub const SCHEMA_VERSION: u32 = 8;
 pub const MAX_LOG_DAMAGE_PER_MINUTE: f64 = 3000.0;
 // Rank after 35 qualifying logs, using all available logs up to the latest 100.
 pub const RANK_MAX_MATCHES: usize = 100;
