@@ -1314,12 +1314,44 @@ void GetNameColorTagForSteamId(const char[] steamId, char[] colorTag, int maxlen
     char escapedSteamId[STEAMID64_LEN * 2];
     EscapeSqlString(steamId, escapedSteamId, sizeof(escapedSteamId));
 
-    char query[192];
+    char query[512];
+    Format(query, sizeof(query),
+        "SELECT f.steamid, f.color, c.steamid, c.name_color FROM (SELECT '%s' AS steamid) s "
+        ... "LEFT JOIN filters_namecolors f ON f.steamid = s.steamid "
+        ... "LEFT JOIN whaletracker_points_cache c ON c.steamid = s.steamid "
+        ... "LIMIT 1",
+        escapedSteamId);
+
+    DBResultSet results = SQLQuerySync(query);
+    if (results != null && SQL_HasResultSet(results))
+    {
+        // Presence columns distinguish a missing row from a NULL color.
+        // Preserve the buffer left by the native helper when a row is absent.
+        if (results.FetchRow())
+        {
+            if (!results.IsFieldNull(0))
+            {
+                results.FetchString(1, colorTag, maxlen);
+                TrimString(colorTag);
+            }
+            if (colorTag[0] == '\0' && !results.IsFieldNull(2))
+            {
+                results.FetchString(3, colorTag, maxlen);
+                TrimString(colorTag);
+            }
+        }
+        delete results;
+        return;
+    }
+    delete results;
+
+    // Preserve legacy partial-schema/query-error behavior. For example, a
+    // missing cache table must not prevent a valid filter color from loading.
     Format(query, sizeof(query),
         "SELECT color FROM filters_namecolors WHERE steamid = '%s' LIMIT 1",
         escapedSteamId);
 
-    DBResultSet results = SQLQuerySync(query);
+    results = SQLQuerySync(query);
     if (results != null && SQL_HasResultSet(results) && results.FetchRow())
     {
         results.FetchString(0, colorTag, maxlen);
@@ -1399,10 +1431,7 @@ void CacheWhalePointsOnDisconnect(int client)
         return;
     }
 
-    char colorTag[32];
-    GetNameColorTagForSteamId(g_Stats[client].steamId, colorTag, sizeof(colorTag));
-
-    UpdateWhalePointsCacheMetadata(g_Stats[client].steamId, colorTag, GetClientUserId(client));
+    UpdateWhalePointsCacheMetadata(g_Stats[client].steamId, "", GetClientUserId(client));
 }
 
 bool IsValidClient(int client)

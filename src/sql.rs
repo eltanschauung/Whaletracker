@@ -100,8 +100,13 @@ fn head_tokens(sql: &str) -> Vec<String> {
     result
 }
 
+#[cfg(test)]
 pub fn target_table(sql: &str) -> Option<String> {
     let words = head_tokens(sql);
+    target_table_from_tokens(&words).map(str::to_owned)
+}
+
+fn target_table_from_tokens(words: &[String]) -> Option<&str> {
     let first = words.first()?.as_str();
     let mut index = match first {
         "insert" | "replace" => words
@@ -138,11 +143,16 @@ pub fn target_table(sql: &str) -> Option<String> {
     if words.get(index + 1).is_some_and(|word| word == ".") {
         index += 2;
     }
-    words.get(index).cloned()
+    words.get(index).map(String::as_str)
 }
 
+#[cfg(test)]
 pub fn lane_for(sql: &str) -> Lane {
-    match target_table(sql).as_deref() {
+    lane_for_table(target_table(sql).as_deref())
+}
+
+fn lane_for_table(table: Option<&str>) -> Lane {
+    match table {
         Some("whaletracker_online" | "whaletracker_online_meta" | "whaletracker_servers") => {
             Lane::Online
         }
@@ -156,30 +166,51 @@ pub fn lane_for(sql: &str) -> Lane {
     }
 }
 
+#[cfg(test)]
 pub fn invalidates_points_cache(sql: &str) -> bool {
+    invalidates_table(sql, target_table(sql).as_deref())
+}
+
+fn invalidates_table(sql: &str, table: Option<&str>) -> bool {
     let sql = sql.trim_start();
     (sql.starts_with("/* wt_points_cache_finalize */")
         || sql.starts_with("/* wt_points_cache_round_end */"))
-        && target_table(sql).as_deref() == Some("whaletracker_logs")
+        && table == Some("whaletracker_logs")
 }
 
+#[cfg(test)]
 pub fn validate_write(sql: &str) -> Result<(), String> {
+    validate_and_classify(sql).map(|_| ())
+}
+
+// Transient metadata only: replay derives it again from the unchanged SQL journal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Classification {
+    pub lane: Lane,
+    pub invalidates_points: bool,
+}
+
+pub fn validate_and_classify(sql: &str) -> Result<Classification, String> {
     if sql.trim().is_empty() {
         return Err("empty SQL write".into());
     }
     let head = head_tokens(sql);
+    let table = target_table_from_tokens(&head);
     let temporary_table = head
         .first()
         .is_some_and(|word| word == "create" || word == "drop")
         && head.get(1).is_some_and(|word| word == "temporary");
-    if target_table(sql).is_none() || temporary_table {
+    if table.is_none() || temporary_table {
         return Err("outlet accepts table writes, not session or transaction control".into());
     }
     validate_single_statement(sql)?;
-    if target_table(sql).as_deref() == Some("whaletracker_log_players") {
-        validate_log_player_write(sql)?;
+    if table == Some("whaletracker_log_players") {
+        validate_log_player_write(sql, head.first().map(String::as_str))?;
     }
-    Ok(())
+    Ok(Classification {
+        lane: lane_for_table(table),
+        invalidates_points: invalidates_table(sql, table),
+    })
 }
 
 fn validate_single_statement(sql: &str) -> Result<(), String> {
@@ -257,8 +288,8 @@ fn validate_single_statement(sql: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn validate_log_player_write(sql: &str) -> Result<(), String> {
-    let Some((columns, values)) = parse_insert_columns_values(sql) else {
+fn validate_log_player_write(sql: &str, first: Option<&str>) -> Result<(), String> {
+    let Some((columns, values)) = parse_insert_columns_values(sql, first) else {
         return Ok(());
     };
     let damage =
@@ -283,9 +314,8 @@ pub fn is_log_rate_plausible(amount: i64, playtime: i64) -> bool {
     playtime > 0 && (amount as f64 * 60.0 / playtime as f64) <= MAX_LOG_DAMAGE_PER_MINUTE
 }
 
-fn parse_insert_columns_values(sql: &str) -> Option<(Vec<String>, Vec<String>)> {
-    if !head_tokens(sql)
-        .first()
+fn parse_insert_columns_values(sql: &str, first: Option<&str>) -> Option<(Vec<String>, Vec<String>)> {
+    if !first
         .is_some_and(|word| word == "insert" || word == "replace")
     {
         return None;

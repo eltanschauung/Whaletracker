@@ -121,6 +121,26 @@ pub struct PointsCache {
     max_wait: Duration,
 }
 
+type CacheState = (u8, u64, u64, u64, u64);
+
+fn read_state(conn: &mut PooledConn) -> Result<Option<CacheState>, String> {
+    conn.query_first(
+        "SELECT dirty, dirty_updated_at, dirty_generation, dirty_since, \
+         CAST(UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3))*1000 AS UNSIGNED) \
+         FROM whaletracker_points_cache_state WHERE cache_key = 'global' LIMIT 1"
+    ).map_err(|err| err.to_string())
+}
+
+fn eligible_generation(state: Option<CacheState>, debounce_ms: u64, max_wait_ms: u64) -> Option<u64> {
+    let (dirty, updated, generation, since, now) = state?;
+    if dirty == 0 || (now.saturating_sub(updated) < debounce_ms
+        && now.saturating_sub(if since == 0 { updated } else { since }) < max_wait_ms)
+    {
+        return None;
+    }
+    Some(generation)
+}
+
 impl PointsCache {
     pub fn new(pool: Pool, cfg: Config) -> Arc<Self> {
         Arc::new(Self {
@@ -176,20 +196,18 @@ impl PointsCache {
     }
 
     fn poll_and_rebuild(&self) -> Result<(), String> {
-        let conn = connection(&self.pool)?;
+        let mut conn = connection(&self.pool)?;
+        let debounce_ms = self.cfg.cache_debounce.as_millis() as u64;
+        let max_wait_ms = self.max_wait.as_millis() as u64;
+        // A hint only: never retain a negative result beyond this poll.
+        if eligible_generation(read_state(&mut conn)?, debounce_ms, max_wait_ms).is_none() {
+            return Ok(());
+        }
         with_named_lock(conn, "wt-points-cache", 0, |conn| {
-            let state: Option<(u8, u64, u64, u64, u64)> = conn.query_first(
-                "SELECT dirty, dirty_updated_at, dirty_generation, dirty_since, \
-                 CAST(UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3))*1000 AS UNSIGNED) \
-                 FROM whaletracker_points_cache_state WHERE cache_key = 'global' LIMIT 1"
-            ).map_err(|err| err.to_string())?;
-            let Some((dirty, updated, generation, since, now)) = state else { return Ok(()); };
-            if dirty == 0 { return Ok(()); }
-            let debounce_ms = self.cfg.cache_debounce.as_millis() as u64;
-            let max_wait_ms = self.max_wait.as_millis() as u64;
-            if now.saturating_sub(updated) < debounce_ms
-                && now.saturating_sub(if since == 0 { updated } else { since }) < max_wait_ms
-            { return Ok(()); }
+            // Every decision field, including database time, must be read again
+            // after locking: another owner or writer may have changed the state.
+            let Some(generation) = eligible_generation(read_state(conn)?, debounce_ms, max_wait_ms)
+                else { return Ok(()); };
 
             self.rebuild(conn)?;
             // A later invalidation has a different generation even if it happened
@@ -296,6 +314,65 @@ fn build_insert_sql(now: u64) -> String {
 mod tests {
     use super::*;
     use std::collections::HashSet;
+
+    #[test]
+    fn eligibility_boundaries_preserve_debounce_and_max_wait() {
+        assert_eq!(eligible_generation(None, 3000, 30_000), None);
+        assert_eq!(eligible_generation(Some((0, 0, 1, 0, 90_000)), 3000, 30_000), None);
+        assert_eq!(eligible_generation(Some((1, 1000, 7, 0, 3999)), 3000, 30_000), None);
+        assert_eq!(eligible_generation(Some((1, 1000, 7, 0, 4000)), 3000, 30_000), Some(7));
+        assert_eq!(eligible_generation(Some((1, 30_999, 8, 1000, 31_000)), 3000, 30_000), Some(8));
+        assert_eq!(eligible_generation(Some((1, 5000, 8, 5000, 4000)), 3000, 30_000), None);
+    }
+
+    // Deterministic interleaving/query-count MODEL, using the production
+    // eligibility function. Does not execute MariaDB or the pool/lock wrapper.
+    fn model_poll(probe: Option<CacheState>, locked: Option<CacheState>, lock_available: bool,
+        invalidate_during_build: bool) -> (usize, usize, bool)
+    {
+        let mut queries = 1; // unlocked probe
+        if eligible_generation(probe, 3000, 30_000).is_none() {
+            return (queries, 0, false);
+        }
+        queries += 1; // GET_LOCK
+        if !lock_available { return (queries, 0, false); }
+        queries += 2; // locked reread + RELEASE_LOCK, also on early return
+        let Some(generation) = eligible_generation(locked, 3000, 30_000) else {
+            return (queries, 0, false);
+        };
+        queries += 5; // four existing rebuild statements + guarded UPDATE
+        let current_generation = generation + u64::from(invalidate_during_build);
+        (queries, 1, current_generation == generation)
+    }
+
+    #[test]
+    fn poll_query_count_model() {
+        let clean = Some((0, 1000, 1, 0, 5000));
+        let waiting = Some((1, 4000, 2, 4000, 5000));
+        let due = Some((1, 1000, 3, 1000, 5000));
+        assert_eq!(model_poll(None, None, true, false), (1, 0, false));
+        assert_eq!(model_poll(clean, clean, true, false), (1, 0, false));
+        assert_eq!(model_poll(waiting, waiting, true, false), (1, 0, false));
+        assert_eq!(model_poll(due, due, true, false), (9, 1, true));
+        assert_eq!(model_poll(due, due, false, false), (2, 0, false));
+        println!("poll statement-count model: clean/debouncing/missing 3 -> 1; due rebuild 8 -> 9; lock contention 1 -> 2");
+    }
+
+    #[test]
+    fn poll_interleaving_model_rereads_all_decisions() {
+        let due = Some((1, 1000, 3, 1000, 5000));
+        // Another owner finished after our probe; no second rebuild.
+        assert_eq!(model_poll(due, Some((0, 1000, 3, 0, 5000)), true, false), (4, 0, false));
+        // A writer renewed debounce before acquisition; do not rebuild early.
+        assert_eq!(model_poll(due, Some((1, 4999, 4, 1000, 5000)), true, false), (4, 0, false));
+        // New generation is used if still due, never the probe generation.
+        assert_eq!(model_poll(due, Some((1, 1000, 4, 1000, 5000)), true, false), (9, 1, true));
+        // A writer invalidating during rebuild prevents clearing dirty.
+        assert_eq!(model_poll(due, due, true, true), (9, 1, false));
+        // A negative hint is not retained: the next poll observes the writer.
+        assert_eq!(model_poll(Some((0, 0, 2, 0, 5000)), due, true, false), (1, 0, false));
+        assert_eq!(model_poll(due, due, true, false), (9, 1, true));
+    }
 
     #[test]
     fn ranked_maps_are_grouped_sorted_and_unique() {

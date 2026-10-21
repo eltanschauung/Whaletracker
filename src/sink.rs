@@ -35,6 +35,7 @@ pub struct Counters {
 
 struct Job {
     write: StoredWrite,
+    classification: sql::Classification,
     _permit: Permit,
     completion: Arc<Completion>,
 }
@@ -115,10 +116,12 @@ impl SqlSink {
             .store(replay.done_records as u64, Ordering::Relaxed);
         // Validate ALL replay records before publishing any. Invalid records stay
         // on disk for explicit operator repair instead of being marked done.
-        for write in &replay.pending {
-            sql::validate_write(&write.sql)?;
-        }
-        self.publish_writes(replay.pending, false)
+        let classifications = replay
+            .pending
+            .iter()
+            .map(|write| sql::validate_and_classify(&write.sql))
+            .collect::<Result<Vec<_>, _>>()?;
+        self.publish_writes(replay.pending, classifications, false)
             .map_err(str::to_string)?;
         self.counters
             .journal_replayed_startup
@@ -127,31 +130,39 @@ impl SqlSink {
     }
 
     pub fn enqueue(&self, writes: Vec<StoredWrite>) -> Result<Accepted, &'static str> {
+        let mut classifications = Vec::with_capacity(writes.len());
         for write in &writes {
-            if let Err(reason) = sql::validate_write(&write.sql) {
-                self.dead_letters.record("invalid_write", &reason, write);
-                return Err("invalid SQL write; entire batch rejected");
+            match sql::validate_and_classify(&write.sql) {
+                Ok(classification) => classifications.push(classification),
+                Err(reason) => {
+                    self.dead_letters.record("invalid_write", &reason, write);
+                    return Err("invalid SQL write; entire batch rejected");
+                }
             }
         }
-        self.publish_writes(writes, true)
+        self.publish_writes(writes, classifications, true)
     }
 
     fn publish_writes(
         &self,
         writes: Vec<StoredWrite>,
+        classifications: Vec<sql::Classification>,
         append: bool,
     ) -> Result<Accepted, &'static str> {
         let _publisher = self.publish.lock().expect("publication mutex poisoned");
-        let writes: Vec<_> = writes
+        assert_eq!(writes.len(), classifications.len());
+        let (writes, classifications): (Vec<_>, Vec<_>) = writes
             .into_iter()
-            .filter(|write| !self.dedupe.contains(&write.event_id))
-            .collect();
+            .zip(classifications)
+            .filter(|(write, _)| !self.dedupe.contains(&write.event_id))
+            .unzip();
         let specs: Vec<_> = writes
             .iter()
-            .map(|write| Spec {
+            .zip(&classifications)
+            .map(|(write, classification)| Spec {
                 id: &write.event_id,
                 bytes: write_size(write),
-                lane: sql::lane_for(&write.sql),
+                lane: classification.lane,
             })
             .collect();
         let permits = self.admission.reserve(&specs)?;
@@ -165,14 +176,16 @@ impl SqlSink {
         }
         let accepted = writes.len();
         let completion = Completion::new(accepted);
-        for (write, permit) in writes.into_iter().zip(permits) {
-            let lane = sql::lane_for(&write.sql) as usize;
+        for ((write, classification), permit) in writes.into_iter().zip(classifications).zip(permits)
+        {
+            let lane = classification.lane as usize;
             self.lanes[lane]
                 .jobs
                 .lock()
                 .expect("lane mutex poisoned")
                 .push_back(Job {
                     write,
+                    classification,
                     _permit: permit,
                     completion: Arc::clone(&completion),
                 });
@@ -268,7 +281,7 @@ impl SqlSink {
                     };
                     match result {
                         Ok(()) => {
-                            if sql::invalidates_points_cache(&job.write.sql) {
+                            if job.classification.invalidates_points {
                                 self.cache.mark_dirty();
                             }
                             self.counters.executed.fetch_add(1, Ordering::Relaxed);
