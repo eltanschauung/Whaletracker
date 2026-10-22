@@ -18,6 +18,7 @@ float g_fPendingSoldierSyncKillTime[MAXPLAYERS + 1];
 int g_iPendingJuggleAttackerUserId[MAXPLAYERS + 1];
 float g_fPendingJuggleDirectHitTime[MAXPLAYERS + 1];
 int g_iPendingAirShotAttackerUserId[MAXPLAYERS + 1];
+bool g_bPendingAirShotIsJuggle[MAXPLAYERS + 1];
 char g_sRoundTopScoringSteamId[STEAMID64_LEN];
 int g_iRoundTopScoringScore = 0;
 
@@ -526,6 +527,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 
     if (IsValidClient(victim) && !IsFakeClient(victim) && IsValidClient(attacker) && !IsFakeClient(attacker) && WhaleTracker_IsTrackingEnabled(attacker))
     {
+        bool isJuggle = false;
         if (GetClientTeam(attacker) != GetClientTeam(victim))
         {
             if (reflectBonusEligible)
@@ -542,7 +544,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
             if (IsValidProjectileDirectHit(attacker, victim, weapon, inflictor, wasDirectHit, directProjectileRef))
             {
                 FireProjectileDirectHit(attacker, victim, weapon);
-                RegisterJuggleDirectHit(attacker, victim, directProjectileRef);
+                isJuggle = RegisterJuggleDirectHit(attacker, victim, directProjectileRef);
                 if (IsWeaponClass(weapon, "tf_weapon_grenadelauncher"))
                 {
                     MarkDemoSyncKillCandidate(attacker, victim);
@@ -563,7 +565,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 
         if (IsSupstatsAirshot(attacker, victim, weapon, wasDirectHit, reflectBonusEligible && wasReflectDirectHit))
         {
-            RecordSupstatsAirshot(attacker, victim);
+            RecordSupstatsAirshot(attacker, victim, isJuggle);
         }
 
         if (IsMarketGardenerHit(attacker, weapon))
@@ -872,16 +874,16 @@ void RecordCrossbowHit(int attacker)
     MarkClientDirty(attacker);
 }
 
-void RecordSupstatsAirshot(int attacker, int victim)
+void RecordSupstatsAirshot(int attacker, int victim, bool isJuggle = false)
 {
     g_Stats[attacker].totalAirshots += 1;
     g_MapStats[attacker].totalAirshots += 1;
     WhaleTracker_AnnounceCountMilestone(attacker, g_Stats[attacker].totalAirshots, "airshots");
     FireLegacyAirShot(attacker, victim);
-    QueueAirShotBroadcast(attacker, victim);
+    QueueAirShotBroadcast(attacker, victim, isJuggle);
 }
 
-void QueueAirShotBroadcast(int attacker, int victim)
+void QueueAirShotBroadcast(int attacker, int victim, bool isJuggle = false)
 {
     if (!IsValidClient(attacker) || !IsValidClient(victim) || attacker == victim)
     {
@@ -891,10 +893,13 @@ void QueueAirShotBroadcast(int attacker, int victim)
     int attackerUserId = GetClientUserId(attacker);
     if (g_iPendingAirShotAttackerUserId[victim] == attackerUserId)
     {
+        // Coalesced hits must retain a juggle completed before the broadcast.
+        g_bPendingAirShotIsJuggle[victim] = g_bPendingAirShotIsJuggle[victim] || isJuggle;
         return;
     }
 
     g_iPendingAirShotAttackerUserId[victim] = attackerUserId;
+    g_bPendingAirShotIsJuggle[victim] = isJuggle;
     CreateTimer(0.0, Timer_BroadcastAirShot, GetClientUserId(victim));
 }
 
@@ -920,7 +925,8 @@ public Action Timer_BroadcastAirShot(Handle timer, any victimUserId)
     BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
     for (int viewer = 1; viewer <= MaxClients; viewer++)
         if (IsClientInGame(viewer) && !Oblivion_ShouldHide(viewer, attacker) && !Oblivion_ShouldHide(viewer, victim))
-            CPrintToChat(viewer, "%s airshot %s!", attackerName, victimName);
+            CPrintToChat(viewer, "%s %s %s!", attackerName,
+                g_bPendingAirShotIsJuggle[victim] ? "juggled" : "airshot", victimName);
     FireAirShot(attacker, victim, killed);
 
     if (killed)
@@ -1015,6 +1021,7 @@ void ResetAirShotBroadcastState(int client)
     if (client >= 1 && client <= MaxClients)
     {
         g_iPendingAirShotAttackerUserId[client] = 0;
+        g_bPendingAirShotIsJuggle[client] = false;
     }
 }
 
@@ -1258,12 +1265,12 @@ bool IsValidProjectileDirectHit(int attacker, int victim, int weapon, int inflic
     return primary > MaxClients && primary == weapon;
 }
 
-void RegisterJuggleDirectHit(int attacker, int victim, int projectileRef)
+bool RegisterJuggleDirectHit(int attacker, int victim, int projectileRef)
 {
     if (TF2_GetPlayerClass(attacker) == TFClass_Scout || !IsVictimAirshotEligible(victim))
     {
         ResetJuggleState(victim);
-        return;
+        return false;
     }
 
     int attackerUserId = GetClientUserId(attacker);
@@ -1277,12 +1284,13 @@ void RegisterJuggleDirectHit(int attacker, int victim, int projectileRef)
     {
         ResetJuggleState(victim);
         FireJuggle(attacker, victim);
-        return;
+        return true;
     }
 
     g_iPendingJuggleAttackerUserId[victim] = attackerUserId;
     g_iJuggleProjectileRef[victim] = projectileRef;
     g_fPendingJuggleDirectHitTime[victim] = now;
+    return false;
 }
 
 void ResetJuggleState(int client)
