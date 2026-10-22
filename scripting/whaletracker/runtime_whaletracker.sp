@@ -415,6 +415,7 @@ public void OnMapStart()
 
 public void OnMapEnd()
 {
+    WhaleTracker_PausePointsGainTimers();
     for (int i = 1; i <= MaxClients; i++)
     {
         if (IsValidClient(i) && !IsFakeClient(i))
@@ -552,6 +553,7 @@ public void OnPluginEnd()
 
 public void OnClientPutInServer(int client)
 {
+    WhaleTracker_ResetPointsGainClient(client);
     ResetAirShotBroadcastState(client);
     WhaleTracker_ResetPlaytimeMilestoneClient(client);
 
@@ -616,6 +618,7 @@ public void OnClientCookiesCached(int client)
 
 public void OnClientDisconnect(int client)
 {
+    WhaleTracker_ResetPointsGainClient(client);
     ResetAirShotBroadcastState(client);
     ResetMultikillClient(client);
 
@@ -878,10 +881,7 @@ bool WhaleTracker_ConsumePrefetchedJoinLeaderboard(int client)
         g_JoinLeaderboardPoints.Remove(steamId64);
         g_JoinLeaderboardRanks.Remove(steamId64);
         g_JoinLeaderboardMatches.Remove(steamId64);
-        g_iRollingPointsCache[client] = points > 0 ? points : 0;
-        g_iRollingRankCache[client] = rank > 0 ? rank : 0;
-        g_iRollingMatchesCache[client] = matchesUsed > 0 ? matchesUsed : 0;
-        g_bRollingPointsLoaded[client] = true;
+        WhaleTracker_AcceptCalculatedPoints(client, points, rank, matchesUsed);
         WhaleTracker_PrintJoinLeaderboardMessage(client, points, rank);
         return true;
     }
@@ -968,10 +968,7 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
 
     if (results == null || !results.FetchRow())
     {
-        g_iRollingPointsCache[client] = 0;
-        g_iRollingRankCache[client] = 0;
-        g_iRollingMatchesCache[client] = 0;
-        g_bRollingPointsLoaded[client] = true;
+        WhaleTracker_AcceptCalculatedPoints(client, 0, 0, 0);
         WhaleTracker_PrintJoinLeaderboardMessage(client, 0, 0);
         return;
     }
@@ -992,10 +989,7 @@ public void WhaleTracker_JoinLeaderboardQueryCallback(Database db, DBResultSet r
         matchesUsed = 0;
     }
 
-    g_iRollingPointsCache[client] = points;
-    g_iRollingRankCache[client] = rank;
-    g_iRollingMatchesCache[client] = matchesUsed;
-    g_bRollingPointsLoaded[client] = true;
+    WhaleTracker_AcceptCalculatedPoints(client, points, rank, matchesUsed);
 
     WhaleTracker_PrintJoinLeaderboardMessage(client, points, rank);
 }

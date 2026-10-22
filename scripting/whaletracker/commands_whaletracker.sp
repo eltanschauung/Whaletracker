@@ -1,4 +1,5 @@
 #define WT_COMMAND_QUICK_RECONNECT_DELAY 2.0
+#include "points_gain_whaletracker.sp"
 
 public Action Command_ShowStats(int client, int args)
 {
@@ -232,10 +233,7 @@ public void WhaleTracker_ShowLivePointsRankCallback(Database db, DBResultSet res
         rollingDeaths = results.FetchInt(4);
     }
 
-    g_iRollingPointsCache[target] = points > 0 ? points : 0;
-    g_iRollingRankCache[target] = rank > 0 ? rank : 0;
-    g_iRollingMatchesCache[target] = matchesUsed > 0 ? matchesUsed : 0;
-    g_bRollingPointsLoaded[target] = true;
+    WhaleTracker_AcceptCalculatedPoints(target, points, rank, matchesUsed);
 
     if (rank <= 0)
     {
@@ -1545,10 +1543,7 @@ public int GetWhalePointsForClient(int client)
         return 0;
     }
 
-    g_iRollingPointsCache[client] = results.FetchInt(0);
-    g_iRollingRankCache[client] = results.FetchInt(1);
-    g_iRollingMatchesCache[client] = results.FetchInt(2);
-    g_bRollingPointsLoaded[client] = true;
+    WhaleTracker_AcceptCalculatedPoints(client, results.FetchInt(0), results.FetchInt(1), results.FetchInt(2));
     delete results;
 
     return g_iRollingRankCache[client] > 0 ? g_iRollingPointsCache[client] : 0;

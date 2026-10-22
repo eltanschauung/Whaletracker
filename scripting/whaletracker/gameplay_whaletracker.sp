@@ -782,6 +782,7 @@ void RegisterMultikill(int client)
 
 public void Event_ResetMultikillAll(Event event, const char[] name, bool dontBroadcast)
 {
+    WhaleTracker_SchedulePointsGainNotifications();
     ResetRoundTopScoringPlayer();
     ResetMultikillAll();
 }

@@ -1879,10 +1879,7 @@ public void SQL_OnRoundPointsRefreshed(Handle owner, Handle query, const char[] 
         for (int client = 1; client <= MaxClients; client++)
         {
             if (!IsClientInGame(client) || !StrEqual(g_Stats[client].steamId, steamId)) continue;
-            g_iRollingPointsCache[client] = SQL_FetchInt(query, 1);
-            g_iRollingRankCache[client] = SQL_FetchInt(query, 2);
-            g_iRollingMatchesCache[client] = SQL_FetchInt(query, 3);
-            g_bRollingPointsLoaded[client] = true;
+            WhaleTracker_AcceptCalculatedPoints(client, SQL_FetchInt(query, 1), SQL_FetchInt(query, 2), SQL_FetchInt(query, 3));
             break;
         }
     }
