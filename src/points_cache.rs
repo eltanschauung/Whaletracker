@@ -96,6 +96,7 @@ const RANKED_MAPS: &[&str] = &[
     "koth_suijin",
     "koth_sunnymilk",
     "koth_touhvest_b6",
+    "koth_touhvest_event_b1",
     "koth_watermill_final",
     "pl_badwater",
     "pl_badwater_snowy2",
