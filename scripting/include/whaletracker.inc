@@ -1814,16 +1814,18 @@ void WhaleTracker_PublishRoundPointsSnapshot()
         "/* wt_points_cache_round_end */ UPDATE whaletracker_logs SET points_snapshot_at = %d WHERE log_id = '%s'",
         now, g_sCurrentLogId);
     QueueSaveQuery(query, 0, false);
+    int refreshGeneration = WhaleTracker_BeginRoundPointsRefresh();
     WhaleTracker_RustRequestFlush();
-    WhaleTracker_QueueRoundPointsRefresh(now, g_sCurrentLogId);
+    WhaleTracker_QueueRoundPointsRefresh(now, g_sCurrentLogId, refreshGeneration);
 }
 
-void WhaleTracker_QueueRoundPointsRefresh(int requestedAt, const char[] logId)
+void WhaleTracker_QueueRoundPointsRefresh(int requestedAt, const char[] logId, int refreshGeneration)
 {
     DataPack pack;
     CreateDataTimer(2.0, Timer_RefreshRoundPoints, pack, TIMER_FLAG_NO_MAPCHANGE);
     pack.WriteCell(requestedAt);
     pack.WriteString(logId);
+    pack.WriteCell(refreshGeneration);
 }
 
 public Action Timer_RefreshRoundPoints(Handle timer, DataPack pack)
@@ -1832,8 +1834,14 @@ public Action Timer_RefreshRoundPoints(Handle timer, DataPack pack)
     int requestedAt = pack.ReadCell();
     char logId[128];
     pack.ReadString(logId, sizeof(logId));
+    int refreshGeneration = pack.ReadCell();
+    if (!WhaleTracker_IsCurrentRoundPointsRefresh(refreshGeneration)) return Plugin_Stop;
     if (!StrEqual(logId, g_sCurrentLogId) || GetTime() - requestedAt > 60
-        || !g_bDatabaseReady || g_hDatabase == null) return Plugin_Stop;
+        || !g_bDatabaseReady || g_hDatabase == null)
+    {
+        WhaleTracker_FinishRoundPointsRefresh(refreshGeneration, false);
+        return Plugin_Stop;
+    }
     char ids[4096];
     for (int client = 1; client <= MaxClients; client++)
     {
@@ -1843,7 +1851,11 @@ public Action Timer_RefreshRoundPoints(Handle timer, DataPack pack)
         FormatEx(item, sizeof(item), "%s'%s'", ids[0] ? "," : "", steamId);
         StrCat(ids, sizeof(ids), item);
     }
-    if (!ids[0]) return Plugin_Stop;
+    if (!ids[0])
+    {
+        WhaleTracker_FinishRoundPointsRefresh(refreshGeneration, false);
+        return Plugin_Stop;
+    }
     char query[4608];
     // Do not invalidate local native caches before Rust publishes the new
     // generation; that would force synchronous SQL on the next team-balance call.
@@ -1854,6 +1866,7 @@ public Action Timer_RefreshRoundPoints(Handle timer, DataPack pack)
     DataPack request = new DataPack();
     request.WriteCell(requestedAt);
     request.WriteString(logId);
+    request.WriteCell(refreshGeneration);
     SQL_TQuery(g_hDatabase, SQL_OnRoundPointsRefreshed, query, request);
     return Plugin_Stop;
 }
@@ -1865,11 +1878,17 @@ public void SQL_OnRoundPointsRefreshed(Handle owner, Handle query, const char[] 
     int requestedAt = pack.ReadCell();
     char logId[128];
     pack.ReadString(logId, sizeof(logId));
+    int refreshGeneration = pack.ReadCell();
     delete pack;
-    if (!StrEqual(logId, g_sCurrentLogId) || GetTime() - requestedAt > 60) return;
+    if (!WhaleTracker_IsCurrentRoundPointsRefresh(refreshGeneration)) return;
+    if (!StrEqual(logId, g_sCurrentLogId) || GetTime() - requestedAt > 60)
+    {
+        WhaleTracker_FinishRoundPointsRefresh(refreshGeneration, false);
+        return;
+    }
     if (query == null || !SQL_GetRowCount(query))
     {
-        WhaleTracker_QueueRoundPointsRefresh(requestedAt, logId);
+        WhaleTracker_QueueRoundPointsRefresh(requestedAt, logId, refreshGeneration);
         return;
     }
     while (SQL_FetchRow(query))
@@ -1883,6 +1902,7 @@ public void SQL_OnRoundPointsRefreshed(Handle owner, Handle query, const char[] 
             break;
         }
     }
+    WhaleTracker_FinishRoundPointsRefresh(refreshGeneration, true);
 }
 
 void InsertMatchLogRecord(int endTime, int duration, int participantCount, bool forceSync, bool finalized)
