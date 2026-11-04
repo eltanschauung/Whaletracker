@@ -1,8 +1,6 @@
 #pragma semicolon 1
 
 #include <sourcemod>
-#include <public_activity>
-#include <oblivion>
 #include <tf2>
 #include <tf2_stocks>
 #include <sdktools>

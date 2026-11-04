@@ -8,9 +8,7 @@ void WhaleTracker_AnnounceCountMilestone(int client, int count, const char[] lab
     if (GetFeatureStatus(FeatureType_Native, "Filters_GetChatName") != FeatureStatus_Available
         || !Filters_GetChatName(client, displayName, sizeof(displayName)))
         FormatEx(displayName, sizeof(displayName), "{teamcolor}%N", client);
-    WhaleTracker_PublicMessage(client, 0, false,
-        "{gold}[WhaleTracker] %s{default} now has {lightgreen}%d %s{default}!",
-        displayName, count, label);
+    WhaleTracker_BroadcastMessage(client, false, "{gold}[WhaleTracker] %s{default} now has {lightgreen}%d %s{default}!", displayName, count, label);
 }
 #define WT_PLAYTIME_MILESTONE_ID_MAX 64
 #define WT_PLAYTIME_MILESTONE_REQUEST_MAX 128
@@ -473,10 +471,7 @@ void WhaleTracker_AnnounceStimulus(int client)
         GetClientName(client, coloredName, sizeof(coloredName));
     }
 
-    WhaleTracker_PublicMessage(client, 0, false,
-        "{gold}[WhaleTracker] %s{default} just got a %sStimulus Check{default} for reaching {gold}10 hours playtime!",
-        coloredName,
-        currencyColor);
+    WhaleTracker_BroadcastMessage(client, false, "{gold}[WhaleTracker] %s{default} just got a %sStimulus Check{default} for reaching {gold}10 hours playtime!", coloredName, currencyColor);
 
     if (GetFeatureStatus(FeatureType_Native, "SaySounds_PlayCommand") == FeatureStatus_Available)
     {

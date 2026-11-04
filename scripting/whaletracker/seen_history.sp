@@ -1,10 +1,6 @@
 int g_SeenSearchGeneration[MAXPLAYERS + 1];
 
-bool WhaleTracker_CanSeeIdentity(int viewer, const char[] steamId)
-{
-    return GetFeatureStatus(FeatureType_Native, "Oblivion_IsSteamHidden") != FeatureStatus_Available
-        || !Oblivion_IsSteamHidden(viewer, steamId);
-}
+
 
 void RequestSeenHistoryMenu(int client, const char[] search)
 {
@@ -44,7 +40,7 @@ public void WhaleTracker_SeenHistoryMenuReady(Database db, DBResultSet rows, con
     while(rows!=null && rows.FetchRow())
     {
         rows.FetchString(0,steamId,sizeof(steamId));
-        if(!WhaleTracker_CanSeeIdentity(client,steamId))continue;
+
         rows.FetchString(1,name,sizeof(name));rows.FetchString(2,alias,sizeof(alias));
         int online=WhaleTracker_FindClientBySteamId64(steamId);
         if(online>0)GetClientName(online,name,sizeof(name));
@@ -54,7 +50,7 @@ public void WhaleTracker_SeenHistoryMenuReady(Database db, DBResultSet rows, con
     }
     // Brand-new clients may not have a lifetime row yet; retain online lookup.
     char onlineName[256];int online=FindOnlineSeenMatch(search,steamId,sizeof(steamId),onlineName,sizeof(onlineName));
-    if(online>0 && !added.ContainsKey(steamId) && WhaleTracker_CanSeeIdentity(client,steamId))
+    if(online>0 && !added.ContainsKey(steamId))
     {
         GetClientName(online,name,sizeof(name));FormatEx(display,sizeof(display),"%s [online]",name);
         menu.AddItem(steamId,display);count++;
@@ -69,7 +65,7 @@ public int WhaleTracker_SeenHistorySelection(Menu menu, MenuAction action, int c
     if(action==MenuAction_End){delete menu;return 0;}
     if(action!=MenuAction_Select || !IsClientInGame(client))return 0;
     char steamId[STEAMID64_LEN],name[256];menu.GetItem(item,steamId,sizeof(steamId),_,name,sizeof(name));
-    if(!WhaleTracker_CanSeeIdentity(client,steamId))return 0;
+
     int online=WhaleTracker_FindClientBySteamId64(steamId);
     if(online>0)GetClientChatDisplayName(online,name,sizeof(name));
     RequestSeenTimesBySteamId(client,steamId,name,online>0?online:client);

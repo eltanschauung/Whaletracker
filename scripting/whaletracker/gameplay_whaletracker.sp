@@ -721,7 +721,7 @@ void AnnounceHighUberDeath(int medic, int percent)
 {
     char medicName[256];
     BuildMedicDropDisplayName(medic, medicName, sizeof(medicName));
-    WhaleTracker_PublicMessage(medic, 0, false, "%s died with %d%% Über!", medicName, percent);
+    WhaleTracker_BroadcastMessage(medic, false, "%s died with %d%% Über!", medicName, percent);
 }
 
 void AnnounceMedicDrop(int attacker, int medic)
@@ -738,7 +738,7 @@ void AnnounceMedicDrop(int attacker, int medic)
     char attackerName[256];
     BuildMedicDropDisplayName(attacker, attackerName, sizeof(attackerName));
 
-    WhaleTracker_PublicMessage(attacker, medic, false, "%s dropped %s!", attackerName, medicName);
+    WhaleTracker_BroadcastMessage(attacker, false, "%s dropped %s!", attackerName, medicName);
     FireMedicDrop(attacker, medic);
 }
 
@@ -748,8 +748,8 @@ void AnnounceTelefrag(int attacker, int victim)
     char victimName[256];
     BuildGameplayDisplayName(attacker, attackerName, sizeof(attackerName));
     BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
-    WhaleTracker_PublicMessage(attacker, victim, false, "%s telefragged %s!", attackerName, victimName);
-    WhaleTracker_PublicMessage(attacker, victim, true, "%N telefragged %N!", attacker, victim);
+    WhaleTracker_BroadcastMessage(attacker, false, "%s telefragged %s!", attackerName, victimName);
+    WhaleTracker_BroadcastMessage(attacker, true, "%N telefragged %N!", attacker, victim);
 }
 
 void BuildMedicDropDisplayName(int client, char[] buffer, int maxlen)
@@ -925,7 +925,7 @@ public Action Timer_BroadcastAirShot(Handle timer, any victimUserId)
     BuildGameplayDisplayName(attacker, attackerName, sizeof(attackerName));
     BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
     for (int viewer = 1; viewer <= MaxClients; viewer++)
-        if (IsClientInGame(viewer) && !Oblivion_ShouldHide(viewer, attacker) && !Oblivion_ShouldHide(viewer, victim))
+        if (IsClientInGame(viewer))
             CPrintToChat(viewer, "%s %s %s!", attackerName,
                 g_bPendingAirShotIsJuggle[victim] ? "juggled" : "airshot", victimName);
     FireAirShot(attacker, victim, killed);
@@ -961,7 +961,7 @@ void TryHandleDropShot(Event event, int attacker, int victim)
     char victimName[256];
     BuildGameplayDisplayName(attacker, attackerName, sizeof(attackerName));
     BuildGameplayDisplayName(victim, victimName, sizeof(victimName));
-    WhaleTracker_PublicMessage(attacker, victim, false, "%s dropshot %s!", attackerName, victimName);
+    WhaleTracker_BroadcastMessage(attacker, false, "%s dropshot %s!", attackerName, victimName);
     FireDropShot(attacker, victim);
     PlayDefaultAirShotSound(attacker, victim);
 }
@@ -1009,12 +1009,11 @@ void PlayDefaultAirShotSound(int attacker, int victim)
     bool played;
     if (GetFeatureStatus(FeatureType_Native, "SaySounds_PlayCommandAs") == FeatureStatus_Available)
         for (int viewer = 1; viewer <= MaxClients; viewer++)
-            if (IsClientInGame(viewer) && !IsFakeClient(viewer)
-                && !Oblivion_ShouldHide(viewer, attacker) && !Oblivion_ShouldHide(viewer, victim))
+            if (IsClientInGame(viewer) && !IsFakeClient(viewer))
                 played = SaySounds_PlayCommandAs(attacker, viewer, WT_AIRSHOT_SAYSOUND) || played;
     if (played) return;
-    if (!Oblivion_ShouldHide(attacker, victim)) EmitSoundToClient(attacker, WT_AIRSHOT_SOUND);
-    if (!Oblivion_ShouldHide(victim, attacker)) EmitSoundToClient(victim, WT_AIRSHOT_SOUND);
+    EmitSoundToClient(attacker, WT_AIRSHOT_SOUND);
+    EmitSoundToClient(victim, WT_AIRSHOT_SOUND);
 }
 
 void ResetAirShotBroadcastState(int client)

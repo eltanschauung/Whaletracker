@@ -705,9 +705,7 @@ bool WhaleTracker_TryEarlyJoin(Event event)
     if (rank > 0) FormatEx(message, sizeof(message), "%s{default} (%d Points, Rank #%d) joined the game", displayName, points, rank);
     else FormatEx(message, sizeof(message), "%s{default} (Unranked) joined the game", displayName);
     for (int viewer = 1; viewer <= MaxClients; viewer++)
-        if (IsClientInGame(viewer) && !IsFakeClient(viewer)
-            && (GetFeatureStatus(FeatureType_Native, "Oblivion_IsSteamHidden") != FeatureStatus_Available
-                || !Oblivion_IsSteamHidden(viewer, steamId))) CPrintToChat(viewer, "%s", message);
+        if (IsClientInGame(viewer) && !IsFakeClient(viewer)) CPrintToChat(viewer, "%s", message);
     PrintToServer("[WhaleTracker] %s", message);
     if (g_EarlyJoinAnnouncedUsers == null) g_EarlyJoinAnnouncedUsers = new StringMap();
     g_EarlyJoinAnnouncedUsers.SetValue(userKey, 1);
@@ -1027,16 +1025,16 @@ void WhaleTracker_PrintJoinLeaderboardMessage(int client, int points, int rank)
 
     if (rank > 0)
     {
-        WhaleTracker_PublicMessage(client, 0, false, "%s{default} (%d Points, Rank #%d) joined the game", displayName, points, rank);
+        WhaleTracker_BroadcastMessage(client, false, "%s{default} (%d Points, Rank #%d) joined the game", displayName, points, rank);
         PrintToServer("[WhaleTracker] %s (%d Points, Rank #%d) joined the game", displayName, points, rank);
     }
     else if (rank == 0)
     {
-        WhaleTracker_PublicMessage(client, 0, false, "%s{default} (Unranked) joined the game", displayName);
+        WhaleTracker_BroadcastMessage(client, false, "%s{default} (Unranked) joined the game", displayName);
         PrintToServer("[WhaleTracker] %s (Unranked) joined the game", displayName);
     }
     else
     {
-        WhaleTracker_PublicMessage(client, 0, false, "%s{default} (Ranking unavailable) joined the game", displayName);
+        WhaleTracker_BroadcastMessage(client, false, "%s{default} (Ranking unavailable) joined the game", displayName);
     }
 }
